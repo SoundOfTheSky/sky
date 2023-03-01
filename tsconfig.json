@@ -1,0 +1,14 @@
+{
+  "extends": "@tsconfig/node18-strictest-esm/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "src",
+    "outDir": "dist",
+    "noUnusedLocals": false,
+    "exactOptionalPropertyTypes": false,
+    "paths": {
+      "better-sqlite3": ["types/better-sqlite3.d.ts"]
+    },
+    "lib": ["ESNext", "DOM"]
+  },
+  "include": ["src/**/*"]
+}

@@ -1,0 +1,45 @@
+{
+  "name": "sky",
+  "version": "1.0.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "node --experimental-specifier-resolution=node --loader ts-node/esm --inspect ./src",
+    "build": "tsc",
+    "start": "node --experimental-specifier-resolution=node dist",
+    "lint": "eslint \"src/**/*{.js,.ts}\" --fix",
+    "proxy": "reverse-proxy /^/api/=:8080 /^//=:5173 --key privkey.pem --ca chain.pem --cert cert.pem"
+  },
+  "dependencies": {
+    "@simplewebauthn/server": "latest",
+    "better-sqlite3": "latest",
+    "dotenv": "latest",
+    "execa": "latest",
+    "file-type": "latest",
+    "jsonwebtoken": "latest",
+    "mime-types": "latest",
+    "mqtt": "latest",
+    "net": "latest",
+    "node-stream-zip": "latest",
+    "ohmyfetch": "latest",
+    "tslib": "latest"
+  },
+  "devDependencies": {
+    "@simplewebauthn/typescript-types": "latest",
+    "@tsconfig/node18-strictest-esm": "latest",
+    "@types/jsonwebtoken": "latest",
+    "@types/mime-types": "latest",
+    "@types/node": "latest",
+    "@typescript-eslint/eslint-plugin": "latest",
+    "@typescript-eslint/parser": "latest",
+    "eslint": "latest",
+    "eslint-config-prettier": "latest",
+    "eslint-plugin-import": "latest",
+    "eslint-plugin-prettier": "latest",
+    "eslint-plugin-sonarjs": "latest",
+    "eslint-plugin-unicorn": "latest",
+    "prettier": "latest",
+    "ts-node": "latest",
+    "typescript": "latest"
+  }
+}

@@ -1,0 +1,1 @@
+.subjects-component{display:flex;flex-wrap:wrap;width:100%;padding:24px}.subjects-component .search{display:flex;width:100%;height:fit-content}.subjects-component .result{cursor:pointer;transition:background-color .2s;min-width:128px;max-height:128px;text-decoration:none}.subjects-component .result:hover{background-color:#343d58}

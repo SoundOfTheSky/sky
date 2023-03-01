@@ -1,0 +1,108 @@
+import { Credentials, OAuth2Client } from 'google-auth-library';
+import * as grpc from '@grpc/grpc-js';
+import { default as protobuf } from 'protobufjs';
+import type { ServiceClient } from '@grpc/grpc-js/build/src/make-client';
+import { join } from 'path';
+import { log } from './utils';
+
+const protoRoot = new protobuf.Root();
+const embeddedAssistant = protoRoot.loadSync(join(__dirname, 'assets', 'embedded_assistant.proto'));
+const AssistRequest = embeddedAssistant.lookupType('google.assistant.embedded.v1alpha2.AssistRequest');
+const AssistResponse = embeddedAssistant.lookupType('google.assistant.embedded.v1alpha2.AssistResponse');
+const AssistConfig = embeddedAssistant.lookupType('google.assistant.embedded.v1alpha2.AssistConfig');
+const AudioOutConfig = embeddedAssistant.lookupType('google.assistant.embedded.v1alpha2.AudioOutConfig');
+const DeviceConfig = embeddedAssistant.lookupType('google.assistant.embedded.v1alpha2.DeviceConfig');
+
+export class Google {
+  oauthClient: OAuth2Client;
+  converseClient?: ServiceClient;
+  assistantConfig?: {
+    audioOutConfig: protobuf.Message<Record<string, unknown>>;
+    deviceConfig: protobuf.Message<Record<string, unknown>>;
+  };
+
+  constructor(credentials: { clientId: string; clientSecret: string; redirectUri: string }, tokens?: Credentials) {
+    this.oauthClient = new OAuth2Client(credentials.clientId, credentials.clientSecret, credentials.redirectUri);
+    if (tokens) this.handleAuthenticated(tokens);
+    else this.auth();
+  }
+
+  auth() {
+    const url = this.oauthClient.generateAuthUrl({
+      access_type: 'offline',
+      scope: ['https://www.googleapis.com/auth/assistant-sdk-prototype'],
+      prompt: 'consent',
+    });
+    log('Login with url:\n', url);
+    return url;
+  }
+
+  setOAuthCode(code: string) {
+    this.oauthClient.getToken(code, (error, tokens) => {
+      if (error || !tokens) log('Error in setOAuthCode:\n', error);
+      else {
+        log('Google tokens:\n', JSON.stringify(tokens));
+        this.handleAuthenticated(tokens);
+      }
+    });
+  }
+
+  handleAuthenticated(tokens: Credentials) {
+    this.oauthClient.setCredentials(tokens);
+    const sslCreds = grpc.credentials.createSsl();
+    const callCreds = grpc.credentials.createFromGoogleCredential(this.oauthClient);
+    const combinedCreds = grpc.credentials.combineChannelCredentials(sslCreds, callCreds);
+    const ConverseClient = grpc.makeGenericClientConstructor(
+      {
+        converse: {
+          path: '/google.assistant.embedded.v1alpha2.EmbeddedAssistant/Assist',
+          requestStream: true,
+          responseStream: true,
+          requestSerialize: value => Buffer.from(AssistRequest.encode(value).finish()),
+          requestDeserialize: buffer => AssistRequest.decode(buffer),
+          responseSerialize: value => Buffer.from(AssistResponse.encode(value).finish()),
+          responseDeserialize: buffer => AssistResponse.decode(buffer),
+        },
+      },
+      'ConverseClient',
+    );
+    this.converseClient = new ConverseClient('embeddedassistant.googleapis.com', combinedCreds);
+    this.assistantConfig = {
+      audioOutConfig: AudioOutConfig.create({
+        encoding: 2,
+        sampleRateHertz: 16000,
+        volumePercentage: 100,
+      }),
+      deviceConfig: DeviceConfig.create({
+        deviceId: 'example',
+        deviceModelId: 'example',
+      }),
+    };
+  }
+
+  askAssistant(textQuery: string) {
+    return new Promise<string>(r => {
+      const conversation = this.converseClient!.converse();
+      conversation.write(
+        AssistRequest.create({
+          config: AssistConfig.create({
+            textQuery,
+            ...this.assistantConfig,
+          }),
+        }),
+      );
+      conversation.once('data', (data?: { dialogStateOut?: { supplementalDisplayText?: string } }) =>
+        r(data?.dialogStateOut?.supplementalDisplayText ?? ''),
+      );
+    });
+  }
+}
+const google = new Google(
+  {
+    clientId: process.env.GOOGLE_CLIENT_ID!,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    redirectUri: process.env.GOOGLE_REDIRECT_URI!,
+  },
+  process.env.GOOGLE_TOKENS ? JSON.parse(process.env.GOOGLE_TOKENS) : undefined,
+);
+export default google;
