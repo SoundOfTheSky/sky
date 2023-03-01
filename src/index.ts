@@ -1,0 +1,40 @@
+import { file, serve } from 'bun';
+import { WS, wsCloseHandler, wsMessageHandler, wsOpenHandler } from '@/services/ws';
+import { log } from '@/utils';
+import { DB } from '@/services/db';
+import '@/ws';
+import { handleHTTP } from '@/services/http';
+
+if (!process.env['PORT'])
+  serve({
+    fetch: (req) => Response.redirect(process.env['HTTP_ORIGIN']! + req.url),
+    port: 80,
+  });
+export const server = Bun.serve<WS['data']>({
+  port: process.env['PORT'] ?? 443,
+  lowMemoryMode: true,
+  key: process.env['KEY'] ? file(process.env['KEY']) : undefined,
+  cert: process.env['CERT'] ? file(process.env['CERT']) : undefined,
+  ca: process.env['CHAIN'] ? file(process.env['CHAIN']) : undefined,
+  fetch: handleHTTP,
+  websocket: {
+    message: wsMessageHandler,
+    close: wsCloseHandler,
+    open: wsOpenHandler,
+  },
+  maxRequestBodySize: 1024 * 1024, // 1mb
+});
+log('Started on port', server.port);
+
+process.on('SIGHUP', onExit);
+process.on('SIGINT', onExit);
+process.on('SIGTERM', onExit);
+process.on('uncaughtException', (e) => log(e));
+function onExit() {
+  log('Closing');
+  DB.close();
+  process.exit();
+}
+
+// setTimeout(() => void import('./weird/wanikani.js'), 1000);
+// setTimeout(() => void import('./weird/staticIsUsed.js'), 1000);

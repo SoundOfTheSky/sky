@@ -1,0 +1,32 @@
+{
+  "name": "sky",
+  "version": "1.0.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "bun build ./src/index.ts --outfile=dist.js --target=bun",
+    "start": "bun src/index.ts",
+    "lint": "eslint \"src/**/*{.js,.ts}\" --fix",
+    "proxy": "bunx reverse-proxy-node /^/api/=:8080 /^/static/=:8080 /^/ws/=:8080 /^//=:5173 --key privkey.pem --ca chain.pem --cert cert.pem"
+  },
+  "dependencies": {
+    "@simplewebauthn/server": "latest",
+    "file-type": "latest",
+    "jose": "latest",
+    "mime-types": "latest",
+    "mqtt": "latest"
+  },
+  "devDependencies": {
+    "@simplewebauthn/typescript-types": "latest",
+    "@types/mime-types": "latest",
+    "@typescript-eslint/eslint-plugin": "latest",
+    "@typescript-eslint/parser": "latest",
+    "bun-types": "latest",
+    "eslint": "latest",
+    "eslint-config-prettier": "latest",
+    "eslint-plugin-prettier": "latest",
+    "eslint-plugin-sonarjs": "latest",
+    "prettier": "latest",
+    "typescript": "latest"
+  }
+}

@@ -1,0 +1,11 @@
+**/.DS_Store
+**/.env
+**/*.pem
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.zip
+static
+assets
+node_modules
+dist
