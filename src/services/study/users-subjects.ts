@@ -167,7 +167,7 @@ export class UsersSubjectsTable extends DBTable<UserSubject> {
       });
       this.update(subjectStats.id, {
         stage,
-        nextReview: now + SRS.timings[stage - 1]! - 240,
+        nextReview: now + SRS.timings[stage - 1]!,
       });
       if (stage === SRS.ok) this.unlockForDependency(subjectId, userId, subject.themeId);
     } else {
@@ -179,7 +179,7 @@ export class UsersSubjectsTable extends DBTable<UserSubject> {
       });
       this.update(subjectStats.id, {
         stage,
-        nextReview: now + SRS.timings[stage - 1]! - 240,
+        nextReview: now + SRS.timings[stage - 1]!,
       });
     }
   }
