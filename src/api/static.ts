@@ -49,16 +49,12 @@ async function getFile(path: string) {
     try {
       return await readFileInfo(join(p, 'index.html'));
     } catch {
-      return;
+      return readFileInfo(join(STATIC_PATH, 'index.html'));
     }
   }
 }
 export default (async function (_req, res, query) {
   const fileInfo = await getFile(query.pathname);
-  if (!fileInfo) {
-    res.writeHead(404).end();
-    return;
-  }
   res
     .writeHead(200, {
       'Content-Type': fileInfo.mime ?? 'text/plain',
