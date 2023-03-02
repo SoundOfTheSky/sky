@@ -418,11 +418,3 @@ setInterval(() => {
   const now = Date.now();
   for (const [sub, time] of disposedTokens.entries()) if (now - time > EXPIRES_IN * 1000) disposedTokens.delete(sub);
 }, EXPIRES_IN);
-
-console.log(
-  sign({
-    id: 1,
-    permissions: [PERMISSIONS.ADMIN],
-    status: 0,
-  }),
-);

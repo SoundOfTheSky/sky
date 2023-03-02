@@ -10,7 +10,7 @@ os.setPriority(19);
 
 const PORT = process.env['PORT'] ? +process.env['PORT'] : 80;
 log(`Running on port ${PORT}`);
-http.createServer(PORT ? handler : redirectToHTTPS).listen(PORT);
+http.createServer(process.env['PORT'] ? handler : redirectToHTTPS).listen(PORT);
 if (!process.env['PORT'])
   https
     .createServer(

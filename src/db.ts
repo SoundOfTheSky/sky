@@ -20,8 +20,8 @@ export const DB = new Database(DBFileName);
 // DB.prepare(`VACUUM`).run();
 // DB.pragma('ignore_check_constraints = 0');
 // DB.pragma('foreign_keys = 1');
+// DB.prepare(`UPDATE authenticators SET user_id = 1 WHERE user_id = 53`).run();
 // DB.prepare(`DELETE FROM users WHERE id != 1`).run();
-// DB.prepare(`UPDATE authenticators SET user_id = 1 WHERE user_id = 51`).run();
 
 export type TableDTO<T> = Omit<T, 'id' | 'created' | 'updated'>;
 export type UpdateTableDTO<T> = {
