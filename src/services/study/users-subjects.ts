@@ -141,7 +141,7 @@ export class UsersSubjectsTable extends DBTable<UserSubject> {
   }
   getReview(subjectId: number, userId: number) {
     const subjectStats = DB.prepare(
-      `SELECT s.id, s.questions_have_to_answer, s.title, us.correct, us.incorrect, us.next_review, us.stage, s.srs_id FROM ${this.name} us 
+      `SELECT s.id, s.questions_have_to_answer, s.title, us.next_review, us.stage, s.srs_id FROM ${this.name} us 
       JOIN ${this.dependentTables.subjectsTable.name} s ON s.id = us.subject_id 
       WHERE subject_id = ? AND user_id = ?`,
     ).get(subjectId, userId);
@@ -293,8 +293,6 @@ export class UsersSubjectsTable extends DBTable<UserSubject> {
     return {
       id: x['id'] as number,
       title: x['title'] as string,
-      correct: x['correct'] as number | null,
-      incorrect: x['incorrect'] as number | null,
       nextReview: x['next_review'] as number | null,
       stage: x['stage'] as number | null,
       questionsHaveToAnswer: (x['questions_have_to_answer'] as number | undefined) ?? undefined,
