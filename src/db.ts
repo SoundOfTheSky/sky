@@ -193,22 +193,23 @@ export async function backupDB() {
   unlinkSync('backup.db');
   log('Backup done!');
 }
-export async function loadBackupDB(name?: string) {
+export async function loadBackupDB(name?: string, restart?: boolean) {
   log('Downloading backup', name);
   if (!name) {
     const info = await fs.getInfo('website/backups');
     const index = info.content
       ?.map((c, i) => [Number.parseInt(c.name.slice(0, -3)), i])
       .sort((a, b) => b[0]! - a[0]!)[0]?.[1];
-    console.log(index, info);
-    if (!index) throw new Error("Can't find backup");
+    if (index === undefined) throw new Error("Can't find backup");
     name = info.content![index]!.name.slice(0, -3);
   }
   const buffer = await fs.readFile(`/website/backups/${name}.db`);
   log('Writing backup...');
   writeFileSync(DBFileName, buffer);
-  log('Restarting...');
-  // eslint-disable-next-line unicorn/no-process-exit
-  process.exit();
+  if (restart) {
+    log('Restarting...');
+    // eslint-disable-next-line unicorn/no-process-exit
+    process.exit();
+  }
 }
 setTimeout(() => void backupDB(), 86_400_000);

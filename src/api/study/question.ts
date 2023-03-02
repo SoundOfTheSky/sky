@@ -14,7 +14,7 @@ export default (async function (req, res, query) {
     res.writeHead(400).end('Question ID must be integer');
     return;
   }
-  if (req.method === 'GET') sendJSON(res, getQuestion(payload.id, questionId));
+  if (req.method === 'GET') sendJSON(res, getQuestion(questionId, payload.id));
   else if (req.method === 'PATCH') {
     const rawData = await getDataFromRequest(req);
     const { note, synonyms } = JSON.parse(rawData.toString()) as {

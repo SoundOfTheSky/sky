@@ -28,7 +28,7 @@ import {
 } from '../db';
 
 const JWT_VERSION = process.env['JWT_VERSION'] ?? 1;
-const EXPIRES_IN = 1000 * 60 * 60 * 4; // 4 hours
+const EXPIRES_IN = 60 * 60 * 4; // 4 hours
 const AUTH_REFRESH_AFTER = 60 * 60; // 1 hour in seconds
 
 export enum PERMISSIONS {
@@ -416,5 +416,13 @@ export function authCheck(
  */
 setInterval(() => {
   const now = Date.now();
-  for (const [sub, time] of disposedTokens.entries()) if (now - time > EXPIRES_IN) disposedTokens.delete(sub);
+  for (const [sub, time] of disposedTokens.entries()) if (now - time > EXPIRES_IN * 1000) disposedTokens.delete(sub);
 }, EXPIRES_IN);
+
+console.log(
+  sign({
+    id: 1,
+    permissions: [PERMISSIONS.ADMIN],
+    status: 0,
+  }),
+);

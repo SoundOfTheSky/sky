@@ -1,6 +1,7 @@
+import type { DBDataTypes } from 'better-sqlite3';
 import { convertFromArray, convertToArray, DB, DBTable, TableDefaults, UpdateTableDTO } from '../../db';
 import { usersTable, UsersTable } from '../auth';
-import { questionsTable, QuestionsTable } from './questions';
+import { Question, questionsTable, QuestionsTable } from './questions';
 
 export type UserQuestion = TableDefaults & {
   note?: string | undefined;
@@ -54,13 +55,19 @@ export class UsersQuestionsTable extends DBTable<UserQuestion> {
       `UPDATE ${this.name} SET ${cols.map((x) => x[0] + ' = ?').join(', ')} WHERE question_id = ? AND user_id = ?`,
     ).run(...cols.map((x) => x[1]), questionId, userId);
   }
-  getUserQuestion(userId: number, questionId: number) {
-    const qs = this.convertFrom(
-      DB.prepare(`SELECT * FROM ${this.name} WHERE user_id = ? AND question_id = ?`).get(userId, questionId),
-    );
-    if (!qs) return;
-    const q = this.dependencyTables.questionsTable.get(questionId)!;
-    return { ...q, note: qs.note, synonyms: qs.synonyms };
+  getQuestion(questionId: number, userId?: number) {
+    const question = this.dependencyTables.questionsTable.convertFrom(
+      this.convertFrom(
+        DB.prepare(
+          `SELECT q.id, q.answers, q.question, q.description_word_id, q.subject_id, q.alternate_answers, q.choose, uq.note, uq.synonyms
+          FROM ${this.dependencyTables.questionsTable.name} q
+          LEFT OUTER JOIN ${this.name} uq ON uq.question_id = q.id
+          WHERE q.id = ? AND (user_id = ? OR user_id IS NULL)`,
+        ).get(questionId, userId),
+      ) as unknown as Record<string, DBDataTypes>,
+    ) as Omit<Question & UserQuestion, 'userId' | 'questionId' | 'created' | 'updated'> | undefined;
+    if (!question) return;
+    return question;
   }
 }
 export const usersQuestionsTable = new UsersQuestionsTable('users_questions', {

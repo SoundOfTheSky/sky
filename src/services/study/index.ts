@@ -11,10 +11,10 @@ export function getThemes(userId?: number) {
   return usersThemesTable.getAllByUser(userId);
 }
 export function getSubject(subjectId: number, userId: number) {
-  return usersSubjectsTable.getReview(subjectId, userId);
+  return usersSubjectsTable.getSubject(subjectId, userId);
 }
-export function getQuestion(userId: number, questionId: number) {
-  return usersQuestionsTable.getUserQuestion(userId, questionId);
+export function getQuestion(questionId: number, userId?: number) {
+  return usersQuestionsTable.getQuestion(questionId, userId);
 }
 export function updateQuestionData(
   userId: number,

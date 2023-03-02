@@ -10,6 +10,6 @@ export default (async function (req, res, query) {
     return;
   }
   const splitPath = query.pathname.split('/');
-  await (splitPath.length === 4 ? loadBackupDB(splitPath[3]) : backupDB());
+  await (splitPath.length === 4 ? loadBackupDB(splitPath[3], true) : backupDB());
   res.end();
 } as ApiHandler);

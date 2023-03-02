@@ -39,7 +39,7 @@ export default (function (req, res, query) {
     } else res.writeHead(400).end('Subject ID must be integer');
   } else if (req.method === 'GET') sendJSON(res, getSubject(subjectId, payload.id));
   else if (req.method === 'POST') {
-    answer(subjectId, payload.id, splitQuery[5] !== 'correct');
+    answer(subjectId, payload.id, splitQuery[5] === 'correct');
     res.end();
   }
 } as ApiHandler);

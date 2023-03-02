@@ -100,9 +100,11 @@ export async function retry<T>(fn: () => Promise<T>, retries: number, interval: 
     return retry(fn, retries - 1);
   }
 }
+
 export function log(...agrs: unknown[]) {
   console.log(new Date().toLocaleString('ru'), ...agrs);
 }
+
 export function formatBytes(bytes: number) {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   if (!bytes) return `0B`;
@@ -110,6 +112,7 @@ export function formatBytes(bytes: number) {
   const maxPow = Math.min(pow, sizes.length - 1);
   return `${Number.parseFloat((bytes / Math.pow(1024, maxPow)).toFixed(2))}${sizes[maxPow]!}`;
 }
+
 export class ValidationError extends Error {
   override name = 'ValidationError';
 }

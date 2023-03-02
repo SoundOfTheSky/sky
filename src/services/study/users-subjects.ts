@@ -139,14 +139,14 @@ export class UsersSubjectsTable extends DBTable<UserSubject> {
       ).get(subjectId, userId),
     );
   }
-  getReview(subjectId: number, userId: number) {
-    const subjectStats = DB.prepare(
-      `SELECT s.id, s.questions_have_to_answer, s.title, us.next_review, us.stage, s.srs_id FROM ${this.name} us 
-      JOIN ${this.dependentTables.subjectsTable.name} s ON s.id = us.subject_id 
-      WHERE subject_id = ? AND user_id = ?`,
+  getSubject(subjectId: number, userId?: number) {
+    const subject = DB.prepare(
+      `SELECT s.id, s.questions_have_to_answer, s.title, us.next_review, us.stage, s.srs_id FROM ${this.dependentTables.subjectsTable.name} s 
+      OUTER LEFT JOIN ${this.name} us ON s.id = us.subject_id 
+      WHERE s.id = ? AND (user_id = ? OR user_id IS NULL)`,
     ).get(subjectId, userId);
-    if (!subjectStats) return;
-    return this.parseToDTO(subjectStats);
+    if (!subject) return;
+    return this.parseToDTO(subject);
   }
   answer(subjectId: number, userId: number, correct: boolean) {
     const subject = this.dependentTables.subjectsTable.get(subjectId);
@@ -167,7 +167,7 @@ export class UsersSubjectsTable extends DBTable<UserSubject> {
       });
       this.update(subjectStats.id, {
         stage,
-        nextReview: now + SRS.timings[stage - 1]!,
+        nextReview: now + SRS.timings[stage - 1]! - 240,
       });
       if (stage === SRS.ok) this.unlockForDependency(subjectId, userId, subject.themeId);
     } else {
@@ -179,7 +179,7 @@ export class UsersSubjectsTable extends DBTable<UserSubject> {
       });
       this.update(subjectStats.id, {
         stage,
-        nextReview: now + SRS.timings[stage - 1]!,
+        nextReview: now + SRS.timings[stage - 1]! - 240,
       });
     }
   }
