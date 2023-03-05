@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { readFile, rm, writeFile } from 'node:fs/promises';
-import execa from 'execa';
+import { execa } from 'execa';
 export type MakeOptional<Type, Key extends keyof Type> = Omit<Type, Key> & Partial<Pick<Type, Key>>;
 
 export const colors = {
@@ -148,3 +148,10 @@ export function parseTime(time: number) {
   }
   return output;
 }
+
+export function* chunkifyBuffer(buffer: Buffer, chunkSize = 65_536) {
+  for (let pos = 0; pos < buffer.byteLength; pos += chunkSize) yield buffer.subarray(pos, pos + chunkSize);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+export const noop = () => {};

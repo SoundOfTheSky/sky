@@ -1,4 +1,4 @@
-import FileType from 'file-type';
+import { fileTypeFromBuffer } from 'file-type';
 import { execBuffer, ValidationError } from '../utils';
 
 export async function convertImage(buffer: Buffer, from: string, to: string): Promise<Buffer> {
@@ -10,7 +10,7 @@ export async function convertImage(buffer: Buffer, from: string, to: string): Pr
 }
 export async function optimizeImage(buffer: Buffer, ext?: string) {
   if (!ext) {
-    const _from = await FileType.fromBuffer(buffer);
+    const _from = await fileTypeFromBuffer(buffer);
     if (!_from) throw new ValidationError('Unknown format');
     ext = _from.ext;
   }

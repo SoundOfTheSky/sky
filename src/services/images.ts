@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import FileType from 'file-type';
+import { fileTypeFromBuffer } from 'file-type';
 
 import { DB, DBTable, TableDefaults, TableDTO } from '../db';
 import { formatBytes, log, ValidationError, wait } from '../utils';
@@ -47,7 +47,7 @@ export class ImagesTable extends DBTable<Image> {
   async uploadImage(buffer: Buffer, description: string) {
     const md5 = createHash('md5').update(buffer).digest('hex');
     if (imagesTable.checkExistsMD5(md5)) throw new ValidationError('Image with same MD5 already exists');
-    const type = await FileType.fromBuffer(buffer);
+    const type = await fileTypeFromBuffer(buffer);
     if (!type) throw new ValidationError('Unknown format');
     const path = BASE_DIR + md5 + '.' + type.ext;
     return imagesTable.createImage({ description, originalMd5: md5, md5, path }, buffer);

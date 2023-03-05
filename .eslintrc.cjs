@@ -9,8 +9,6 @@ module.exports = {
     'plugin:unicorn/recommended',
     'plugin:sonarjs/recommended',
     'plugin:prettier/recommended',
-    'plugin:import/recommended',
-    'plugin:import/typescript',
   ],
   rules: {
     'prettier/prettier': 1,
@@ -26,6 +24,5 @@ module.exports = {
     'sonarjs/no-nested-template-literals': 0,
     '@typescript-eslint/no-non-null-assertion': 0,
     '@typescript-eslint/consistent-type-definitions': [2, 'type'],
-    'import/order': 1,
   },
 };

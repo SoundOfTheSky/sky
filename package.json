@@ -16,12 +16,10 @@
     "dotenv": "latest",
     "execa": "latest",
     "file-type": "latest",
+    "got": "latest",
     "jsonwebtoken": "latest",
     "mime-types": "latest",
     "mqtt": "latest",
-    "net": "latest",
-    "node-stream-zip": "latest",
-    "ohmyfetch": "latest",
     "tslib": "latest"
   },
   "devDependencies": {
@@ -34,7 +32,6 @@
     "@typescript-eslint/parser": "latest",
     "eslint": "latest",
     "eslint-config-prettier": "latest",
-    "eslint-plugin-import": "latest",
     "eslint-plugin-prettier": "latest",
     "eslint-plugin-sonarjs": "latest",
     "eslint-plugin-unicorn": "latest",

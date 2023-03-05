@@ -1,8 +1,8 @@
 /* eslint-disable sonarjs/no-duplicate-string */
 /* eslint-disable sonarjs/no-nested-template-literals */
 /* eslint-disable sonarjs/cognitive-complexity */
+import got from 'got';
 import { readFile } from 'node:fs/promises';
-import { $fetch } from 'ohmyfetch';
 import type { TableDTO } from '../../db';
 import { log } from '../../utils';
 import { wordsTable } from '../words';
@@ -200,11 +200,11 @@ type BunProQuestionObject = {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function getAllWK<T>(url: string): Promise<WaniKaniObject<T>[]> {
-  const res = await $fetch<WaniKaniResponse<WaniKaniObject<T>>>(url, {
+  const res = await got(url, {
     headers: {
       Authorization: 'Bearer ' + process.env['WK_TOKEN']!,
     },
-  });
+  }).json<WaniKaniResponse<WaniKaniObject<T>>>();
   if (res.pages.next_url) res.data.push(...(await getAllWK<T>(res.pages.next_url)));
   return res.data;
 }
@@ -248,7 +248,7 @@ async function scrapBunpro() {
   //     '_grammar_app_session=RG1QY21VQXF5cVM3NjMyR1RidEI5dTI4d1JmaXNFZmRzSXdtMEV0aG9XbTNmV3ZuUjB1SGlWcHYzb0p1YW8zU3Fqd1gydGQ4cUd1d04xRGFMbG1CcVlhczFFcWtKTlQ4cGJPQldVTVNEbFRlWkxqRGEvRDdSRHg0b2pkc0pabXlKVk4zVGMvUlZHNXRNRXFVdytZY1pMUGQza01PVTgwdmNLMnJBdXg5TFJ0Y1EyWDJhQnBYNUxpeTllbCtZZlQ2MTEvc2N5VHR0ZTRUMCtnRW5CWlBnR0dVM2RBcmgzVy9KM2ZTa204KzViZz0tLTBNVU01Yks5b1dzQnlvVFFhY1ZPdGc9PQ%3D%3D--b86392e5842df1ea96f6072cfb375876a898d530',
   // // spell-checker:enable
   // };
-  // const lessonsPage: string = await $fetch('https://bunpro.jp/lessons', {
+  // const lessonsPage: string = await got('https://bunpro.jp/lessons', {
   //   headers: bunproHeaders,
   // });
   // await writeFile('./cached/BPLessons.html', lessonsPage);
@@ -304,13 +304,13 @@ async function scrapBunpro() {
       .replaceAll(/(<\/accent>){2,}/gs, '</accent>');
   // generate questions
   for (const lesson of lessons) {
-    // const grammarPage: string = await $fetch('https://bunpro.jp/grammar_points/' + lesson.id, {
+    // const grammarPage: string = await got('https://bunpro.jp/grammar_points/' + lesson.id, {
     //   headers: bunproHeaders,
     // });
     // await writeFile(`./cached/BPgrammar${lesson.id}.html`, grammarPage);
     // const questions = JSON.parse(
     //   (
-    //     (await $fetch('https://bunpro.jp/cram?ids%5B%5D=' + lesson.id, {
+    //     (await got('https://bunpro.jp/cram?ids%5B%5D=' + lesson.id, {
     //       headers: {
     //         ...bunproHeaders,
     //         accept: 'application/json, text/javascript, */*; q=0.01',

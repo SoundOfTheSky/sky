@@ -1,7 +1,8 @@
 **/.DS_Store
-**/node_modules
-**/dist
 **/.env
 **/*.pem
 **/*.db
 cached
+static
+node_modules
+dist

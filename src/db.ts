@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createReadStream, unlinkSync, writeFileSync, existsSync } from 'node:fs';
 import Database, { DBDataTypes, RunResult } from 'better-sqlite3';
-import fs from './services/fs';
+import { innerFS, yandexDiskFS } from './services/fs';
 import { camelToSnakeCase, log } from './utils';
 
 const DBFileName = 'database.db';
@@ -189,23 +189,21 @@ export async function backupDB() {
   log('Started DB backup');
   await DB.backup('backup.db');
   log('Uploading backup...');
-  await fs.write(`/website/backups/${Date.now()}.db`, createReadStream('backup.db'));
+  await yandexDiskFS.write(`backups/${Date.now()}.db`, createReadStream('backup.db'));
   unlinkSync('backup.db');
   log('Backup done!');
 }
 export async function loadBackupDB(name?: string, restart?: boolean) {
   log('Downloading backup', name);
   if (!name) {
-    const info = await fs.getInfo('website/backups');
+    const info = await yandexDiskFS.getInfo('backups');
     const index = info.content
       ?.map((c, i) => [Number.parseInt(c.name.slice(0, -3)), i])
       .sort((a, b) => b[0]! - a[0]!)[0]?.[1];
     if (index === undefined) throw new Error("Can't find backup");
     name = info.content![index]!.name.slice(0, -3);
   }
-  const buffer = await fs.readFile(`/website/backups/${name}.db`);
-  log('Writing backup...');
-  writeFileSync(DBFileName, buffer);
+  await innerFS.write(DBFileName, yandexDiskFS.readStream(`backups/${name}.db`));
   if (restart) {
     log('Restarting...');
     // eslint-disable-next-line unicorn/no-process-exit
