@@ -3,7 +3,7 @@ import { copyFile, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 
 import { basename, join } from 'node:path';
 import { PassThrough, Readable } from 'node:stream';
 import { lookup as TypeLookUp } from 'mime-types';
-import got, { Method } from 'got';
+import got, { Method, Progress } from 'got';
 import { chunkifyBuffer } from '../utils';
 
 type YandexFile = {
@@ -94,7 +94,7 @@ export class YandexDisk implements FS {
     return got(href).buffer();
   }
 
-  async write(path: string, buffer: Buffer | ReadStream): Promise<void> {
+  async write(path: string, buffer: Buffer | ReadStream, progress?: (data: Progress) => unknown): Promise<void> {
     const { href, method } = await got('https://cloud-api.yandex.net/v1/disk/resources/upload', {
       method: 'GET',
       searchParams: {
@@ -106,17 +106,18 @@ export class YandexDisk implements FS {
       },
     }).json<{ href: string; method: Method }>();
     return new Promise((resolve, reject) => {
-      got
-        .stream(href, {
-          method,
-          headers: {
-            Authorization: 'OAuth ' + this.token,
-            'Content-Type': 'application/binary',
-          },
-          body: Buffer.isBuffer(buffer) ? chunkifyBuffer(buffer) : buffer,
-        })
-        .on('close', resolve)
-        .on('error', reject);
+      const stream = got.stream(href, {
+        method,
+        headers: {
+          Authorization: 'OAuth ' + this.token,
+          'Content-Type': 'application/binary',
+        },
+        body: Buffer.isBuffer(buffer) ? chunkifyBuffer(buffer) : buffer,
+      });
+
+      if (progress) stream.on('uploadProgress', progress);
+      stream.on('close', resolve);
+      stream.on('error', reject);
     });
   }
 
@@ -164,7 +165,7 @@ export class YandexDisk implements FS {
     });
   }
 
-  readStream(path: string): Readable {
+  readStream(path: string, progress?: (data: Progress) => unknown): Readable {
     const stream = new PassThrough();
     got('https://cloud-api.yandex.net/v1/disk/resources/download', {
       searchParams: {
@@ -175,7 +176,11 @@ export class YandexDisk implements FS {
       },
     })
       .json<{ href: string }>()
-      .then(({ href }) => got.stream(href).pipe(stream))
+      .then(({ href }) => {
+        const downloadStream = got.stream(href);
+        if (progress) downloadStream.on('downloadProgress', progress);
+        downloadStream.pipe(stream);
+      })
       .catch(() => stream.destroy());
     return stream;
   }

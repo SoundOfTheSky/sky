@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createReadStream, unlinkSync, writeFileSync, existsSync } from 'node:fs';
+import { createReadStream, unlinkSync, existsSync } from 'node:fs';
 import Database, { DBDataTypes, RunResult } from 'better-sqlite3';
 import { innerFS, yandexDiskFS } from './services/fs';
-import { camelToSnakeCase, log } from './utils';
+import { camelToSnakeCase, log, formatBytes } from './utils';
+import type { Progress } from 'got';
 
 const DBFileName = 'database.db';
 if (!existsSync(DBFileName)) await loadBackupDB();
@@ -189,7 +190,14 @@ export async function backupDB() {
   log('Started DB backup');
   await DB.backup('backup.db');
   log('Uploading backup...');
-  await yandexDiskFS.write(`backups/${Date.now()}.db`, createReadStream('backup.db'));
+  let progress = 0;
+  const logProgress = (p: Progress) => {
+    const percent = Math.floor(p.percent * 100);
+    if (percent === progress) return;
+    progress = percent;
+    log(`Uploading backup ${percent}% ${formatBytes(p.transferred)}/${formatBytes(p.total ?? 0)}`);
+  };
+  await yandexDiskFS.write(`backups/${Date.now()}.db`, createReadStream('backup.db'), logProgress);
   unlinkSync('backup.db');
   log('Backup done!');
 }
@@ -203,7 +211,14 @@ export async function loadBackupDB(name?: string, restart?: boolean) {
     if (index === undefined) throw new Error("Can't find backup");
     name = info.content![index]!.name.slice(0, -3);
   }
-  await innerFS.write(DBFileName, yandexDiskFS.readStream(`backups/${name}.db`));
+  let progress = 0;
+  const logProgress = (p: Progress) => {
+    const percent = Math.floor(p.percent * 100);
+    if (percent === progress) return;
+    progress = percent;
+    log(`Downloading backup ${percent}% ${formatBytes(p.transferred)}/${formatBytes(p.total ?? 0)}`);
+  };
+  await innerFS.write(DBFileName, yandexDiskFS.readStream(`backups/${name}.db`, logProgress));
   if (restart) {
     log('Restarting...');
     // eslint-disable-next-line unicorn/no-process-exit

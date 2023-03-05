@@ -53,7 +53,7 @@ export class UsersThemesTable extends DBTable<UserTheme> {
       title: theme.title,
       created: theme.created,
       updated: theme.updated,
-      lessons: lessons.find((l) => l.themeId === theme.themeId)!.ids,
+      lessons: lessons.find((l) => l.themeId === theme.themeId)?.ids ?? [],
       reviews: reviews
         .filter((r) => r.themeId === theme.themeId)
         .map((r) => ({
