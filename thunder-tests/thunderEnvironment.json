@@ -1,0 +1,16 @@
+[
+  {
+    "_id": "24c026da-b475-4684-a8ce-24dba513e52e",
+    "name": "sky",
+    "default": true,
+    "sortNum": 10000,
+    "created": "2023-03-06T15:46:34.949Z",
+    "modified": "2023-03-06T15:46:34.949Z",
+    "data": [
+      {
+        "name": "cookie",
+        "value": "auth=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2ZXJzaW9uIjoxLCJpZCI6MSwicGVybWlzc2lvbnMiOlsiYWRtaW4iXSwic3RhdHVzIjoxLCJpYXQiOjE2NzgyMDgwNTYsImV4cCI6MTcwOTc0NDA1Niwic3ViIjoiNjQyMTRlYjAtOTY5OC00ZTAzLWJmYjgtMmVkNmUwMTMyNTNhIn0.eLFzaBGKthGXG5_SV5dukOHuvWVP_fiSruesb2AVVUY"
+      }
+    ]
+  }
+]

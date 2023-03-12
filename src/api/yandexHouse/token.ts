@@ -1,4 +1,4 @@
-import { getDataFromRequest, sendJSON, setCookie } from '../../utils';
+import { getDataFromRequest, sendJSON, setCookie, ValidationError } from '../../utils';
 import type { ApiHandler } from '..';
 import { PERMISSIONS, sign } from '../../services/auth';
 
@@ -6,7 +6,7 @@ export default (async function (req, res, query) {
   if (query.pathname !== '/api/yandex-house/token' || req.method !== 'POST') return;
   const rawData = await getDataFromRequest(req);
   const data = rawData.toString();
-  if (!data) res.writeHead(400).end('No data');
+  if (!data) throw new ValidationError('Invalid data');
   const body = Object.fromEntries(data.split('&').map((x) => x.split('='))) as Record<string, string>;
   if (body['client_id'] !== 'yandex' || body['client_secret'] !== process.env['YANDEX_HOUSE_SECRET']) {
     res.writeHead(401).end();

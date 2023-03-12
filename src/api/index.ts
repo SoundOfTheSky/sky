@@ -3,7 +3,7 @@ import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { fileURLToPath } from 'node:url';
-import { log, ValidationError } from '../utils';
+import { HTTPError, log, ValidationError } from '../utils';
 
 const handlers: ApiHandler[] = [];
 
@@ -25,15 +25,19 @@ async function loadHandlersInDirectory(directory: string) {
 await loadHandlersInDirectory(fileURLToPath(new URL('.', import.meta.url)));
 handlers.push(((await import(fileURLToPath(new URL('static', import.meta.url)))) as { default: ApiHandler }).default);
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 export default (async function (req, res, query) {
   for (const handler of handlers) {
     try {
       await handler(req, res, query);
       if (res.headersSent || !res.writable) return;
     } catch (error) {
-      log(error);
+      const isValidationError = error instanceof ValidationError;
+      const isHTTPError = error instanceof HTTPError;
+      if (!isValidationError && !isHTTPError) log(error);
       if (!res.headersSent && res.writable)
-        res.writeHead(error instanceof ValidationError ? 400 : 500).end((error as Error).message);
+        if (isHTTPError) res.writeHead(error.code).end(error.body);
+        else res.writeHead(isValidationError ? 400 : 500).end((error as Error).message);
     }
   }
   if (!res.headersSent && res.writable) res.writeHead(404).end();

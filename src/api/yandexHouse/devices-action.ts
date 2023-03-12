@@ -25,10 +25,7 @@ const MQTTClient = mqtt.connect(MQTT_ADDRESS!, {
 ].forEach(e => MQTTClient.on(e, (...args: unknown[]) => log('MQTT', e, ...args)));*/
 export default (async function (req, res, query) {
   if (query.pathname !== '/api/yandex-house/v1.0/user/devices/action') return;
-  if (!authCheck(req, res, [PERMISSIONS.HOUSE])) {
-    if (!res.headersSent && res.writable) res.writeHead(401).end();
-    return;
-  }
+  if (!authCheck(req, res, [PERMISSIONS.HOUSE])) return;
   const rawData = await getDataFromRequest(req);
   const data = rawData.toString();
   const reqBody = JSON.parse(data) as {

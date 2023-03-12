@@ -16,7 +16,7 @@ import type {
   RegistrationResponseJSON,
 } from '@simplewebauthn/typescript-types';
 
-import { getCookies, MakeOptional, parseTime, setCookie, ValidationError } from '../utils';
+import { getCookies, log, MakeOptional, setCookie, ValidationError } from '../utils';
 import {
   convertFromArray,
   convertFromBoolean,
@@ -28,9 +28,24 @@ import {
 } from '../db';
 
 const JWT_VERSION = process.env['JWT_VERSION'] ?? 1;
-const EXPIRES_IN = 60 * 60 * 4; // 4 hours
-const AUTH_REFRESH_AFTER = 60 * 60; // 1 hour in seconds
+const EXPIRES_IN = 60 * 60 * 24 * 7; // Week
+const AUTH_REFRESH_AFTER = 60 * 60 * 24; // 1 hour in seconds
+const RP_NAME = 'SoundOfTheSky';
+const RP_ID = process.env['HTTP_ORIGIN']!.slice(8);
+const RP_ORIGIN = process.env['HTTP_ORIGIN']!;
+const CHALLENGE_TIMEOUT = 900_000; // 15 min
+const sessionData = new Map<string, SessionData>();
+const disposedTokens = new Map<string, number>(); // Token/time of disposal
 
+export type SessionData = {
+  timeout: NodeJS.Timeout;
+  expires: number;
+  challenge?: {
+    challenge: string;
+    timeout: NodeJS.Timeout;
+    expires: number;
+  };
+};
 export enum PERMISSIONS {
   HOUSE = 'house',
   DISK = 'disk',
@@ -75,12 +90,6 @@ export class UsersTable extends DBTable<User> {
   }
 }
 export const usersTable = new UsersTable('users');
-
-// DB.prepare('INSERT INTO users (username, permissions) VALUES (?, ?)').run('SoundOfTheSky', 'admin');
-// DB.prepare('DELETE FROM users WHERE id != 1').run();
-// DB.prepare('DROP TABLE IF EXISTS authenticators').run();
-// DB.prepare('UPDATE authenticators SET user_id=1 WHERE user_id=50').run();
-
 type Authenticator = TableDefaults & {
   credentialID: Buffer;
   credentialPublicKey: Buffer;
@@ -144,36 +153,20 @@ class AuthenticatorsTable extends DBTable<Authenticator> {
 export const authenticatorsTable = new AuthenticatorsTable('authenticators');
 
 // === WebAuthn ===
-const RP_NAME = 'SoundOfTheSky';
-const RP_ID = process.env['HTTP_ORIGIN']!.slice(8);
-const RP_ORIGIN = process.env['HTTP_ORIGIN']!;
-const CHALLENGE_TIMEOUT = 300_000;
-const challenges = new Map<string, [NodeJS.Timeout, string, number]>();
-
-/**
- * Add challenge that will timeout.
- * @param username unique user name
- * @param challenge WebAuthn challenge
- */
-const addChallenge = (username: string, challenge: string) => {
-  const timeout = setTimeout(() => challenges.delete(username), CHALLENGE_TIMEOUT);
-  challenges.set(username, [timeout, challenge, Date.now() + CHALLENGE_TIMEOUT]);
+export const addChallenge = (session: SessionData, challenge: string) => {
+  session.challenge = {
+    challenge,
+    timeout: setTimeout(() => removeChallenge(session), CHALLENGE_TIMEOUT),
+    expires: Date.now() + CHALLENGE_TIMEOUT,
+  };
 };
-
-/**
- * Start login process and get WebAuthn options.
- * @param username unique user name
- * @returns WebAuthn challenge
- */
-export function startLogin(username: string) {
-  if (challenges.has(username))
-    throw new ValidationError(
-      `Someone already trying to log in under this user wait ${parseTime(challenges.get(username)![2] - Date.now())}`,
-    );
-  const user = usersTable.getByUsername(username);
-  if (!user) throw new ValidationError('User not found');
-  const userAuthenticators = authenticatorsTable.getAllByUser(user.id);
-  const options = generateAuthenticationOptions({
+export function removeChallenge(session: SessionData) {
+  if (!session.challenge) return;
+  clearTimeout(session.challenge.timeout);
+  delete session.challenge;
+}
+export function getLoginOptions(userAuthenticators: Authenticator[]) {
+  return generateAuthenticationOptions({
     allowCredentials: userAuthenticators.map((authenticator) => ({
       id: authenticator.credentialID,
       type: 'public-key',
@@ -183,50 +176,23 @@ export function startLogin(username: string) {
     timeout: CHALLENGE_TIMEOUT,
     rpID: RP_ID,
   });
-  addChallenge(username, options.challenge);
-  return options;
 }
-
-/**
- * Verify user's authenticator response and finish login.
- * @param username unique user name
- * @param response user's authenticator response
- * @returns JWT object or throws an error
- */
-export async function verifyLogin(username: string, response: AuthenticationResponseJSON) {
-  const user = usersTable.getByUsername(username);
-  if (!user) throw new ValidationError('User not found');
-  const expectedChallenge = challenges.get(username);
-  if (!expectedChallenge) throw new ValidationError('Challenge timeout');
-  challenges.delete(username);
-  clearTimeout(expectedChallenge[0]);
-  const authenticator = authenticatorsTable.get(response.id);
-  if (!authenticator) throw new ValidationError('Authenticator not found');
-  const verification = await verifyAuthenticationResponse({
+export async function verifyLogin(
+  authenticator: Authenticator,
+  expectedChallenge: string,
+  response: AuthenticationResponseJSON,
+) {
+  return verifyAuthenticationResponse({
     response,
-    expectedChallenge: expectedChallenge[1],
+    expectedChallenge: expectedChallenge,
     expectedOrigin: RP_ORIGIN,
     expectedRPID: RP_ID,
     authenticator,
     requireUserVerification: false,
   });
-  if (!verification.verified) throw new ValidationError('Not verified');
-  return sign({
-    id: user.id,
-    permissions: user.permissions,
-    status: user.status,
-  });
 }
-
-/**
- * Start registration process and get WebAuthn options.
- * @param username unique name for new user
- * @returns WebAuthn options
- */
-export function startRegistration(username: string) {
-  if (usersTable.checkIfUsernameExists(username) || challenges.has(username))
-    throw new ValidationError('Username exists');
-  const options = generateRegistrationOptions({
+export function getRegistrationOptions(username: string) {
+  return generateRegistrationOptions({
     rpName: RP_NAME,
     rpID: RP_ID,
     userID: username,
@@ -239,48 +205,14 @@ export function startRegistration(username: string) {
     },
     userDisplayName: username,
   });
-  addChallenge(username, options.challenge);
-  return options;
 }
-
-/**
- * Verify user's authenticator response and finish registration.
- * @param username unique name for new user
- * @param response user's authenticator response
- * @returns JWT object or throws an error
- */
-export async function verifyRegistration(username: string, response: RegistrationResponseJSON) {
-  if (usersTable.checkIfUsernameExists(username)) throw new ValidationError('Username exists');
-  const expectedChallenge = challenges.get(username);
-  if (!expectedChallenge) throw new ValidationError('Challenge timeout');
-  challenges.delete(username);
-  clearTimeout(expectedChallenge[0]);
-  const verification = await verifyRegistrationResponse({
+export function verifyRegistration(expectedChallenge: string, response: RegistrationResponseJSON) {
+  return verifyRegistrationResponse({
     response,
-    expectedChallenge: expectedChallenge[1],
+    expectedChallenge,
     expectedOrigin: RP_ORIGIN,
     expectedRPID: RP_ID,
     requireUserVerification: false,
-  });
-  if (!verification.verified || !verification.registrationInfo) throw new ValidationError('Not verified');
-  const id = usersTable.create({
-    username,
-    status: 0,
-    permissions: [],
-  }).lastInsertRowid as number;
-  authenticatorsTable.create({
-    counter: verification.registrationInfo.counter,
-    credentialBackedUp: verification.registrationInfo.credentialBackedUp,
-    credentialDeviceType: verification.registrationInfo.credentialDeviceType,
-    credentialID: Buffer.from(verification.registrationInfo.credentialID),
-    credentialPublicKey: Buffer.from(verification.registrationInfo.credentialPublicKey),
-    transports: response.response.transports,
-    userId: id,
-  });
-  return sign({
-    id,
-    permissions: [],
-    status: 0,
   });
 }
 
@@ -291,26 +223,16 @@ type JWTBody = {
   permissions: PERMISSIONS[];
   version: number;
 };
-
 type JWTPayload = JWTBody & {
   sub: string;
   iat: number;
   exp: number;
 };
-
-const disposedTokens = new Map<string, number>();
-
 type SignedToken = {
   access_token: string;
   token_type: string;
   expires_in: number;
 };
-/**
- * Sign new token.
- * @param body body of JWT
- * @param options JWT options
- * @returns JWT object
- */
 export function sign(
   body: MakeOptional<JWTBody, 'version'>,
   options: Omit<JWT.SignOptions, 'expiresIn'> & { expiresIn?: number } = {},
@@ -328,54 +250,43 @@ export function sign(
     expires_in: options.expiresIn ?? EXPIRES_IN,
   };
 }
-
-/**
- * Verify token
- * @param token JWT token
- * @returns JWT payload or false
- */
 export function verify(token: string) {
   try {
     const payload = JWT.verify(token.replace('Bearer ', ''), process.env['JWT_SECRET']!) as JWTPayload;
-    if (payload.version !== JWT_VERSION) return false;
+    if (payload.version !== JWT_VERSION) return;
     return payload;
   } catch {
-    return false;
+    return;
   }
 }
-
-/**
- *
- * @param res HTTP response
- * @param token Signed token
- */
 export function setAuth(res: ServerResponse, token: SignedToken) {
-  setCookie(res, 'Authorization', `${token.token_type} ${token.access_token}; Max-Age=${token.expires_in}`);
+  setCookie(res, 'auth', `${token.token_type} ${token.access_token}; Max-Age=${token.expires_in}`);
 }
-
-/**
- * Deauth user and redirect to auth
- * @param res HTTP response
- */
 export function deauth(res: ServerResponse) {
-  setCookie(res, 'Authorization', 'deleted; expires=Thu, 01 Jan 1970 00:00:00 GMT');
-  //sendRedirect(res, '/auth');
+  setCookie(res, 'auth', 'deleted; expires=Thu, 01 Jan 1970 00:00:00 GMT');
 }
-
-/**
- * Check if user has valid authorization and permissions.
- * If not it will redirect user to auth.
- * Also updates token if it's about to expire.
- * @param req HTTP request
- * @param res HTTP response
- * @param neededPermissions array of permissions to check
- * @returns true if everything is ok
- */
+export function getSession(req: IncomingMessage, res: ServerResponse): [string, SessionData] {
+  let sessionId = getCookies(req)['session']!;
+  let session = sessionData.get(sessionId);
+  if (session) return [sessionId, session];
+  sessionId = randomUUID();
+  session = {
+    expires: Date.now() + EXPIRES_IN,
+    timeout: setTimeout(() => removeToken(sessionId), EXPIRES_IN),
+  };
+  sessionData.set(sessionId, session);
+  setCookie(res, 'session', `${sessionId}; Max-Age=${EXPIRES_IN}`);
+  return [sessionId, session];
+}
+export function removeToken(id: string) {
+  sessionData.delete(id);
+}
 export function authCheck(
   req: IncomingMessage,
   res: ServerResponse,
   neededPermissions: PERMISSIONS[] = [],
-): false | JWTPayload {
+  dontThrow401?: boolean,
+) {
   if (process.env['DISABLE_AUTH'] === 'true')
     return {
       exp: Date.now() + 3_600_000,
@@ -386,35 +297,52 @@ export function authCheck(
       sub: '0',
       version: +JWT_VERSION,
     };
-  const token = getCookies(req)['Authorization'] ?? req.headers.authorization;
-  if (!token) return false;
+  const token = getCookies(req)['auth'] ?? req.headers.authorization;
+  if (!token) {
+    if (!dontThrow401) res.writeHead(401).end();
+    return;
+  }
   const payload = verify(token);
-  if (!payload) {
+  if (!payload || disposedTokens.has(payload.sub)) {
     deauth(res);
-    return false;
+    if (!dontThrow401) res.writeHead(401).end();
+    return;
   }
   const permission =
     payload.permissions.includes(PERMISSIONS.ADMIN) ||
     neededPermissions.every((perm) => payload.permissions.some((uPerm) => perm.startsWith(uPerm)));
-  if (
-    !req.headers.authorization &&
-    permission &&
-    payload.iat + AUTH_REFRESH_AFTER < Date.now() / 1000 &&
-    !disposedTokens.has(payload.sub)
-  ) {
+  if (!req.headers.authorization && permission && payload.iat + AUTH_REFRESH_AFTER < Date.now() / 1000) {
     disposedTokens.set(payload.sub, Date.now());
-    const newToken = sign(payload, {
-      expiresIn: payload.exp - payload.iat,
-    });
-    setAuth(res, newToken);
+    setAuth(
+      res,
+      sign(payload, {
+        expiresIn: payload.exp - payload.iat,
+      }),
+    );
   }
-  return permission ? payload : false;
+  if (!permission && !dontThrow401) res.writeHead(401).end();
+  return permission ? payload : undefined;
 }
 
 /**
- * Clear updated tokens
+ * Clear disposed tokens
  */
 setInterval(() => {
   const now = Date.now();
   for (const [sub, time] of disposedTokens.entries()) if (now - time > EXPIRES_IN * 1000) disposedTokens.delete(sub);
 }, EXPIRES_IN);
+
+log(
+  `Admin token: ${
+    sign(
+      {
+        id: 1,
+        permissions: [PERMISSIONS.ADMIN],
+        status: 1,
+      },
+      {
+        expiresIn: 60 * 60 * 24 * 365,
+      },
+    ).access_token
+  }`,
+);

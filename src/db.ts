@@ -1,12 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createReadStream, unlinkSync, existsSync } from 'node:fs';
 import Database, { DBDataTypes, RunResult } from 'better-sqlite3';
-import { innerFS, yandexDiskFS } from './services/fs';
-import { camelToSnakeCase, log, formatBytes } from './utils';
-import type { Progress } from 'got';
+import { createProgressLogger, innerFS, yandexDiskFS } from './services/fs';
+import { camelToSnakeCase, log } from './utils';
 
 const DBFileName = 'database.db';
-if (!existsSync(DBFileName)) await loadBackupDB();
+try {
+  await innerFS.getInfo(DBFileName);
+} catch {
+  await loadBackupDB();
+}
 export const DB = new Database(DBFileName);
 
 // DB.pragma('ignore_check_constraints = 1');
@@ -21,8 +23,9 @@ export const DB = new Database(DBFileName);
 // DB.prepare(`VACUUM`).run();
 // DB.pragma('ignore_check_constraints = 0');
 // DB.pragma('foreign_keys = 1');
-// DB.prepare(`UPDATE authenticators SET user_id = 1 WHERE user_id = 53`).run();
+// DB.prepare(`UPDATE authenticators SET user_id = 1 WHERE user_id = 55`).run();
 // DB.prepare(`DELETE FROM users WHERE id != 1`).run();
+// DB.prepare(`DROP TABLE authenticators`).run();
 
 export type TableDTO<T> = Omit<T, 'id' | 'created' | 'updated'>;
 export type UpdateTableDTO<T> = {
@@ -190,15 +193,16 @@ export async function backupDB() {
   log('Started DB backup');
   await DB.backup('backup.db');
   log('Uploading backup...');
-  let progress = 0;
-  const logProgress = (p: Progress) => {
-    const percent = Math.floor(p.percent * 100);
-    if (percent === progress) return;
-    progress = percent;
-    log(`Uploading backup ${percent}% ${formatBytes(p.transferred)}/${formatBytes(p.total ?? 0)}`);
-  };
-  await yandexDiskFS.write(`backups/${Date.now()}.db`, createReadStream('backup.db'), logProgress);
-  unlinkSync('backup.db');
+  const backupInfo = await innerFS.getInfo('backup.db');
+  await yandexDiskFS.write(
+    `backups/${Date.now()}.db`,
+    innerFS.createReadStreamWithProgress(
+      'backup.db',
+      backupInfo.size ?? 0,
+      createProgressLogger('Uploading backup <p>% <b>/<s> ETA: <t>'),
+    ),
+  );
+  await innerFS.delete('backup.db');
   log('Backup done!');
 }
 export async function loadBackupDB(name?: string, restart?: boolean) {
@@ -211,14 +215,10 @@ export async function loadBackupDB(name?: string, restart?: boolean) {
     if (index === undefined) throw new Error("Can't find backup");
     name = info.content![index]!.name.slice(0, -3);
   }
-  let progress = 0;
-  const logProgress = (p: Progress) => {
-    const percent = Math.floor(p.percent * 100);
-    if (percent === progress) return;
-    progress = percent;
-    log(`Downloading backup ${percent}% ${formatBytes(p.transferred)}/${formatBytes(p.total ?? 0)}`);
-  };
-  await innerFS.write(DBFileName, yandexDiskFS.readStream(`backups/${name}.db`, logProgress));
+  await innerFS.write(
+    DBFileName,
+    yandexDiskFS.readStream(`backups/${name}.db`, createProgressLogger('Downloading backup <p>% <b>/<s> ETA: <t>')),
+  );
   if (restart) {
     log('Restarting...');
     // eslint-disable-next-line unicorn/no-process-exit

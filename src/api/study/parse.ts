@@ -4,11 +4,7 @@ import { sendJSON } from '../../utils';
 import type { ApiHandler } from '..';
 export default (async function (req, res, query) {
   if (query.pathname !== '/api/study/parse' || req.method !== 'POST') return;
-  const payload = authCheck(req, res, [PERMISSIONS.ADMIN]);
-  if (!payload) {
-    if (!res.headersSent && res.writable) res.writeHead(401).end();
-    return;
-  }
+  if (!authCheck(req, res, [PERMISSIONS.ADMIN])) return;
   const resp = await parse();
   sendJSON(res, resp);
 } as ApiHandler);

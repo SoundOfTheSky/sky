@@ -1,14 +1,11 @@
 import { authCheck, PERMISSIONS } from '../../services/auth';
 import { addTheme, getThemes, removeTheme } from '../../services/study';
-import { sendJSON } from '../../utils';
+import { sendJSON, ValidationError } from '../../utils';
 import type { ApiHandler } from '..';
 export default (function (req, res, query) {
   if (!query.pathname.startsWith('/api/study/themes')) return;
   const payload = authCheck(req, res, [PERMISSIONS.STUDY]);
-  if (!payload) {
-    if (!res.headersSent && res.writable) res.writeHead(401).end();
-    return;
-  }
+  if (!payload) return;
   const splitQuery = query.pathname.split('/');
   switch (req.method) {
     case 'GET': {
@@ -22,10 +19,7 @@ export default (function (req, res, query) {
     }
     case 'POST': {
       const themeId = Number.parseInt(splitQuery[4]!);
-      if (Number.isNaN(themeId)) {
-        res.writeHead(400).end('Theme ID must be integer');
-        return;
-      }
+      if (Number.isNaN(themeId)) throw new ValidationError('Theme ID must be integer');
       addTheme(payload.id, themeId);
       res.end();
 
@@ -33,10 +27,7 @@ export default (function (req, res, query) {
     }
     case 'DELETE': {
       const themeId = Number.parseInt(splitQuery[4]!);
-      if (Number.isNaN(themeId)) {
-        res.writeHead(400).end('Theme ID must be integer');
-        return;
-      }
+      if (Number.isNaN(themeId)) throw new ValidationError('Theme ID must be integer');
       removeTheme(payload.id, themeId);
       res.end();
 

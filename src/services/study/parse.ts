@@ -431,7 +431,7 @@ async function scrapBunpro() {
       if (duplicate) {
         if (!duplicate.answers.includes(q.study_question.answer))
           questionsTable.update(duplicate.id, {
-            answers: [...duplicate.answers, q.study_question.answer],
+            answers: [...new Set<string>([...duplicate.answers, q.study_question.answer])],
             alternateAnswers: { ...duplicate.alternateAnswers, ...q.study_question.alternate_answers },
           });
       } else

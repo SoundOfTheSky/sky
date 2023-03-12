@@ -4,11 +4,7 @@ import { reloadStatic } from '../../services/static';
 
 export default (async function (req, res, query) {
   if (query.pathname !== '/api/admin/reload-static') return;
-  const payload = authCheck(req, res, [PERMISSIONS.ADMIN]);
-  if (!payload) {
-    if (!res.headersSent && res.writable) res.writeHead(401).end();
-    return;
-  }
+  if(!authCheck(req, res, [PERMISSIONS.ADMIN])) return;
   await reloadStatic();
   res.end();
 } as ApiHandler);

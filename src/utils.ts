@@ -36,7 +36,8 @@ export function sendRedirect(res: ServerResponse, Location: string) {
 }
 
 export function setCookie(res: ServerResponse, name: string, value: string) {
-  res.setHeader('Set-Cookie', `${name}=${value}; Path=/; SameSite=none; Secure; HttpOnly`);
+  const header = res.getHeader('Set-Cookie') as string | undefined;
+  res.setHeader('Set-Cookie', `${header ? `${header},` : ''}${name}=${value}; Path=/; SameSite=none; Secure; HttpOnly`);
 }
 
 export function getCookies(req: IncomingMessage) {
@@ -130,7 +131,7 @@ export class HTTPError extends Error {
 
 export const camelToSnakeCase = (str: string) => str.replace(/[A-Z]+/g, (letter) => `_${letter.toLowerCase()}`);
 
-export function parseTime(time: number) {
+export function formatTime(time: number) {
   const ranges = [
     [31_536_000_000, 'y'],
     [86_400_000, 'd'],
@@ -147,10 +148,6 @@ export function parseTime(time: number) {
     time %= ms;
   }
   return output;
-}
-
-export function* chunkifyBuffer(buffer: Buffer, chunkSize = 65_536) {
-  for (let pos = 0; pos < buffer.byteLength; pos += chunkSize) yield buffer.subarray(pos, pos + chunkSize);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function

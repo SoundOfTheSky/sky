@@ -1,10 +1,10 @@
-import { createReadStream, ReadStream, createWriteStream } from 'node:fs';
+import { createReadStream, createWriteStream } from 'node:fs';
 import { copyFile, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { PassThrough, Readable } from 'node:stream';
+import { PassThrough, Readable, Transform } from 'node:stream';
 import { lookup as TypeLookUp } from 'mime-types';
 import got, { Method, Progress } from 'got';
-import { chunkifyBuffer } from '../utils';
+import { formatBytes, formatTime, log } from '../utils';
 
 type YandexFile = {
   type: 'file' | 'dir';
@@ -94,7 +94,7 @@ export class YandexDisk implements FS {
     return got(href).buffer();
   }
 
-  async write(path: string, buffer: Buffer | ReadStream, progress?: (data: Progress) => unknown): Promise<void> {
+  async write(path: string, buffer: Buffer | Readable, progress?: (data: Progress) => unknown): Promise<void> {
     const { href, method } = await got('https://cloud-api.yandex.net/v1/disk/resources/upload', {
       method: 'GET',
       searchParams: {
@@ -114,7 +114,6 @@ export class YandexDisk implements FS {
         },
         body: Buffer.isBuffer(buffer) ? chunkifyBuffer(buffer) : buffer,
       });
-
       if (progress) stream.on('uploadProgress', progress);
       stream.on('close', resolve);
       stream.on('error', reject);
@@ -259,10 +258,60 @@ export class InnerFS implements FS {
     await rename(this.p(from), this.p(path));
   }
 
-  readStream(path: string): ReadStream {
+  readStream(path: string): Readable {
     return createReadStream(this.p(path));
   }
+
+  createReadStreamWithProgress(path: string, total: number, progress: (data: Progress) => unknown): Readable {
+    const stream = createReadStream(this.p(path));
+    let transferred = 0;
+    const transform = new Transform({
+      transform(chunk: Buffer, _encoding, callback) {
+        transferred += chunk.length;
+        progress({
+          percent: transferred / total,
+          transferred,
+          total,
+        });
+        callback(null, chunk);
+      },
+    });
+    stream.pipe(transform);
+    return transform;
+  }
 }
+
+export function createProgressLogger(msg: string) {
+  let progress = 0;
+  const start = Date.now();
+  return (p: Progress) => {
+    const percent = Math.floor(p.percent * 100);
+    if (percent === progress) return;
+    const time = Date.now() - start;
+    progress = percent;
+    log(
+      msg
+        .replace('<p>', `${percent}`)
+        .replace('<b>', formatBytes(p.transferred))
+        .replace('<s>', formatBytes(p.total ?? 0))
+        .replace('<t>', formatTime(time / p.percent - time)),
+    );
+  };
+}
+
+export function* chunkifyBuffer(buffer: Buffer, chunkSize = 65_536, progress?: (data: Progress) => unknown) {
+  for (let pos = 0; pos < buffer.length; pos += chunkSize) {
+    const endPos = pos + chunkSize;
+    if (progress)
+      progress({
+        percent: endPos / buffer.length,
+        transferred: endPos,
+        total: buffer.length,
+      });
+    yield buffer.subarray(pos, endPos);
+  }
+}
+
 export const yandexDiskFS = new YandexDisk(process.env['YANDEX_TOKEN']!, '/website/');
 export const innerFS = new InnerFS('');
 export default yandexDiskFS;

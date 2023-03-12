@@ -6,10 +6,7 @@ export default (async function (req, res, query) {
   if (query.pathname !== '/api/yandex-house/v1.0/user/devices/query') return;
   const rawData = await getDataFromRequest(req);
   const data = rawData.toString();
-  if (!authCheck(req, res, [PERMISSIONS.HOUSE])) {
-    if (!res.headersSent && res.writable) res.writeHead(401).end();
-    return;
-  }
+  if (!authCheck(req, res, [PERMISSIONS.HOUSE])) return;
   const state = (
     JSON.parse(data) as {
       devices: { id: string }[];
