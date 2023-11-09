@@ -7,7 +7,7 @@ import yandexDisk from '@/services/yandex-disk';
 const STATIC_PATH = 'static';
 const INDEX = 'index.html';
 
-async function _getStaticFile(path: string, brotli?: boolean) {
+export async function getStaticFile(path: string, brotli?: boolean) {
   let f = file(path);
   if (await f.exists()) return f;
   if (brotli) {
@@ -16,13 +16,13 @@ async function _getStaticFile(path: string, brotli?: boolean) {
   }
 }
 
-export async function getStaticFile(path: string, brotli?: boolean) {
+export async function getStaticFileWithIndexFallback(path: string, brotli?: boolean) {
   const p = join(STATIC_PATH, ...path.split(sep));
 
   return (
-    (await _getStaticFile(p, brotli)) ??
-    (await _getStaticFile(join(p, INDEX), brotli)) ??
-    (await _getStaticFile(join(STATIC_PATH, INDEX), brotli))
+    (await getStaticFile(p, brotli)) ??
+    (await getStaticFile(join(p, INDEX), brotli)) ??
+    (await getStaticFile(join(STATIC_PATH, INDEX), brotli))
   );
 }
 

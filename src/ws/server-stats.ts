@@ -22,7 +22,7 @@ subscribeWSEvent('open', () => {
 });
 
 function broadcastServerStats() {
-  log(`serverStats ${visitsStats.uniqueVisits}|${visitsStats.visits}|${online}`);
+  log(`[STATS] ${visitsStats.uniqueVisits}|${visitsStats.visits}|${online}`);
   server.publish('serverStats', `serverStats ${visitsStats.uniqueVisits}|${visitsStats.visits}|${online}`);
 }
 visitEmitter.on('update', broadcastServerStats);

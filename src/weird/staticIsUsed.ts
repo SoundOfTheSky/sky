@@ -108,4 +108,5 @@ setTimeout(async () => {
   await recalcCache();
   findBrokenReferences();
   log('Done!');
+  process.exit();
 }, 3000);

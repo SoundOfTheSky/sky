@@ -163,19 +163,32 @@ async function parseWK() {
   }
 
   // === Generating logic ===
-  const subjectTag = (subject: WKObject<WKAnySubject>, text?: string) =>
+  const subjectTag = async (subject: WKObject<WKAnySubject>, text?: string) =>
     `<subject uid="${subject.id}" title="${subject.object[0].toUpperCase() + subject.object.slice(1)}: ${
       subject.data.characters ?? subject.data.slug
-    }">${text ?? subject.data.characters ?? subject.data.slug}</subject>`;
-  function generateRelated(subject: WKObject<WKAnySubject>) {
-    let txt = subjectTag(subject);
+    }">${
+      text ??
+      subject.data.characters ??
+      ('character_images' in subject.data
+        ? `<img class="em" src="/static/${await downloadFileAndGetHash(
+            subject.data.character_images.find((x) => x.content_type === 'image/svg+xml')!.url,
+            'svg',
+          )}" >`
+        : subject.data.slug)
+    }</subject>`;
+  async function generateRelated(subject: WKObject<WKAnySubject>) {
+    let txt = await subjectTag(subject);
     if (subject.object === 'kanji' || subject.object === 'vocabulary')
       txt += ` - ${getSubjectReadings(subject as WKObject<WKKanji | WKVocab>).join(', ')}`;
     txt += ` - ${getSubjectMeanings(subject).join(', ')}`;
     if (subject.object === 'kanji' || subject.object === 'vocabulary')
-      txt += ` [${(subject as WKObject<WKKanji | WKVocab>).data.component_subject_ids
-        .map((id) => subjectTag(subjectsMap.get(id)!))
-        .join('+')}]`;
+      txt += ` [${(
+        await Promise.all(
+          (subject as WKObject<WKKanji | WKVocab>).data.component_subject_ids.map((id) =>
+            subjectTag(subjectsMap.get(id)!),
+          ),
+        )
+      ).join('+')}]`;
     return txt;
   }
   const getSubjectMeanings = (s: WKObject<WKAnySubject>) => [
@@ -184,9 +197,6 @@ async function parseWK() {
   ];
   const getSubjectReadings = (s: WKObject<WKKanji | WKVocab>) =>
     s.data.readings.filter((x) => x.accepted_answer).map((x) => x.reading);
-  const getSubjectIdByTitle = (title: number) =>
-    DB.prepare<{ id: number }, [number | string]>(`SELECT id FROM ${subjectsTable.name} WHERE title = ?`).get(title)
-      ?.id;
   const parseWKDescription = (str: string) =>
     str
       .replaceAll('<radical>', '<accent>')
@@ -199,11 +209,6 @@ async function parseWK() {
       .replaceAll('</reading>', '</accent>')
       .replaceAll('<meaning>', '<accent>')
       .replaceAll('</meaning>', '</accent>');
-  const parseFuriganaToRuby = (str: string) =>
-    str.replaceAll(
-      /([\u4E00-\u9FAF]+?)（([\u3040-\u309F]+?)）/gsu,
-      (_, a: string, b: string) => `<ruby>${a}<rp>(</rp><rt>${b}</rt><rp>)</rp></ruby>`,
-    );
 
   // === Schemas ===
   const schemas: Record<string, (s: WKObject<WKAnySubject>) => string | Promise<string>> = {
@@ -243,13 +248,13 @@ Anime sentences:
 <ik>{{title}}</ik></tab><tab title="Related">{{sameMeaning}}</tab>`,
     meaningDesc: (s) => parseWKDescription(s.data.meaning_mnemonic),
     readingDesc: (s) => parseWKDescription((s.data as WKVocab).reading_mnemonic),
-    deps: (s) =>
+    deps: async (s) =>
       (s.data as WKKanji).component_subject_ids.length > 0
-        ? `${s.object === 'kanji' ? 'Radicals' : 'Kanji'}: ${(s.data as WKKanji).component_subject_ids
-            .map((id) => subjectTag(subjectsMap.get(id)!))
-            .join('+')}`
+        ? `${s.object === 'kanji' ? 'Radicals' : 'Kanji'}: ${(
+            await Promise.all((s.data as WKKanji).component_subject_ids.map((id) => subjectTag(subjectsMap.get(id)!)))
+          ).join('+')}`
         : ``,
-    similar: (s) => {
+    similar: async (s) => {
       const sub = s as WKObject<WKKanji>;
       if (sub.data.component_subject_ids.length === 0) return '';
       const similar = subjects.filter(
@@ -259,9 +264,11 @@ Anime sentences:
           (subject.data as WKKanji).component_subject_ids.length === sub.data.component_subject_ids.length &&
           sub.data.component_subject_ids.every((d) => (subject.data as WKKanji).component_subject_ids.includes(d)),
       );
-      return similar.length > 0 ? `<b>Similar:</b>\n${similar.map(generateRelated).join('\n')}` : ``;
+      return similar.length > 0
+        ? `<b>Similar:</b>\n${(await Promise.all(similar.map(generateRelated))).join('\n')}`
+        : ``;
     },
-    sameMeaning: (s) => {
+    sameMeaning: async (s) => {
       const answers = getSubjectMeanings(s);
       const same = subjects.filter(
         (subject) =>
@@ -269,9 +276,11 @@ Anime sentences:
           subject.object === s.object &&
           answers.some((a) => getSubjectMeanings(subject).includes(a)),
       );
-      return same.length > 0 ? `<b>Same meaning:</b>\n${same.map(generateRelated).join('\n')}` : ``;
+      return same.length > 0
+        ? `<b>Same meaning:</b>\n${(await Promise.all(same.map(generateRelated))).join('\n')}`
+        : ``;
     },
-    sameReading: (s) => {
+    sameReading: async (s) => {
       const answers = getSubjectReadings(s as WKObject<WKKanji>);
       const same = subjects.filter(
         (subject) =>
@@ -279,14 +288,17 @@ Anime sentences:
           subject.object === s.object &&
           answers.some((a) => getSubjectReadings(subject as WKObject<WKKanji>).includes(a)),
       );
-      return same.length > 0 ? `<b>Same reading:</b>\n${same.map(generateRelated).join('\n')}` : ``;
+      return same.length > 0
+        ? `<b>Same reading:</b>\n${(await Promise.all(same.map(generateRelated))).join('\n')}`
+        : ``;
     },
-    usedIn: (s) =>
+    usedIn: async (s) =>
       (s.data as WKRadical).amalgamation_subject_ids.length > 0
-        ? `<b>Used in:</b>\n${(s.data as WKRadical).amalgamation_subject_ids
-            .map((id) => subjectsMap.get(id)!)
-            .map(generateRelated)
-            .join('\n')}`
+        ? `<b>Used in:</b>\n${(
+            await Promise.all(
+              (s.data as WKRadical).amalgamation_subject_ids.map((id) => subjectsMap.get(id)!).map(generateRelated),
+            )
+          ).join('\n')}`
         : '',
     audio: async (s) => {
       const audios = (s.data as WKVocab).pronunciation_audios.filter((x) => x.content_type === 'audio/mpeg');
@@ -535,7 +547,7 @@ Anime sentences:
 // eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/require-await
 setTimeout(async () => {
   log('Generating...');
-  // await write(join('assets', 'WK.json'), JSON.stringify(await downloadWK(), undefined, 2));
+  await write(join('assets', 'WK.json'), JSON.stringify(await downloadWK(), undefined, 2));
   await parseWK();
   log('Done...');
   process.exit();

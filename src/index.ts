@@ -5,18 +5,22 @@ import { DB } from '@/services/db';
 import '@/ws';
 import { handleHTTP } from '@/services/http';
 
-if (!process.env['PORT'])
-  serve({
-    fetch: (req) => Response.redirect(process.env['HTTP_ORIGIN']! + req.url),
-    port: 80,
-  });
+serve({
+  fetch: (req) => {
+    let url = process.env['HTTP_ORIGIN']!;
+    const i = req.url.indexOf('/', 8);
+    if (i !== -1) url += req.url.slice(i);
+    return Response.redirect(url);
+  },
+  port: 80,
+});
 export const server = Bun.serve<WS['data']>({
   port: process.env['PORT'] ?? 443,
-  lowMemoryMode: true,
   key: process.env['KEY'] ? file(process.env['KEY']) : undefined,
   cert: process.env['CERT'] ? file(process.env['CERT']) : undefined,
   ca: process.env['CHAIN'] ? file(process.env['CHAIN']) : undefined,
   fetch: handleHTTP,
+  serverName: 'SkyServer',
   websocket: {
     message: wsMessageHandler,
     close: wsCloseHandler,

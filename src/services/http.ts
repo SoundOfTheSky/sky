@@ -1,6 +1,6 @@
 import { MatchedRoute, Server } from 'bun';
 import { join, relative } from 'node:path';
-import { ValidationError, log } from '@/utils';
+import { ValidationError, formatTime, log } from '@/utils';
 import { sessionGuard } from '@/services/session';
 
 export type HTTPResponse = {
@@ -66,10 +66,12 @@ const handlers = new Map(
 log('[Loading] Handlers ok!');
 export async function handleHTTP(req: Request, server: Server): Promise<Response | undefined> {
   const url = req.url.slice(req.url.indexOf('/', 8));
-  log(`[${req.method}] ${req.url}`);
+  log(`[HTTP] ${req.method}: ${req.url}`);
+  const time = Date.now();
   const res: HTTPResponse = {
     headers: new Headers(),
   };
+  res.headers.set('cache-control', 'no-cache, no-store, max-age=0, must-revalidate');
   if (url === '/ws') {
     const payload = await sessionGuard({ req, res });
     if (
@@ -94,5 +96,6 @@ export async function handleHTTP(req: Request, server: Server): Promise<Response
       res.body = e.message;
     } else throw e;
   }
+  log(`[HTTP END] ${req.method}: ${req.url} ${formatTime(Date.now() - time)}`);
   return new Response(res.body, res);
 }
