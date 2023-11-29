@@ -14,13 +14,12 @@ serve({
   },
   port: 80,
 });
-export const server = Bun.serve<WS['data']>({
+export const server = serve<WS['data']>({
   port: process.env['PORT'] ?? 443,
   key: process.env['KEY'] ? file(process.env['KEY']) : undefined,
   cert: process.env['CERT'] ? file(process.env['CERT']) : undefined,
   ca: process.env['CHAIN'] ? file(process.env['CHAIN']) : undefined,
   fetch: handleHTTP,
-  serverName: 'SkyServer',
   websocket: {
     message: wsMessageHandler,
     close: wsCloseHandler,

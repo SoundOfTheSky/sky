@@ -50,8 +50,8 @@ export function getCookies(req: Request) {
 
 const router = new Bun.FileSystemRouter({
   style: 'nextjs',
-  dir: join(__dirname, '../routes'),
-  origin: __dirname,
+  dir: join(import.meta.dir, '../routes'),
+  origin: import.meta.dir,
 });
 
 log('[Loading] Handlers...');
@@ -59,7 +59,7 @@ const handlers = new Map(
   await Promise.all(
     Object.entries(router.routes).map(
       async ([key, val]) =>
-        [key, ((await import(relative(__dirname, val))) as { default: HTTPHandler }).default] as const,
+        [key, ((await import(relative(import.meta.dir, val))) as { default: HTTPHandler }).default] as const,
     ),
   ),
 );

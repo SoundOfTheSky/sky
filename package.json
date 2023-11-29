@@ -26,6 +26,7 @@
     "eslint-config-prettier": "latest",
     "eslint-plugin-prettier": "latest",
     "eslint-plugin-sonarjs": "latest",
+    "eslint-plugin-unused-imports": "latest",
     "prettier": "latest",
     "typescript": "latest"
   }
