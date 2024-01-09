@@ -40,4 +40,5 @@ function onExit() {
 }
 
 // setTimeout(() => void import('./weird/wanikani.js'), 1000);
+// setTimeout(() => void import('./weird/importDeck.js'), 1000);
 // setTimeout(() => void import('./weird/staticIsUsed.js'), 1000);

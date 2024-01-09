@@ -343,10 +343,13 @@ Anime sentences:
   }
 
   const dbsubjects = subjectsTable.getAll('theme_id = 1').map((s) => s.id);
-  for (const id of dbsubjects) {
-    log('Deleting dependencies', id);
-    DB.prepare(`DELETE FROM ${subjectDependenciesTable.name} WHERE subject_id = ?`).run(id);
-  }
+  log('Deleting dependencies');
+  DB.prepare(
+    `DELETE FROM ${subjectDependenciesTable.name}
+    WHERE subject_id IN (
+      SELECT id FROM ${subjectsTable.name} WHERE theme_id = ?
+    )`,
+  ).run(1);
   const dbMap = new Map<number, number>();
   for (const subject of subjects) {
     log(`Subject ${subject.id} ${subject.object} ${subject.data.characters ?? subject.data.slug}`);
@@ -527,7 +530,7 @@ Anime sentences:
   for (const subject of subjects) {
     const id = dbMap.get(subject.id)!;
     log('Creating deps:', subject.id, id);
-    if (subject.data.level > 1 && subject.object === 'kanji')
+    if (subject.data.level > 1)
       for (const dep of levelDeps[subject.data.level - 2])
         subjectDependenciesTable.create({ dependencyId: dbMap.get(dep)!, percent: 90, subjectId: id });
     if ('component_subject_ids' in subject.data)
@@ -547,7 +550,7 @@ Anime sentences:
 // eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/require-await
 setTimeout(async () => {
   log('Generating...');
-  await write(join('assets', 'WK.json'), JSON.stringify(await downloadWK(), undefined, 2));
+  //await write(join('assets', 'WK.json'), JSON.stringify(await downloadWK(), undefined, 2));
   await parseWK();
   log('Done...');
   process.exit();

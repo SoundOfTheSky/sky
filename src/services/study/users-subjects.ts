@@ -67,18 +67,17 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
     ),
     getUnlockables: DB.prepare<{ id: number }, [number, number]>(
       `SELECT id FROM (
-            SELECT SUM(locks) locks, id FROM (
-              SELECT ssDep.stage IS NULL OR SUM(ssDep.stage>=srs.ok)*100/COUNT(*)<subject_dependencies.percent locks, subject.id
-              FROM ${subjectsTable.name} subject
-              LEFT JOIN ${this.name} ss ON ss.subject_id = subject.id AND ss.user_id = ?
-              JOIN ${subjectDependenciesTable.name} subject_dependencies ON subject_dependencies.subject_id = subject.id
-              LEFT JOIN ${this.name} ssDep ON ssDep.subject_id = subject_dependencies.dependency_id AND ssDep.user_id = ?
-              JOIN ${subjectsTable.name} dep ON dep.id = subject_dependencies.dependency_id
-              JOIN ${srsTable.name} srs ON srs.id = dep.srs_id
-              WHERE ss.subject_id IS NULL GROUP BY subject.id, subject_dependencies.percent)
-            GROUP BY id)
-          WHERE locks = 0
-      `,
+        SELECT SUM(locks) locks, id FROM (
+          SELECT sd.subject_id IS NOT NULL AND (ssDep.stage IS NULL OR SUM(ssDep.stage>=srs.ok)*100/COUNT(*)<sd.percent) locks, subject.id
+          FROM ${subjectsTable.name} subject
+          LEFT JOIN ${this.name} ss ON ss.subject_id = subject.id AND ss.user_id = ?
+          LEFT JOIN ${subjectDependenciesTable.name} sd ON sd.subject_id = subject.id
+          LEFT JOIN ${this.name} ssDep ON ssDep.subject_id = sd.dependency_id AND ssDep.user_id = ?
+          LEFT JOIN ${subjectsTable.name} dep ON dep.id = sd.dependency_id
+          LEFT JOIN ${srsTable.name} srs ON srs.id = dep.srs_id
+          WHERE ss.subject_id IS NULL GROUP BY subject.id, sd.percent)
+        GROUP BY id)
+      WHERE locks = 0`,
     ),
   };
   getUserReviewsAndLessons(userId: number) {
@@ -137,13 +136,12 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
     }
   }
   unlock(userId: number) {
-    for (const { id } of this.queries.getUnlockables.all(userId, userId)) {
+    for (const { id } of this.queries.getUnlockables.all(userId, userId))
       this.create({
         stage: 0,
         subjectId: id,
         userId,
       });
-    }
   }
   search(themeIds: number[], query: string) {
     const q = `%${query}%`;

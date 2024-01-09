@@ -4,10 +4,10 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "bun build ./src/index.ts --outfile=dist.js --target=bun",
     "start": "bun src/index.ts",
     "lint": "eslint \"src/**/*{.js,.ts}\" --fix",
-    "proxy": "bunx reverse-proxy-node /^/api/=:8080 /^/static/=:8080 /^/ws/=:8080 /^//=:5173 --key privkey.pem --ca chain.pem --cert cert.pem"
+    "proxy": "bunx reverse-proxy-node /^/api/=:8080 /^/static/=:8080 /^/ws/=:8080 /^//=:5173 --key privkey.pem --ca chain.pem --cert cert.pem",
+    "deploy": "bun src/weird/deploy.ts"
   },
   "dependencies": {
     "@simplewebauthn/server": "latest",
@@ -18,10 +18,10 @@
   },
   "devDependencies": {
     "@simplewebauthn/typescript-types": "latest",
+    "@types/bun": "latest",
     "@types/mime-types": "latest",
     "@typescript-eslint/eslint-plugin": "latest",
     "@typescript-eslint/parser": "latest",
-    "bun-types": "latest",
     "eslint": "latest",
     "eslint-config-prettier": "latest",
     "eslint-plugin-prettier": "latest",
