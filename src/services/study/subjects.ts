@@ -18,6 +18,8 @@ export class SubjectsTable extends DBTable<Subject, SubjectDTO> {
         ref: {
           table: srsTable.name,
           column: 'id',
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
       },
       themeId: {
@@ -27,6 +29,7 @@ export class SubjectsTable extends DBTable<Subject, SubjectDTO> {
           table: themesTable.name,
           column: 'id',
           onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
       },
       title: {

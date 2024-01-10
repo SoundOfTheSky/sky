@@ -108,6 +108,7 @@ class AuthenticatorsTable extends DBTable<Authenticator> {
           column: 'id',
           table: 'users',
           onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
       },
     });

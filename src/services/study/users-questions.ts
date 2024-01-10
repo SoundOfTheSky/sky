@@ -36,6 +36,7 @@ export class UsersQuestionsTable extends DBTable<UserQuestion> {
           table: usersTable.name,
           column: 'id',
           onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
       },
       questionId: {
@@ -45,6 +46,7 @@ export class UsersQuestionsTable extends DBTable<UserQuestion> {
           table: questionsTable.name,
           column: 'id',
           onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
       },
     });

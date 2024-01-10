@@ -21,6 +21,7 @@ export class SubjectDependenciesTable extends DBTable<SubjectDependencies> {
           table: subjectsTable.name,
           column: 'id',
           onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
       },
       dependencyId: {
@@ -30,6 +31,7 @@ export class SubjectDependenciesTable extends DBTable<SubjectDependencies> {
           table: subjectsTable.name,
           column: 'id',
           onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
       },
     });

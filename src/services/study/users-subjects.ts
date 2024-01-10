@@ -33,6 +33,7 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
           table: usersTable.name,
           column: 'id',
           onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
       },
       subjectId: {
@@ -42,6 +43,7 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
           table: subjectsTable.name,
           column: 'id',
           onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
       },
     });

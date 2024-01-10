@@ -7,7 +7,7 @@ import { CryptoHasher, file, write } from 'bun';
 import { log } from '@/utils';
 import { QuestionDTO, questionsTable } from '@/services/study/questions';
 import { SubjectDTO, subjectsTable } from '@/services/study/subjects';
-import { DB, lastInsertRowIdQuery, UpdateTableDTO } from '@/services/db';
+import { DB, UpdateTableDTO } from '@/services/db';
 import { wordsTable } from '@/services/words';
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
 
@@ -173,7 +173,7 @@ async function parseWK() {
         ? `<img class="em" src="/static/${await downloadFileAndGetHash(
             subject.data.character_images.find((x) => x.content_type === 'image/svg+xml')!.url,
             'svg',
-          )}" >`
+          )}">`
         : subject.data.slug)
     }</subject>`;
   async function generateRelated(subject: WKObject<WKAnySubject>) {
@@ -448,7 +448,7 @@ Anime sentences:
           s.title = `Radical <img class="em" src="/static/${await downloadFileAndGetHash(
             radical.data.character_images.find((x) => x.content_type === 'image/svg+xml')!.url,
             'svg',
-          )}" >`;
+          )}">`;
         qs.push({
           answers: meanings,
           descriptionWordId: -1,
@@ -465,8 +465,8 @@ Anime sentences:
 
     // === DB ===
     const idReplaces = new Map<number, number>([
-      [3867, 2590],
-      [7357, 7674],
+      // [3867, 2590],
+      // [7357, 7674],
     ]);
     let id =
       idReplaces.get(subject.id) ??
@@ -492,10 +492,10 @@ Anime sentences:
       subjectsTable.update(id, s);
       dbsubjects.splice(dbsubjects.indexOf(id), 1);
     } else {
+      throw new Error('It must exist');
       //log(`[CREATING SUBJECT] ${subject.id} ${s.title}`);
-      if (subject.id < 9124) throw new Error('It must exist');
-      subjectsTable.create(s);
-      id = lastInsertRowIdQuery.get()!.id;
+      // subjectsTable.create(s);
+      // id = lastInsertRowIdQuery.get()!.id;
     }
     dbMap.set(subject.id, id);
     const dbqs = questionsTable.getBySubject(id);
@@ -517,19 +517,39 @@ Anime sentences:
           log(id, s, q, questionsTable.getBySubject(id), subject);
           throw new Error('It must exist');
         }
-        wordsTable.create({
+        q.descriptionWordId = wordsTable.create({
           word,
         });
-        q.descriptionWordId = lastInsertRowIdQuery.get()!.id;
         questionsTable.create(q as QuestionDTO);
       }
     }
   }
+  // === Replace subject ids ===
+  log('Fixing stuff in words...');
+  const words = DB.prepare(
+    `SELECT w.id, w.word FROM ${wordsTable.name} w
+JOIN ${questionsTable.name} q ON q.description_word_id = w.id
+JOIN ${subjectsTable.name} s ON s.id = q.subject_id
+WHERE s.theme_id = 1
+  `,
+  )
+    .all()
+    .map((x) => wordsTable.convertFrom(x)!);
+  for (const word of words) {
+    log(word.id);
+    wordsTable.update(word.id, {
+      word: word.word
+        // Subject ids only known after all updates so we fix them now
+        .replaceAll(/<subject uid="(\d+?)"/g, (_, id) => `<subject uid="${dbMap.get(parseInt(id as string))}"`)
+        // Remove empty tags
+        .replaceAll(/<(.+?) title=".+?">\s+?<\/\1>/g, ''),
+    });
+  }
 
   // === Dependenices ===
+  log('Creating deps...');
   for (const subject of subjects) {
     const id = dbMap.get(subject.id)!;
-    log('Creating deps:', subject.id, id);
     if (subject.data.level > 1)
       for (const dep of levelDeps[subject.data.level - 2])
         subjectDependenciesTable.create({ dependencyId: dbMap.get(dep)!, percent: 90, subjectId: id });

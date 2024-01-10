@@ -11,15 +11,15 @@ import { spawnSync } from 'bun';
 
 console.log('Unzipping...');
 spawnSync({
-  cmd: ['unzip', 'deck.apkg', '-d', 'deck'],
-  cwd: import.meta.dir,
+  cmd: ['unzip', 'jpcore2k.apkg', '-d', 'deck'],
+  cwd: join('assets'),
 });
 const media = new Map(
-  Object.entries(
-    JSON.parse(readFileSync(join(import.meta.dir, 'deck', 'media'), 'utf8')) as Record<string, string>,
-  ).map(([k, v]) => [v, k]),
+  Object.entries(JSON.parse(readFileSync(join('assets', 'deck', 'media'), 'utf8')) as Record<string, string>).map(
+    ([k, v]) => [v, k],
+  ),
 );
-const db = new Database(join(import.meta.dir, 'deck', 'collection.anki2'), {
+const db = new Database(join('assets', 'deck', 'collection.anki2'), {
   create: false,
   readwrite: true,
 });
@@ -47,10 +47,10 @@ for (const card of data) {
   const subjectId = lastInsertRowIdQuery.get()!.id;
   subjectIds.push(subjectId);
   if (card[1] !== card[3]) {
-    wordsTable.create({
-      word: `<tab title="Description"></tab>`,
+    const descriptionWordId = wordsTable.create({
+      word: `<tab title="Description">Word type: ${card[6]}
+      ${card[5] ? `<audio s="/static/${card[5].slice(7, -1)}">${card[3]}</audio>` : ''}</tab>`,
     });
-    const descriptionWordId = lastInsertRowIdQuery.get()!.id;
     questionsTable.create({
       subjectId,
       descriptionWordId,
@@ -58,15 +58,14 @@ for (const card of data) {
       question: `Reading:\n${card[1]}`,
     });
   }
-  wordsTable.create({
+  const descriptionWordId = wordsTable.create({
     word: `<tab title="Description">Word type: ${card[6]}
-${card[5] ? `<audio s="/static/${card[5].slice(7, -1)}">${card[2]}</audio>` : ''}
+${card[5] ? `<audio s="/static/${card[5].slice(7, -1)}">${card[3]}</audio>` : ''}
 <example>${card[8]}
 ${card[11]}</example>
 ${card[13] ? `<audio s="/static/${card[13].slice(7, -1)}">${card[10]}</audio>` : ''}
 </tab>`,
   });
-  const descriptionWordId = lastInsertRowIdQuery.get()!.id;
   questionsTable.create({
     subjectId,
     descriptionWordId,
@@ -74,15 +73,9 @@ ${card[13] ? `<audio s="/static/${card[13].slice(7, -1)}">${card[10]}</audio>` :
     question: `Translation:\n${card[1]}`,
   });
   if (card[5])
-    cpSync(
-      join(import.meta.dir, 'deck', media.get(card[5].slice(7, -1))!),
-      join('static', 'static', card[5].slice(7, -1)),
-    );
+    cpSync(join('assets', 'deck', media.get(card[5].slice(7, -1))!), join('static', 'static', card[5].slice(7, -1)));
   if (card[13])
-    cpSync(
-      join(import.meta.dir, 'deck', media.get(card[13].slice(7, -1))!),
-      join('static', 'static', card[13].slice(7, -1)),
-    );
+    cpSync(join('assets', 'deck', media.get(card[13].slice(7, -1))!), join('static', 'static', card[13].slice(7, -1)));
 }
 // Deps in batches
 const BATCH = 10;
@@ -94,7 +87,7 @@ for (let i = BATCH; i < subjectIds.length; i++)
       subjectId: subjectIds[i],
       dependencyId: subjectIds[i2],
     });
-rmSync(join(import.meta.dir, 'deck'), {
+rmSync(join('assets', 'deck'), {
   recursive: true,
 });
 console.log('Done');

@@ -23,6 +23,7 @@ export class UsersThemesTable extends DBTable<UserTheme> {
           table: usersTable.name,
           column: 'id',
           onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
       },
       themeId: {
@@ -32,6 +33,7 @@ export class UsersThemesTable extends DBTable<UserTheme> {
           table: 'themes',
           column: 'id',
           onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
       },
       needUnlock: {

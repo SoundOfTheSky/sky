@@ -39,7 +39,6 @@ function copy(from: string, to: string) {
   }
 }
 copy(FE_DIST, STATIC);
-
 console.log('Compressing...');
 spawnSync(['zip', '-r', STATICZIP, '.'], {
   cwd: STATIC,

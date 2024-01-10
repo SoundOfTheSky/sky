@@ -32,6 +32,8 @@ export class QuestionsTable extends DBTable<Question, QuestionDTO> {
         ref: {
           column: 'id',
           table: wordsTable.name,
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
       },
       subjectId: {
@@ -41,6 +43,7 @@ export class QuestionsTable extends DBTable<Question, QuestionDTO> {
           table: subjectsTable.name,
           column: 'id',
           onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
         },
       },
       alternateAnswers: {
