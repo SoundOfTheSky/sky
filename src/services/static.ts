@@ -38,7 +38,7 @@ export async function reloadStatic() {
       5,
       +response.headers.get('content-length')!,
     ),
-  ))
+  ) as unknown as AsyncIterable<Uint8Array>)
     zipFile.write(chunk);
   await zipFile.end();
   await rm(STATIC_PATH, { force: true });

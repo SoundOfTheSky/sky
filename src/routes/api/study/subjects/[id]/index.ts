@@ -11,7 +11,9 @@ export default (async function (req, res, route) {
     const themeIds = route.query['themes']?.split(',').map((el) => Number.parseInt(el));
     if (!themeIds || themeIds.some((el) => Number.isNaN(el)))
       throw new ValidationError('Theme IDs must all be integers separated with comma');
-    sendJSON(res, searchSubjects(themeIds, decodeURI(route.query['id'])));
+    let page = Number.parseInt(route.query['page']);
+    if (Number.isNaN(page)) page = 1;
+    sendJSON(res, searchSubjects(themeIds, decodeURI(route.query['id']), page));
   } else if (req.method === 'GET') sendJSON(res, getSubject(subjectId, payload.user.id));
   else if (req.method === 'POST') answer(subjectId, payload.user.id, route.query['id'] === 'correct');
 } satisfies HTTPHandler);

@@ -80,9 +80,9 @@ export async function loadBackupDB(name?: string, restart?: boolean) {
     const info = await yandexDisk.getInfo('backups');
     const index = info.content
       ?.map((c, i) => [Number.parseInt(c.name.slice(0, -3)), i])
-      .sort((a, b) => b[0]! - a[0]!)[0]?.[1];
+      .sort((a, b) => b[0] - a[0])[0]?.[1];
     if (index === undefined) throw new Error("Can't find backup");
-    name = info.content![index]!.name.slice(0, -3);
+    name = info.content![index].name.slice(0, -3);
   }
   log('Downloading backup', name);
   const response = await yandexDisk.read(`backups/${name}.db`);
@@ -93,7 +93,7 @@ export async function loadBackupDB(name?: string, restart?: boolean) {
       5,
       +response.headers.get('content-length')!,
     ),
-  ))
+  ) as unknown as AsyncIterable<Uint8Array>)
     dbfile.write(chunk);
   await dbfile.end();
   if (restart) {

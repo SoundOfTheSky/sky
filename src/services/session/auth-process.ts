@@ -10,7 +10,7 @@ import { Authenticator } from '@/services/session/user';
 const RP_NAME = 'SoundOfTheSky';
 const RP_ID = process.env['HTTP_ORIGIN']!.slice(8);
 const RP_ORIGIN = process.env['HTTP_ORIGIN']!;
-const CHALLENGE_TIMEOUT = 900_000;
+const CHALLENGE_TIMEOUT = 120_000;
 
 const challenges = new Map<
   string,

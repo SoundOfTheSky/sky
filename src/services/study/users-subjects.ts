@@ -8,6 +8,7 @@ import { subjectDependenciesTable } from '@/services/study/subject-dependencies'
 import { subjectsTable } from '@/services/study/subjects';
 import { usersAnswersTable } from '@/services/study/users-answers';
 import { usersThemesTable } from '@/services/study/users-themes';
+import { usersQuestionsTable } from '@/services/study/users-questions';
 
 export type UserSubject = TableDefaults & {
   stage: number;
@@ -121,7 +122,7 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
       });
       this.update(subjectStats.id, {
         stage,
-        nextReview: now + SRS.timings[stage - 1]!,
+        nextReview: now + SRS.timings[stage - 1],
       });
       if (stage === SRS.ok) usersThemesTable.update(subject.themeId, { needUnlock: true });
     } else {
@@ -133,7 +134,7 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
       });
       this.update(subjectStats.id, {
         stage,
-        nextReview: now + SRS.timings[stage - 1]!,
+        nextReview: now + SRS.timings[stage - 1],
       });
     }
   }
@@ -145,56 +146,43 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
         userId,
       });
   }
-  search(themeIds: number[], query: string) {
-    const q = `%${query}%`;
-    const themeIdsString = themeIds.join(',');
-    // Cant prepare
-    const results = DB.prepare<{ id: number; title: string }, [string, string, string, string]>(
-      `SELECT 
-        s.id,
-        s.title
+  search(themeIds: number[], query?: string, page = 1) {
+    const PAGE_SIZE = 100;
+    const statement = `SELECT 
+        s.id id,
+        s.title title,
+        GROUP_CONCAT(q.answers) answers,
+        GROUP_CONCAT(q.alternate_answers) alternate_answers,
+        us.stage stage,
+        us.next_review next_review,
+        GROUP_CONCAT(uq.note) note,
+        GROUP_CONCAT(uq.synonyms) synonyms
       FROM ${subjectsTable.name} s
       JOIN ${questionsTable.name} q ON q.subject_id = s.id
-      WHERE s.theme_id IN (${themeIdsString})
-        AND (s.title LIKE ?
-          OR q.answers LIKE ?
-          OR q.answers LIKE ?
-          OR q.answers LIKE ?)
-      GROUP BY s.id`,
-    ).all(query, query, `|${q}`, `${q}|`);
-    if (results.length < 40)
-      results.push(
-        // Cant prepare
-        ...DB.prepare<{ id: number; title: string }, [string, string, string]>(
-          `SELECT 
-        s.id,
-        s.title
-      FROM ${subjectsTable.name} s
-      JOIN ${questionsTable.name} q ON q.subject_id = s.id
-      WHERE s.theme_id IN (${themeIdsString})
-        AND s.id NOT IN (${results.map((x) => x.id).join(',')})
-        AND (s.title LIKE ?
-          OR q.answers LIKE ?
-          OR q.question LIKE ?)
+      LEFT JOIN ${usersSubjectsTable.name} us ON us.subject_id = s.id
+      LEFT JOIN ${usersQuestionsTable.name} uq ON uq.question_id = q.id
+      WHERE s.theme_id IN (${themeIds.join(',')}) ${
+        query
+          ? `AND
+        (s.title LIKE ?2 OR
+        q.answers LIKE ?2 OR
+        uq.note LIKE ?2)`
+          : ''
+      }
       GROUP BY s.id
-      LIMIT ${40 - results.length}`,
-        ).all(q, q, q),
-      );
-    return results.map(this.parseToSimpleDTO.bind(this));
-  }
-  getAllByThemes(themeIds: number[], page: number) {
-    const themeIdsString = themeIds.join(',');
-    // Cant prepare
-    const results = DB.prepare<{ id: number; title: string; srs_id: number }, []>(
-      `SELECT 
-        s.id,
-        s.title,
-        s.srs_id
-      FROM ${subjectsTable.name} s
-      WHERE s.theme_id IN (${themeIdsString})
-      LIMIT 40 OFFSET ${40 * (page - 1)}`,
-    ).all();
-    return results.map(this.parseToSimpleDTO.bind(this));
+      LIMIT ${PAGE_SIZE} OFFSET ?1`;
+    type Data = {
+      id: number;
+      title: string;
+      answers: string;
+      alternate_answers: string;
+      stage?: number;
+      next_review?: number;
+      note?: string;
+      synonyms?: string;
+    };
+    if (query) return DB.prepare<Data, [number, string]>(statement).all(PAGE_SIZE * (page - 1), `%${query}%`);
+    return DB.prepare<Data, [number]>(statement).all(PAGE_SIZE * (page - 1));
   }
   parseToDTO(x: DBRow) {
     return {
@@ -208,7 +196,7 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
   }
   parseToSimpleDTO(x: DBRow) {
     const answers = new Set<string>();
-    for (const q of questionsTable.getBySubject(x['id'] as number)) answers.add(q.answers[0]!);
+    for (const q of questionsTable.getBySubject(x['id'] as number)) answers.add(q.answers[0]);
     return {
       id: x['id'] as number,
       title: x['title'] as string,

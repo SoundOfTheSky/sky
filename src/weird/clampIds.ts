@@ -1,5 +1,5 @@
 import { DB } from '@/services/db';
-import { authenticatorsTable, usersTable } from '@/services/session/user';
+import { usersTable } from '@/services/session/user';
 import { storeTable } from '@/services/store';
 import { questionsTable } from '@/services/study/questions';
 import { srsTable } from '@/services/study/srs';
@@ -11,9 +11,9 @@ import { usersQuestionsTable } from '@/services/study/users-questions';
 import { usersSubjectsTable } from '@/services/study/users-subjects';
 import { usersThemesTable } from '@/services/study/users-themes';
 import { wordsTable } from '@/services/words';
+
 const tables = [
   usersTable.name,
-  authenticatorsTable.name,
   wordsTable.name,
   subjectDependenciesTable.name,
   questionsTable.name,

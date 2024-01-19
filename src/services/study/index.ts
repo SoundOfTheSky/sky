@@ -21,8 +21,8 @@ export function updateQuestionData(
   { note, synonyms }: { note?: string; synonyms?: string[] },
 ) {
   return usersQuestionsTable.updateByQuestion(userId, questionId, {
-    synonyms: synonyms?.map((a) => a.trim()),
-    note,
+    synonyms: synonyms?.map((a) => a.trim()).filter(Boolean),
+    note: note?.trim(),
   });
 }
 export function answer(subjectId: number, userId: number, correct: boolean) {
@@ -40,11 +40,8 @@ export function getSRS(id: number) {
 export function getAllSRS() {
   return srsTable.getAll();
 }
-export function searchSubjects(themeIds: number[], query: string) {
-  return usersSubjectsTable.search(themeIds, query);
-}
-export function getAllSubjects(themeIds: number[], page: number) {
-  return usersSubjectsTable.getAllByThemes(themeIds, page);
+export function searchSubjects(themeIds: number[], query?: string, page?: number) {
+  return usersSubjectsTable.search(themeIds, query, page);
 }
 export function getStats(userId: number, start: number, end: number) {
   return usersAnswersTable.getUserStats(userId, start, end);

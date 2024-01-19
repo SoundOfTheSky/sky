@@ -9,7 +9,7 @@ import {
   verifyRegistration,
 } from '@/services/session/auth-process';
 import { sessionGuard, setAuth, signJWT } from '@/services/session';
-import { authenticatorsTable, usersTable } from '@/services/session/user';
+import { PERMISSIONS, authenticatorsTable, usersTable } from '@/services/session/user';
 import { ValidationError } from '@/utils';
 
 export default (async function (req, res, route) {
@@ -33,7 +33,7 @@ export default (async function (req, res, route) {
     usersTable.create({
       username,
       status: 0,
-      permissions: [],
+      permissions: [PERMISSIONS.STUDY],
     });
     const userId = lastInsertRowIdQuery.get()!.id;
     authenticatorsTable.create({

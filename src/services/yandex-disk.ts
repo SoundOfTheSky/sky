@@ -86,7 +86,6 @@ export class YandexDisk {
     await fetch(href, {
       method,
       body: stream,
-      timeout: false,
     });
   }
 
