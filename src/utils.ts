@@ -71,7 +71,7 @@ export function formatBytes(bytes: number) {
   if (!bytes) return `0B`;
   const pow = Math.floor(Math.log(bytes) / Math.log(1024));
   const maxPow = Math.min(pow, sizes.length - 1);
-  return `${Number.parseFloat((bytes / Math.pow(1024, maxPow)).toFixed(2))}${sizes[maxPow]!}`;
+  return `${Number.parseFloat((bytes / Math.pow(1024, maxPow)).toFixed(2))}${sizes[maxPow]}`;
 }
 /** Logger (adds date to log)*/
 export function log(...agrs: unknown[]) {
@@ -123,7 +123,7 @@ export function shuffleArray<T>(arr: T[]): T[] {
   const array = [...arr];
   for (let i = 0; i < array.length; i++) {
     const i2 = Math.floor(Math.random() * array.length);
-    const buf = array[i2]!;
+    const buf = array[i2];
     array[i2] = array[i]!;
     array[i] = buf;
   }
@@ -131,7 +131,7 @@ export function shuffleArray<T>(arr: T[]): T[] {
 }
 /** Swap two elements in array */
 export function swap<T>(arr: T[], i: number, i2: number) {
-  const temp = arr[i2]!;
+  const temp = arr[i2];
   arr[i2] = arr[i]!;
   arr[i] = temp;
   return arr;
@@ -212,7 +212,7 @@ export async function retry<T>(fn: () => Promise<T>, retries: number, interval: 
     return await fn();
   } catch (error) {
     if (retries === 0) throw error;
-    await wait(Array.isArray(interval) ? interval[interval.length - retries]! : interval);
+    await wait(Array.isArray(interval) ? interval[interval.length - retries] : interval);
     return retry(fn, retries - 1, interval);
   }
 }

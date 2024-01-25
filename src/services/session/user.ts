@@ -1,4 +1,4 @@
-import { AuthenticatorTransportFuture, CredentialDeviceType } from '@simplewebauthn/typescript-types';
+import { AuthenticatorTransportFuture, CredentialDeviceType } from '@simplewebauthn/types';
 import {
   DB,
   DBTable,

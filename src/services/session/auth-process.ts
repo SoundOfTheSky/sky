@@ -4,7 +4,7 @@ import {
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
 } from '@simplewebauthn/server';
-import { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/typescript-types';
+import { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/types';
 import { Authenticator } from '@/services/session/user';
 
 const RP_NAME = 'SoundOfTheSky';
@@ -50,10 +50,10 @@ export async function verifyLogin(
 ) {
   return verifyAuthenticationResponse({
     response,
-    expectedChallenge: expectedChallenge,
+    authenticator,
+    expectedChallenge,
     expectedOrigin: RP_ORIGIN,
     expectedRPID: RP_ID,
-    authenticator,
     requireUserVerification: false,
   });
 }

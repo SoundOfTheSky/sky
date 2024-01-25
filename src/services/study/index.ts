@@ -43,6 +43,6 @@ export function getAllSRS() {
 export function searchSubjects(themeIds: number[], query?: string, page?: number) {
   return usersSubjectsTable.search(themeIds, query, page);
 }
-export function getStats(userId: number, start: number, end: number) {
-  return usersAnswersTable.getUserStats(userId, start, end);
+export function getStats(userId: number, start: number, end: number, timezone?: number) {
+  return usersAnswersTable.getUserStats(userId, start, end, timezone);
 }

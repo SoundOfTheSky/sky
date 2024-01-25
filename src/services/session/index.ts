@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { SignJWT, jwtVerify } from 'jose';
 import { storeTable } from '@/services/store';
-import { MakeOptional } from '@/utils';
 import { HTTPError, HTTPResponse, getCookies, setCookie } from '@/services/http';
 import { PERMISSIONS } from '@/services/session/user';
 
@@ -49,7 +48,7 @@ const JWT_ALG = 'HS256';
 const disposedTokens = new Map<string, number>(); // Token/time of disposal
 
 export async function signJWT(
-  body: MakeOptional<JWTBody, 'version'>,
+  body: object,
   options: { expiresIn?: number; subject?: string } = {},
 ): Promise<SignedToken> {
   const now = Math.floor(Date.now() / 1000);
@@ -64,14 +63,13 @@ export async function signJWT(
     expires_in: options.expiresIn ?? JWT_EXPIRES_IN_SEC,
   };
 }
-export async function verify(token: string) {
-  if (token.startsWith('Bearer ')) throw new Error('a');
+export async function verifyJWT<T = JWTPayload>(token: string) {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET, {
       algorithms: [JWT_ALG],
     });
     if (payload.version !== JWT_VERSION) return;
-    return payload as JWTPayload;
+    return payload as T;
   } catch {
     return;
   }
@@ -101,14 +99,14 @@ export async function sessionGuard(options: {
   throw401?: boolean;
 }): Promise<JWTPayload | undefined> {
   const token = getCookies(options.req)['session'] ?? options.req.headers.get('authorization');
-  const payload = token ? await verify(token.slice(7)) : undefined;
+  const payload = token ? await verifyJWT(token.slice(7)) : undefined;
   if (!payload) {
     if (options.res) {
       registerVisit(true);
       const newSession = await signJWT({});
       setAuth(options.res, newSession);
       if (options.permissions && options.throw401) throw new HTTPError('Not allowed', 401);
-      return verify(newSession.access_token)!;
+      return verifyJWT(newSession.access_token);
     }
     return;
   }

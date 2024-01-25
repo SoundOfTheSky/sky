@@ -1,4 +1,4 @@
-import type { AuthenticationResponseJSON } from '@simplewebauthn/typescript-types';
+import type { AuthenticationResponseJSON } from '@simplewebauthn/types';
 import { HTTPHandler, sendJSON } from '@/services/http';
 import {
   getChallenge,
