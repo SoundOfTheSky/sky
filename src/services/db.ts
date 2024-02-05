@@ -73,6 +73,7 @@ export async function backupDB() {
   const buf = new Blob([DB.serialize()]);
   await write('backup.db', buf);
   await yandexDisk.write(`backups/${Date.now()}.db`, buf.stream());
+  await rm('backup.db');
   log('Backup done!');
 }
 export async function loadBackupDB(name?: string, restart?: boolean) {
