@@ -7,25 +7,25 @@
     "start": "bun src/index.ts",
     "lint": "eslint \"src/**/*{.js,.ts}\" --fix && tsc",
     "proxy": "bunx reverse-proxy-node /^/api/=:8080 /^/static/=:8080 /^/ws/=:8080 /^//=:5173 --key privkey.pem --ca chain.pem --cert cert.pem",
-    "deploy": "bun src/weird/deploy.ts"
+    "deploy": "bun src/chiruno/deploy.ts"
   },
   "dependencies": {
-    "@simplewebauthn/server": "^9.0.1",
+    "@simplewebauthn/server": "^9.0.3",
     "file-type": "^19.0.0",
-    "jose": "^5.2.1",
+    "jose": "^5.2.2",
     "mime-types": "^2.1.35"
   },
   "devDependencies": {
     "@simplewebauthn/types": "^9.0.1",
-    "@types/bun": "^1.0.4",
+    "@types/bun": "^1.0.6",
     "@types/mime-types": "^2.1.4",
-    "@typescript-eslint/eslint-plugin": "^6.20.0",
-    "@typescript-eslint/parser": "^6.20.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.1",
+    "@typescript-eslint/parser": "^7.0.1",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",
-    "eslint-plugin-sonarjs": "^0.23.0",
-    "eslint-plugin-unused-imports": "^3.0.0",
+    "eslint-plugin-sonarjs": "^0.24.0",
+    "eslint-plugin-unused-imports": "^3.1.0",
     "prettier": "^3.2.5",
     "typescript": "^5.3.3"
   }

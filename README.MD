@@ -1,21 +1,30 @@
 # SKY
 Backend for my website. Accessible here: https://softsky.site
 
-Main focus of this website is to teach myself japanese and other little tools. Many subsystems called after Norse mythology, bare with it.
+Main focus of this website is to teach myself japanese and other little tools. Many subsystems called after Touhou characters.
+## Subsystems
 
-## Yggdrasil (authentication)
-To access website you must first pass through Yggdrasil. Yggrasil gives you session which may include your authentication details. Authentication is not mundatory.
+### Remilia (Database)
+Remilia is the heart of this project.
+She is a SQLite database in WAL mode.
 
-Yggdrasil protects website and users alike from bots and hackers.
+### Marisa (Session & Authentication)
+To access website you must first pass through Marisa.
+Marisa gives you JWT session. This JWT session may be authenticated or not.
+Marisa automatically refreshes tokens and checks permissions.
 
-## Mímir (Study)
-Mímir is a SRS (Spaced Repetition System) study tool. Based on tool called Anki and tailored for learning Japanese language.
+### Reimu (Protection)
+Marisa and Reimu work closely together. While Marisa is managing sessions, Reimu checks these sessions and protect website if any suspicious activity is found.
 
-## Ginnungagap (File Storage)
-Ginnungagap is a file storage. It allows users to upload any kind of file similar to Cloud Storage. Ginnungagap also can convert a bunch of file formats, optimize image and video files, and also serve files though direct link.
 
-## Tíð (Planner tool)
-Tíð is a planner tool. It allows to create events like any other planner tool out there but with minor additions. It has a feature to add geolocation to any event and even plan the road you need to take to get somethere. I used this to plan my visit to Japan. It really helps to plan a route to visit everything I want most effeciently.
+### Pathouli (Study)
+Pathouli is a SRS (Spaced Repetition System) study tool. Based on tool called Anki and tailored for learning Japanese language but may be used for anything.
+
+### Sakuya (Planner tool) [TODO]
+Sakuya is a planner tool. It allows to create events like any other planner tool out there but with minor additions. It has a feature to add geolocation to any event and even plan the road you need to take to get somethere. It really helps to plan a route to visit everything I want most effeciently.
+
+### Chiruno (Tools)
+Used for weird stuff that I use mainly for bulk data processing.
 
 ## Code & style
 Project uses Bun for package management, running & building.
@@ -35,6 +44,3 @@ SQLite accessed through Bun. Uses foreign keys, CASCADE deletes, create time and
 
 ### Routes
 Routes automatically parsed to HTTP routes, no need for import.
-
-### Weird
-Used for weird stuff that I use mainly for bulk data processing.

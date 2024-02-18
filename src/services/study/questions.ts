@@ -1,4 +1,14 @@
-import { convertFromArray, convertToArray, DB, DBTable, TableDefaults, defaultColumns, TableDTO } from '@/services/db';
+import {
+  convertFromArray,
+  convertToArray,
+  DB,
+  DBTable,
+  TableDefaults,
+  defaultColumns,
+  TableDTO,
+  convertToBoolean,
+  convertFromBoolean,
+} from '@/services/db';
 import { wordsTable } from '@/services/words';
 import { subjectsTable } from '@/services/study/subjects';
 
@@ -8,7 +18,7 @@ export type Question = TableDefaults & {
   descriptionWordId: number;
   subjectId: number;
   alternateAnswers?: Record<string, string>;
-  choose?: number;
+  choose?: boolean;
 };
 export type QuestionDTO = TableDTO<Question>;
 export class QuestionsTable extends DBTable<Question, QuestionDTO> {
@@ -61,6 +71,8 @@ export class QuestionsTable extends DBTable<Question, QuestionDTO> {
       },
       choose: {
         type: 'INTEGER',
+        from: convertFromBoolean,
+        to: convertToBoolean,
       },
     });
   }

@@ -69,12 +69,16 @@ DB.prepare('PRAGMA wal_checkpoint').run();
 DB.prepare('VACUUM').run();
 
 export async function backupDB() {
-  log('Started DB backup');
-  const buf = new Blob([DB.serialize()]);
-  await write('backup.db', buf);
-  await yandexDisk.write(`backups/${Date.now()}.db`, buf.stream());
-  await rm('backup.db');
-  log('Backup done!');
+  try {
+    log('Started DB backup');
+    const buf = new Blob([DB.serialize()]);
+    await write('backup.db', buf);
+    await yandexDisk.write(`backups/${Date.now()}.db`, buf.stream());
+    await rm('backup.db');
+    log('Backup done!');
+  } catch {
+    console.error('Error while updating db');
+  }
 }
 export async function loadBackupDB(name?: string, restart?: boolean) {
   if (!name) {

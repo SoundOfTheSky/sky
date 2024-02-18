@@ -39,8 +39,8 @@ function onExit() {
   process.exit();
 }
 
-// setTimeout(() => void import('./weird/test.js'), 1000);
-// setTimeout(() => void import('./weird/clampIds.js'), 1000);
-// setTimeout(() => void import('./weird/wanikani.js'), 1000);
-// setTimeout(() => void import('./weird/importDeck.js'), 1000);
-// setTimeout(() => void import('./weird/staticIsUsed.js'), 1000);
+// setTimeout(() => void import('./chiruno/test.js'), 1000);
+// setTimeout(() => void import('./chiruno/clampIds.js'), 1000);
+// setTimeout(() => void import('./chiruno/wanikani.js'), 1000);
+// setTimeout(() => void import('./chiruno/importDeck.js'), 1000);
+// setTimeout(() => void import('./chiruno/staticIsUsed.js'), 1000);
