@@ -1,5 +1,4 @@
-import { HTTPHandler } from '@/services/http';
-
+import { HTTPHandler } from '@/services/http/types';
 import { sessionGuard, signJWT } from '@/services/session';
 
 export default (async function (req, res) {

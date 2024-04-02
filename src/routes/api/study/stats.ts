@@ -1,17 +1,15 @@
-import { HTTPHandler } from '@/services/http';
+import { HTTPHandler } from '@/services/http/types';
+import { sendJSON } from '@/services/http/utils';
 import { sessionGuard } from '@/services/session';
 import { PERMISSIONS } from '@/services/session/user';
-import { getStats } from '@/services/study';
+import { usersAnswersTable } from '@/services/study/users-answers';
 import { ValidationError } from '@/utils';
 
 export default (async function (req, res, route) {
   const payload = await sessionGuard({ req, res, permissions: [PERMISSIONS.STUDY], throw401: true });
   const start = Number.parseInt(route.query['start']);
-  const end = Number.parseInt(route.query['end']);
-  const timezone = Number.parseInt(route.query['timezone']);
-  if (Number.isNaN(start) || Number.isNaN(end) || Number.isNaN(timezone))
+  const end = route.query['end'] ? Number.parseInt(route.query['end']) : undefined;
+  if (Number.isNaN(start) || (end !== undefined && Number.isNaN(end)))
     throw new ValidationError('Start & end must be integers');
-  res.body = getStats(payload.user.id, start, end, timezone)
-    .map(([date, themeId, count]) => `${date},${themeId},${count}`)
-    .join('\n');
+  sendJSON(res, usersAnswersTable.getUserStats(payload.user.id, start, end));
 } satisfies HTTPHandler);

@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import { join } from 'node:path';
+import { CryptoHasher, file } from 'bun';
 import { readdirSync, statSync, rmSync, renameSync, existsSync } from 'fs';
+import { join } from 'node:path';
+
+import { DB, DBRow } from '@/services/db';
+import { questionsTable } from '@/services/study/questions';
+import { subjectsTable } from '@/services/study/subjects';
 import { wordsTable } from '@/services/words';
 import { log } from '@/utils';
-import { DB, DBRow } from '@/services/db';
-import { subjectsTable } from '@/services/study/subjects';
-import { questionsTable } from '@/services/study/questions';
-import { CryptoHasher, file } from 'bun';
 
 const STATIC_PATH = join('static', 'static');
 function fsArray(path: string): string[] {

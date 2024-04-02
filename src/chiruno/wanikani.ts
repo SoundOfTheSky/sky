@@ -1,15 +1,17 @@
+/* eslint-disable unused-imports/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable sonarjs/cognitive-complexity */
 /* eslint-disable sonarjs/no-duplicate-string */
+import { CryptoHasher, file, write } from 'bun';
 import { readdirSync, readFileSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
-import { CryptoHasher, file, write } from 'bun';
-import { log } from '@/utils';
-import { QuestionDTO, questionsTable } from '@/services/study/questions';
-import { SubjectDTO, subjectsTable } from '@/services/study/subjects';
+
 import { DB, UpdateTableDTO } from '@/services/db';
-import { wordsTable } from '@/services/words';
+import { QuestionDTO, questionsTable } from '@/services/study/questions';
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
+import { SubjectDTO, subjectsTable } from '@/services/study/subjects';
+import { wordsTable } from '@/services/words';
+import { log } from '@/utils';
 
 type WKResponse<T> = {
   object: string;

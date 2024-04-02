@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { file, write } from 'bun';
-import { rm } from 'node:fs/promises';
 import { Database } from 'bun:sqlite';
-import { ProgressLoggerTransform, camelToSnakeCase, log } from '@/utils';
+import { rm } from 'node:fs/promises';
+
 import yandexDisk from '@/services/yandex-disk';
+import { ProgressLoggerTransform, camelToSnakeCase, log } from '@/utils';
 
 // === Types ===
 export type DBDataTypes = string | number | Uint8Array | null;
@@ -27,10 +28,10 @@ type TableColumn = {
 };
 export type TableDefaults = {
   id: number;
-  created: string;
-  updated: string;
+  created: Date;
+  updated: Date;
 };
-export type TableDTO<T> = Omit<T, keyof TableDefaults>;
+export type TableDTO<T> = Omit<T, keyof TableDefaults> & Partial<TableDefaults>;
 export type UpdateTableDTO<T> = {
   [P in keyof T]?: T[P] | null | undefined;
 };

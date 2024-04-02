@@ -4,26 +4,51 @@ import {
   convertToDate,
   DB,
   DBTable,
-  TableDefaults,
-  defaultColumns,
+  convertFromDate,
+  convertFromArray,
+  convertToArray,
 } from '@/services/db';
 import { usersTable } from '@/services/session/user';
 import { subjectsTable } from '@/services/study/subjects';
 
-export type UserAnswer = TableDefaults & {
+export type UserAnswer = {
+  id: number;
+  created: number;
   correct: boolean;
   subjectId: number;
   userId: number;
+  answers: string[];
+  took: number;
 };
 export class UsersAnswersTable extends DBTable<UserAnswer> {
   constructor(table: string) {
     super(table, {
-      ...defaultColumns,
+      id: {
+        type: 'INTEGER',
+        autoincrement: true,
+        primaryKey: true,
+      },
+      created: {
+        type: 'TEXT',
+        default: 'current_timestamp',
+        from: convertFromDate,
+        to: convertToDate,
+      },
       correct: {
         type: 'INTEGER',
         required: true,
         from: convertFromBoolean,
         to: convertToBoolean,
+      },
+      answers: {
+        type: 'TEXT',
+        required: true,
+        from: convertFromArray,
+        to: convertToArray,
+      },
+      took: {
+        type: 'INTEGER',
+        required: true,
       },
       userId: {
         type: 'INTEGER',
@@ -49,24 +74,39 @@ export class UsersAnswersTable extends DBTable<UserAnswer> {
   }
   queries = {
     getUserStats: DB.prepare<
-      { created: number; theme_id: number; count: number },
-      [number, number, string, string, number]
+      {
+        created: number;
+        theme_id: number;
+        subject_id: number;
+        correct: 1 | 0;
+        answers: string;
+        took: number;
+      },
+      [number, string, string]
     >(
-      `SELECT (unixepoch(ua.created)+?)/86400 created, s.theme_id theme_id, count(ua.subject_id) count
+      `SELECT unixepoch(ua.created) created, s.theme_id, ua.subject_id, ua.correct, ua.answers, ua.took
       FROM ${this.name} ua
       JOIN ${subjectsTable.name} s ON s.id = ua.subject_id
-      WHERE ua.user_id = ? AND ua.created >= ? AND ua.created <= ?
-      GROUP BY (unixepoch(ua.created)+?)/86400, s.theme_id;`,
+      WHERE ua.user_id = ? AND ua.created > ? AND ua.created < ?`,
+    ),
+    deleteByUserTheme: DB.prepare<unknown, [number, number]>(
+      `DELETE FROM ${this.name} WHERE id IN (
+        SELECT a.id FROM ${this.name} a
+        JOIN ${subjectsTable.name} s ON s.id == a.subject_id
+        WHERE a.user_id = ? AND s.theme_id = ?)`,
     ),
   };
-  getUserStats(userId: number, start: number, end: number, timezone = 0) {
-    return this.queries.getUserStats.values(
-      timezone,
-      userId,
-      convertToDate(new Date(start))!,
-      convertToDate(new Date(end))!,
-      timezone,
-    ) as [string, number, number][];
+  getUserStats(userId: number, start: number, end?: number) {
+    return this.queries.getUserStats
+      .all(userId, convertToDate(new Date(start * 1000))!, convertToDate(end ? new Date(end * 1000) : new Date())!)
+      .map((x) => ({
+        created: x.created,
+        themeId: x.theme_id,
+        subjectId: x.subject_id,
+        correct: x.correct === 1,
+        answers: convertFromArray(x.correct) as string[],
+        took: x.took,
+      }));
   }
 }
 export const usersAnswersTable = new UsersAnswersTable('users_answers');

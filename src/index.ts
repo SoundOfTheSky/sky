@@ -1,9 +1,11 @@
 import { file, serve } from 'bun';
+
+import { DB } from '@/services/db';
+import handleHTTP from '@/services/http';
 import { WS, wsCloseHandler, wsMessageHandler, wsOpenHandler } from '@/services/ws';
 import { log } from '@/utils';
-import { DB } from '@/services/db';
-import '@/ws';
-import { handleHTTP } from '@/services/http';
+
+import '@/preload';
 
 serve({
   fetch: (req) => {
@@ -14,7 +16,7 @@ serve({
   },
   port: 80,
 });
-export const server = serve<WS['data']>({
+const server = serve<WS['data']>({
   port: process.env['PORT'] ?? 443,
   key: process.env['KEY'] ? file(process.env['KEY']) : undefined,
   cert: process.env['CERT'] ? file(process.env['CERT']) : undefined,
@@ -39,7 +41,9 @@ function onExit() {
   process.exit();
 }
 
-// setTimeout(() => void import('./chiruno/test.js'), 1000);
+export default server;
+
+// setTimeout(() => void import('./chiruno/test.js'), 5000);
 // setTimeout(() => void import('./chiruno/clampIds.js'), 1000);
 // setTimeout(() => void import('./chiruno/wanikani.js'), 1000);
 // setTimeout(() => void import('./chiruno/importDeck.js'), 1000);

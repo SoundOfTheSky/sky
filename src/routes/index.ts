@@ -1,4 +1,5 @@
-import { HTTPError, HTTPHandler } from '@/services/http';
+import { HTTPHandler } from '@/services/http/types';
+import { HTTPError } from '@/services/http/utils';
 import { getStaticFileWithIndexFallback } from '@/services/static';
 
 export default (async function (req, res, router) {

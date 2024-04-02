@@ -1,5 +1,6 @@
-import type { AuthenticationResponseJSON } from '@simplewebauthn/types';
-import { HTTPHandler, sendJSON } from '@/services/http';
+import { HTTPHandler } from '@/services/http/types';
+import { sendJSON } from '@/services/http/utils';
+import { sessionGuard, setAuth, signJWT } from '@/services/session';
 import {
   getChallenge,
   getLoginOptions,
@@ -7,9 +8,10 @@ import {
   setChallenge,
   verifyLogin,
 } from '@/services/session/auth-process';
-import { sessionGuard, setAuth, signJWT } from '@/services/session';
 import { authenticatorsTable, usersTable } from '@/services/session/user';
 import { ValidationError } from '@/utils';
+
+import type { AuthenticationResponseJSON } from '@simplewebauthn/types';
 
 export default (async function (req, res, route) {
   const username = route.query['username'];

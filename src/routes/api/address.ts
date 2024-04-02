@@ -1,5 +1,5 @@
-import { server } from '@/index';
-import { HTTPHandler } from '@/services/http';
+import server from '@/index';
+import { HTTPHandler } from '@/services/http/types';
 import { ValidationError } from '@/utils';
 
 export default (async function (req, res) {

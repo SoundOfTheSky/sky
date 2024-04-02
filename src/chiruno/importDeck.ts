@@ -1,14 +1,16 @@
-import { join } from 'path';
-import { readFileSync, rmSync } from 'fs';
+/* eslint-disable unused-imports/no-unused-vars */
+import { spawnSync } from 'bun';
 import { Database } from 'bun:sqlite';
-import { subjectsTable } from '@/services/study/subjects';
-import { themesTable } from '@/services/study/themes';
+import { readFileSync, rmSync } from 'fs';
+import { join } from 'path';
+
+import { furiganaToRuby } from '@/chiruno/utils';
 import { lastInsertRowIdQuery } from '@/services/db';
 import { questionsTable } from '@/services/study/questions';
-import { wordsTable } from '@/services/words';
-import { spawnSync } from 'bun';
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
-import { furiganaToRuby } from '@/chiruno/utils';
+import { subjectsTable } from '@/services/study/subjects';
+import { themesTable } from '@/services/study/themes';
+import { wordsTable } from '@/services/words';
 
 console.log('Unzipping...');
 spawnSync({

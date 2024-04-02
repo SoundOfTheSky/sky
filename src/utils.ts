@@ -3,7 +3,7 @@
  */
 
 // === Types ===
-export type MakeOptional<Type, Key extends keyof Type> = Omit<Type, Key> & Partial<Pick<Type, Key>>;
+export type MakeOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
 // === Errors ===
 /** Says that an error is by-design */
@@ -58,7 +58,8 @@ export function cleanupHTML(
     .join('\n')
     .replaceAll(/\s{2,}/g, '\n');
 
-  return ([...text.matchAll(/<.+?>/g)].map((el) => [el[0].slice(1, -1).split(' ')[0], el.index]) as [string, number][])
+  return [...text.matchAll(/<.+?>/g)]
+    .map((el) => [el[0].slice(1, -1).split(' ')[0], el.index] as const)
     .filter(([t]) => whitelist.every((w) => t !== w && t !== `/${w}`))
     .reverse()
     .reduce((acc, [, index]) => acc.slice(0, index) + acc.slice(acc.indexOf('>', index) + 1), text);

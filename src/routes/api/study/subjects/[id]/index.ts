@@ -1,7 +1,8 @@
-import { HTTPHandler, sendJSON } from '@/services/http';
+import { HTTPHandler } from '@/services/http/types';
+import { sendJSON } from '@/services/http/utils';
 import { sessionGuard } from '@/services/session';
 import { PERMISSIONS } from '@/services/session/user';
-import { answer, getSubject, searchSubjects } from '@/services/study';
+import { usersSubjectsTable } from '@/services/study/users-subjects';
 import { ValidationError } from '@/utils';
 
 export default (async function (req, res, route) {
@@ -13,7 +14,6 @@ export default (async function (req, res, route) {
       throw new ValidationError('Theme IDs must all be integers separated with comma');
     let page = Number.parseInt(route.query['page']);
     if (Number.isNaN(page)) page = 1;
-    sendJSON(res, searchSubjects(themeIds, decodeURI(route.query['id']), page));
-  } else if (req.method === 'GET') sendJSON(res, getSubject(subjectId, payload.user.id));
-  else if (req.method === 'POST') answer(subjectId, payload.user.id, route.query['id'] === 'correct');
+    sendJSON(res, usersSubjectsTable.search(themeIds, decodeURI(route.query['id']), page));
+  } else if (req.method === 'GET') sendJSON(res, usersSubjectsTable.getSubject(subjectId, payload.user.id));
 } satisfies HTTPHandler);

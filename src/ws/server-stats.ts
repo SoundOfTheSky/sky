@@ -1,7 +1,7 @@
-import { server } from 'index';
+import server from '@/index';
 import { visitEmitter, visitsStats } from '@/services/session';
 import { subscribeWSEvent } from '@/services/ws';
-import { log } from 'utils';
+import { log } from '@/utils';
 
 let online = 0;
 subscribeWSEvent('subscribeServerStats', (ws) => {

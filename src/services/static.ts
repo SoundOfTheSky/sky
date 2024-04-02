@@ -1,8 +1,9 @@
 import { file, spawnSync } from 'bun';
-import { join, sep } from 'node:path';
 import { rm, mkdir } from 'node:fs/promises';
-import { ProgressLoggerTransform, log } from '@/utils';
+import { join, sep } from 'node:path';
+
 import yandexDisk from '@/services/yandex-disk';
+import { ProgressLoggerTransform, log } from '@/utils';
 
 const STATIC_PATH = 'static';
 const INDEX = 'index.html';

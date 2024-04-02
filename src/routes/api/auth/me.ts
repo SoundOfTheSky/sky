@@ -1,4 +1,5 @@
-import { HTTPError, HTTPHandler, sendJSON } from '@/services/http';
+import { HTTPHandler } from '@/services/http/types';
+import { HTTPError, sendJSON } from '@/services/http/utils';
 import { sessionGuard } from '@/services/session';
 import { usersTable } from '@/services/session/user';
 import { ValidationError } from '@/utils';

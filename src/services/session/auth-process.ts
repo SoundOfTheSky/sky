@@ -5,6 +5,7 @@ import {
   verifyRegistrationResponse,
 } from '@simplewebauthn/server';
 import { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/types';
+
 import { Authenticator } from '@/services/session/user';
 
 const RP_NAME = 'SoundOfTheSky';

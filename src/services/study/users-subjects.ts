@@ -1,14 +1,14 @@
 /* eslint-disable sonarjs/no-duplicate-string */
-import { DB, DBRow, DBTable, TableDefaults, defaultColumns } from '@/services/db';
-import { ValidationError } from '@/utils';
+import { DB, DBRow, DBTable, TableDefaults, convertFromDate, convertToDate, defaultColumns } from '@/services/db';
 import { usersTable } from '@/services/session/user';
 import { questionsTable } from '@/services/study/questions';
 import { srsTable } from '@/services/study/srs';
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
 import { subjectsTable } from '@/services/study/subjects';
 import { usersAnswersTable } from '@/services/study/users-answers';
-import { usersThemesTable } from '@/services/study/users-themes';
 import { usersQuestionsTable } from '@/services/study/users-questions';
+import { usersThemesTable } from '@/services/study/users-themes';
+import { ValidationError } from '@/utils';
 
 export type UserSubject = TableDefaults & {
   stage: number;
@@ -55,8 +55,8 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
       [number]
     >(
       `SELECT next_review, theme_id, stage, GROUP_CONCAT(subject_id) ids
-      FROM ${this.name} JOIN ${subjectsTable.name}
-      ON ${subjectsTable.name}.id = ${this.name}.subject_id 
+      FROM ${this.name} 
+      JOIN ${subjectsTable.name} ON ${subjectsTable.name}.id = ${this.name}.subject_id 
       WHERE user_id = ? AND (next_review IS NOT NULL OR stage = 0)
       GROUP BY theme_id, next_review ORDER BY next_review ASC`,
     ),
@@ -64,31 +64,59 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
       `SELECT * FROM ${this.name} WHERE ${this.name}.subject_id = ? AND user_id = ?`,
     ),
     getSubject: DB.prepare<DBRow, [number, number | null]>(
-      `SELECT s.id, s.title, us.next_review, us.stage, s.srs_id FROM ${subjectsTable.name} s 
+      `SELECT 
+        s.id,
+        s.title,
+        s.theme_id,
+        us.next_review,
+        us.stage,
+        s.srs_id, 
+        IIF(us.updated>s.updated, us.updated, s.updated) updated,
+        s.created
+      FROM ${subjectsTable.name} s
       LEFT JOIN ${this.name} us ON s.id = us.subject_id 
       WHERE s.id = ? AND (user_id = ? OR user_id IS NULL)`,
     ),
     getUnlockables: DB.prepare<{ id: number }, [number, number]>(
       `SELECT id FROM (
         SELECT SUM(locks) locks, id FROM (
-          SELECT sd.subject_id IS NOT NULL AND (ssDep.stage IS NULL OR SUM(ssDep.stage>=srs.ok)*100/COUNT(*)<sd.percent) locks, subject.id
-          FROM ${subjectsTable.name} subject
-          LEFT JOIN ${this.name} ss ON ss.subject_id = subject.id AND ss.user_id = ?
-          LEFT JOIN ${subjectDependenciesTable.name} sd ON sd.subject_id = subject.id
+          SELECT sd.subject_id IS NOT NULL AND (ssDep.stage IS NULL OR SUM(ssDep.stage>=srs.ok)*100/COUNT(*)<sd.percent) locks, s.id
+          FROM ${subjectsTable.name} s
+          JOIN ${usersThemesTable.name} ut ON ut.theme_id = s.theme_id
+          LEFT JOIN ${this.name} ss ON ss.subject_id = s.id AND ss.user_id = ?
+          LEFT JOIN ${subjectDependenciesTable.name} sd ON sd.subject_id = s.id
           LEFT JOIN ${this.name} ssDep ON ssDep.subject_id = sd.dependency_id AND ssDep.user_id = ?
           LEFT JOIN ${subjectsTable.name} dep ON dep.id = sd.dependency_id
           LEFT JOIN ${srsTable.name} srs ON srs.id = dep.srs_id
-          WHERE ss.subject_id IS NULL GROUP BY subject.id, sd.percent)
+          WHERE ss.subject_id IS NULL GROUP BY s.id, sd.percent)
         GROUP BY id)
       WHERE locks = 0`,
     ),
+    getUpdated: DB.prepare<{ id: number; updated: number }, [number, string, string]>(
+      `SELECT s.id, unixepoch(IIF(us.updated>s.updated, us.updated, s.updated)) updated
+      FROM ${subjectsTable.name} s
+      JOIN ${this.name} us ON s.id = us.subject_id
+      WHERE user_id = ? AND (us.updated > ? OR s.updated > ?)`,
+    ),
+    deleteByUserTheme: DB.prepare<unknown, [number, number]>(
+      `DELETE FROM ${this.name} WHERE id IN(
+        SELECT us.id FROM ${this.name} us
+      JOIN ${subjectsTable.name} s ON s.id == us.subject_id
+      WHERE us.user_id = ? AND s.theme_id = ?)`,
+    ),
+    updateStage: DB.prepare<unknown, [number | null, number, number, number]>(
+      `UPDATE ${this.name} SET next_review=?, stage=? WHERE subject_id=? AND user_id=?`,
+    ),
   };
   getUserReviewsAndLessons(userId: number) {
-    const data: Record<number, { reviews: Record<number, number[]>; lessons: number[] }> = {};
+    const data = new Map<number, { reviews: Record<number, number[]>; lessons: number[] }>();
     const themes = this.queries.getUserReviewsAndLessons.all(userId);
     for (const el of themes) {
-      let theme = data[el.theme_id];
-      if (!theme) theme = data[el.theme_id] = { reviews: {}, lessons: [] };
+      let theme = data.get(el.theme_id);
+      if (!theme) {
+        theme = { reviews: {}, lessons: [] };
+        data.set(el.theme_id, theme);
+      }
       const ids = el.ids.split(',').map((x) => +x);
       if (el.stage === 0) theme.lessons = ids;
       else theme.reviews[el.next_review] = ids;
@@ -103,40 +131,45 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
     if (!subject) return;
     return this.parseToDTO(subject);
   }
-  answer(subjectId: number, userId: number, correct: boolean) {
-    const subject = subjectsTable.get(subjectId);
+  answer(userId: number, subjectId: number, created: Date, answers: string[], correct: boolean, took: number) {
+    const subject = this.getSubject(subjectId, userId);
     if (!subject) throw new ValidationError('Subject not found');
-    const subjectStats = this.getBySubjectAndUser(subjectId, userId);
-    if (!subjectStats) throw new ValidationError('Subject not unlocked');
-    const now = ~~(Date.now() / 3_600_000);
-    if (subjectStats.nextReview && subjectStats.nextReview > now)
+    const time = ~~(created.getTime() / 3_600_000);
+    if (subject.nextReview && subject.nextReview > time)
       throw new ValidationError('Subject is not available for review');
+    if (subject.questionIds.length !== answers.length) throw new ValidationError('Every questions must be answered');
     const SRS = srsTable.get(subject.srsId)!;
-    if (correct) {
-      if (subjectStats.stage === SRS.timings.length + 1) throw new ValidationError('Already at max stage');
-      const stage = subjectStats.stage + 1;
-      usersAnswersTable.create({
-        correct: true,
-        subjectId: subjectId,
-        userId: userId,
-      });
-      this.update(subjectStats.id, {
-        stage,
-        nextReview: now + SRS.timings[stage - 1],
-      });
-      if (stage === SRS.ok) usersThemesTable.update(subject.themeId, { needUnlock: true });
-    } else {
-      const stage = Math.max(1, subjectStats.stage - 2);
-      usersAnswersTable.create({
-        correct: false,
-        subjectId: subjectId,
-        userId: userId,
-      });
-      this.update(subjectStats.id, {
-        stage,
-        nextReview: now + SRS.timings[stage - 1],
-      });
-    }
+    // Combines answers from all questions cause overwise it will be too complicated
+    // Correctness check can be disabled if it will be to detremental to performance
+    const correctAnswers = new Set(
+      subject.questionIds
+        .flatMap((id) => {
+          const q = usersQuestionsTable.getQuestion(id, userId)!;
+          if (!q.answers) return [];
+          if (q.choose) return [q.answers[0], ...(q.synonyms ?? [])];
+          return [...q.answers, ...(q.synonyms ?? [])];
+        })
+        .map((x) => x.toLowerCase()),
+    );
+    const isCorrect = answers.every((answer) => correctAnswers.has(answer.toLowerCase()));
+    if (correct !== isCorrect) throw new ValidationError('Answer is actually ' + (isCorrect ? 'correct' : 'wrong'));
+    // End of unnecessary block :)
+    const stage = Math.min(1, Math.max(SRS.timings.length + 1, (subject.stage ?? 0) + (correct ? 1 : -2)));
+    usersAnswersTable.create({
+      created,
+      correct,
+      subjectId,
+      userId,
+      answers,
+      took,
+    });
+    this.queries.updateStage.run(
+      stage >= SRS.timings.length ? null : time + SRS.timings[stage - 1],
+      stage,
+      subjectId,
+      userId,
+    );
+    if (correct && stage === SRS.ok) usersThemesTable.update(subject.themeId, { needUnlock: true });
   }
   unlock(userId: number) {
     for (const { id } of this.queries.getUnlockables.all(userId, userId))
@@ -191,17 +224,15 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
       nextReview: x['next_review'] as number | null,
       stage: x['stage'] as number | null,
       srsId: x['srs_id'] as number,
+      themeId: x['theme_id'] as number,
       questionIds: questionsTable.getBySubject(x['id'] as number).map((q) => q.id),
+      updated: convertFromDate(x['updated']),
+      created: convertFromDate(x['created']),
     };
   }
-  parseToSimpleDTO(x: DBRow) {
-    const answers = new Set<string>();
-    for (const q of questionsTable.getBySubject(x['id'] as number)) answers.add(q.answers[0]);
-    return {
-      id: x['id'] as number,
-      title: x['title'] as string,
-      answers: [...answers],
-    };
+  getUpdated(userId: number, updated: number) {
+    const time = convertToDate(new Date(updated * 1000))!;
+    return this.queries.getUpdated.values(userId, time, time) as [number, number][];
   }
 }
 

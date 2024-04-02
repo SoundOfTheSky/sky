@@ -1,23 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
-import { SignJWT, jwtVerify } from 'jose';
-import { storeTable } from '@/services/store';
-import { HTTPError, HTTPResponse, getCookies, setCookie } from '@/services/http';
-import { PERMISSIONS } from '@/services/session/user';
 
-// === Visits ===
-export const visitsStats = {
-  visits: (storeTable.getValue('visits') ?? 0) as number,
-  uniqueVisits: (storeTable.getValue('uniqueVisits') ?? 0) as number,
-};
-function registerVisit(unique: boolean) {
-  const key = unique ? 'uniqueVisits' : 'visits';
-  visitsStats[key]++;
-  storeTable.setValue(key, visitsStats[key]);
-  if (unique) registerVisit(false);
-  else visitEmitter.emit('update');
-}
-export const visitEmitter = new EventEmitter();
+import { SignJWT, jwtVerify } from 'jose';
+
+import { HTTPResponse } from '@/services/http/types';
+import { HTTPError, getCookies, setCookie } from '@/services/http/utils';
+import { PERMISSIONS } from '@/services/session/user';
+import { storeTable } from '@/services/store';
 
 // === TOKENS ===
 type JWTBody = {
@@ -40,9 +29,8 @@ type SignedToken = {
 };
 
 const JWT_VERSION = 1;
-const JWT_EXPIRES_IN_SEC = 60 * 60 * 50;
-const JWT_EXPIRES_IN_MS = JWT_EXPIRES_IN_SEC * 1000;
-const JWT_REFRESH_TIME = JWT_EXPIRES_IN_SEC - 60 * 60 * 10;
+const JWT_EXPIRES = 60 * 60 * 24 * 30;
+const JWT_REFRESH = 60 * 60 * 4;
 const JWT_SECRET = new TextEncoder().encode(process.env['JWT_SECRET']);
 const JWT_ALG = 'HS256';
 const disposedTokens = new Map<string, number>(); // Token/time of disposal
@@ -56,11 +44,11 @@ export async function signJWT(
     access_token: await new SignJWT({ version: JWT_VERSION, ...body })
       .setProtectedHeader({ alg: JWT_ALG })
       .setIssuedAt(now)
-      .setExpirationTime(now + (options.expiresIn ?? JWT_EXPIRES_IN_SEC))
+      .setExpirationTime(now + (options.expiresIn ?? JWT_EXPIRES))
       .setSubject(options.subject ?? randomUUID())
       .sign(JWT_SECRET),
     token_type: 'Bearer',
-    expires_in: options.expiresIn ?? JWT_EXPIRES_IN_SEC,
+    expires_in: options.expiresIn ?? JWT_EXPIRES,
   };
 }
 export async function verifyJWT<T = JWTPayload>(token: string) {
@@ -100,6 +88,8 @@ export async function sessionGuard(options: {
 }): Promise<JWTPayload | undefined> {
   const token = getCookies(options.req)['session'] ?? options.req.headers.get('authorization');
   const payload = token ? await verifyJWT(token.slice(7)) : undefined;
+
+  // If no token
   if (!payload) {
     if (options.res) {
       registerVisit(true);
@@ -112,11 +102,12 @@ export async function sessionGuard(options: {
   }
 
   // Refresh token
+  const alreadyDisposed = disposedTokens.has(payload.sub);
   if (
     options.res &&
     !options.req.headers.has('authorization') &&
-    (payload.exp - JWT_REFRESH_TIME) * 1000 < Date.now() &&
-    !disposedTokens.has(payload.sub)
+    (payload.exp - JWT_REFRESH) * 1000 < Date.now() &&
+    !alreadyDisposed
   ) {
     registerVisit(false);
     disposedTokens.set(payload.sub, Date.now());
@@ -125,10 +116,11 @@ export async function sessionGuard(options: {
 
   // Check auth and permissions
   if (
-    options.permissions &&
-    (!payload.user ||
-      (!payload.user.permissions.includes(PERMISSIONS.ADMIN) &&
-        options.permissions.some((perm) => payload.user!.permissions.every((uPerm) => !perm.startsWith(uPerm)))))
+    alreadyDisposed ||
+    (options.permissions &&
+      (!payload.user ||
+        (!payload.user.permissions.includes(PERMISSIONS.ADMIN) &&
+          !options.permissions.every((perm) => payload.user!.permissions.some((uPerm) => !perm.startsWith(uPerm))))))
   ) {
     if (options.throw401) throw new HTTPError('Not allowed', 401);
     return;
@@ -141,5 +133,19 @@ export async function sessionGuard(options: {
  */
 setInterval(() => {
   const now = Date.now();
-  for (const [sub, time] of disposedTokens.entries()) if (now - time > JWT_EXPIRES_IN_SEC) disposedTokens.delete(sub);
-}, JWT_EXPIRES_IN_MS);
+  for (const [sub, time] of disposedTokens.entries()) if (now - time > JWT_EXPIRES) disposedTokens.delete(sub);
+}, JWT_EXPIRES * 1000);
+
+// === Visits ===
+export const visitsStats = {
+  visits: (storeTable.getValue('visits') ?? 0) as number,
+  uniqueVisits: (storeTable.getValue('uniqueVisits') ?? 0) as number,
+};
+function registerVisit(unique: boolean) {
+  const key = unique ? 'uniqueVisits' : 'visits';
+  visitsStats[key]++;
+  storeTable.setValue(key, visitsStats[key]);
+  if (unique) registerVisit(false);
+  else visitEmitter.emit('update');
+}
+export const visitEmitter = new EventEmitter();

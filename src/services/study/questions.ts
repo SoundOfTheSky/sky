@@ -9,8 +9,8 @@ import {
   convertToBoolean,
   convertFromBoolean,
 } from '@/services/db';
-import { wordsTable } from '@/services/words';
 import { subjectsTable } from '@/services/study/subjects';
+import { wordsTable } from '@/services/words';
 
 export type Question = TableDefaults & {
   answers: string[];
@@ -78,13 +78,9 @@ export class QuestionsTable extends DBTable<Question, QuestionDTO> {
   }
   queries = {
     getBySubject: DB.prepare(`SELECT * FROM ${this.name} WHERE subject_id = ?`),
-    getByQuetion: DB.prepare(`SELECT * FROM ${this.name} WHERE question = ?`),
   };
   getBySubject(subjectId: number) {
     return this.queries.getBySubject.all(subjectId).map((el) => this.convertFrom(el)!);
-  }
-  getByQuestion(question: string) {
-    return this.convertFrom(this.queries.getByQuetion.get(question));
   }
 }
 export const questionsTable = new QuestionsTable('questions');

@@ -1,6 +1,9 @@
 import { RegistrationResponseJSON } from '@simplewebauthn/types';
+
 import { lastInsertRowIdQuery } from '@/services/db';
-import { HTTPHandler, sendJSON } from '@/services/http';
+import { HTTPHandler } from '@/services/http/types';
+import { sendJSON } from '@/services/http/utils';
+import { sessionGuard, setAuth, signJWT, verifyJWT } from '@/services/session';
 import {
   getChallenge,
   getRegistrationOptions,
@@ -8,7 +11,6 @@ import {
   setChallenge,
   verifyRegistration,
 } from '@/services/session/auth-process';
-import { sessionGuard, setAuth, signJWT, verifyJWT } from '@/services/session';
 import { PERMISSIONS, authenticatorsTable, usersTable } from '@/services/session/user';
 import { ValidationError } from '@/utils';
 
