@@ -35,8 +35,6 @@ module.exports = {
       { vars: 'all', varsIgnorePattern: '^_', args: 'after-used', argsIgnorePattern: '^_' },
     ],
 
-    'jsx-a11y/media-has-caption': 0,
-
     'import/prefer-default-export': 1,
     'import/order': [
       1,

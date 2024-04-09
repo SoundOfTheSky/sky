@@ -10,12 +10,11 @@ import {
   convertFromBoolean,
 } from '@/services/db';
 import { subjectsTable } from '@/services/study/subjects';
-import { wordsTable } from '@/services/words';
 
 export type Question = TableDefaults & {
   answers: string[];
   question: string;
-  descriptionWordId: number;
+  description: string;
   subjectId: number;
   alternateAnswers?: Record<string, string>;
   choose?: boolean;
@@ -36,15 +35,10 @@ export class QuestionsTable extends DBTable<Question, QuestionDTO> {
         required: true,
         unique: true,
       },
-      descriptionWordId: {
-        type: 'INTEGER',
+      description: {
+        type: 'TEXT',
         required: true,
-        ref: {
-          column: 'id',
-          table: wordsTable.name,
-          onDelete: 'CASCADE',
-          onUpdate: 'CASCADE',
-        },
+        unique: true,
       },
       subjectId: {
         type: 'INTEGER',

@@ -2,7 +2,6 @@
 import { DB, DBRow, DBTable, TableDefaults, convertFromDate, convertToDate, defaultColumns } from '@/services/db';
 import { usersTable } from '@/services/session/user';
 import { questionsTable } from '@/services/study/questions';
-import { srsTable } from '@/services/study/srs';
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
 import { subjectsTable } from '@/services/study/subjects';
 import { usersAnswersTable } from '@/services/study/users-answers';
@@ -77,17 +76,17 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
       LEFT JOIN ${this.name} us ON s.id = us.subject_id 
       WHERE s.id = ? AND (user_id = ? OR user_id IS NULL)`,
     ),
+    // TODO: SRS OK IS BASICALLY IGNORED
     getUnlockables: DB.prepare<{ id: number }, [number, number]>(
       `SELECT id FROM (
         SELECT SUM(locks) locks, id FROM (
-          SELECT sd.subject_id IS NOT NULL AND (ssDep.stage IS NULL OR SUM(ssDep.stage>=srs.ok)*100/COUNT(*)<sd.percent) locks, s.id
+          SELECT sd.subject_id IS NOT NULL AND (ssDep.stage IS NULL OR SUM(ssDep.stage>=5)*100/COUNT(*)<sd.percent) locks, s.id
           FROM ${subjectsTable.name} s
           JOIN ${usersThemesTable.name} ut ON ut.theme_id = s.theme_id
           LEFT JOIN ${this.name} ss ON ss.subject_id = s.id AND ss.user_id = ?
           LEFT JOIN ${subjectDependenciesTable.name} sd ON sd.subject_id = s.id
           LEFT JOIN ${this.name} ssDep ON ssDep.subject_id = sd.dependency_id AND ssDep.user_id = ?
           LEFT JOIN ${subjectsTable.name} dep ON dep.id = sd.dependency_id
-          LEFT JOIN ${srsTable.name} srs ON srs.id = dep.srs_id
           WHERE ss.subject_id IS NULL GROUP BY s.id, sd.percent)
         GROUP BY id)
       WHERE locks = 0`,
@@ -99,7 +98,7 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
       WHERE user_id = ? AND (us.updated > ? OR s.updated > ?)`,
     ),
     deleteByUserTheme: DB.prepare<unknown, [number, number]>(
-      `DELETE FROM ${this.name} WHERE id IN(
+      `DELETE FROM ${this.name} WHERE id IN (
         SELECT us.id FROM ${this.name} us
       JOIN ${subjectsTable.name} s ON s.id == us.subject_id
       WHERE us.user_id = ? AND s.theme_id = ?)`,
@@ -138,7 +137,7 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
     if (subject.nextReview && subject.nextReview > time)
       throw new ValidationError('Subject is not available for review');
     if (subject.questionIds.length !== answers.length) throw new ValidationError('Every questions must be answered');
-    const SRS = srsTable.get(subject.srsId)!;
+    const SRS = srsMap[subject.srsId - 1];
     // Combines answers from all questions cause overwise it will be too complicated
     // Correctness check can be disabled if it will be to detremental to performance
     const correctAnswers = new Set(
@@ -237,3 +236,18 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
 }
 
 export const usersSubjectsTable = new UserSubjectsTable();
+
+export const srsMap = [
+  {
+    id: 1,
+    ok: 5,
+    timings: [4, 8, 23, 47, 167, 335, 719, 2879],
+    title: 'Default',
+  },
+  {
+    id: 2,
+    ok: 5,
+    timings: [2, 4, 8, 23, 167, 335, 719, 2879],
+    title: 'Fast unlock',
+  },
+];

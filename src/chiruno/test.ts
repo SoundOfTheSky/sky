@@ -16,3 +16,14 @@
 //     subjectId: a.subject_id as number,
 //   });
 // console.log('done');
+
+// const questions = questionsTable.getAll();
+// for (const question of questions) {
+//   const word = wordsTable.get(question.descriptionWordId)!;
+//   console.log(question.id);
+//   questionsTable.update(question.id, {
+//     ...question,
+//     description: word.word,
+//   });
+// }
+// console.log('done');

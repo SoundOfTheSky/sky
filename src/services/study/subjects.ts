@@ -1,5 +1,4 @@
 import { DBTable, TableDefaults, TableDTO, defaultColumns } from '@/services/db';
-import { srsTable } from '@/services/study/srs';
 import { themesTable } from '@/services/study/themes';
 
 export type Subject = TableDefaults & {
@@ -15,12 +14,6 @@ export class SubjectsTable extends DBTable<Subject, SubjectDTO> {
       srsId: {
         type: 'INTEGER',
         required: true,
-        ref: {
-          table: srsTable.name,
-          column: 'id',
-          onDelete: 'CASCADE',
-          onUpdate: 'CASCADE',
-        },
       },
       themeId: {
         type: 'INTEGER',

@@ -6,30 +6,30 @@
   "scripts": {
     "start": "bun src/index.ts",
     "lint": "eslint \"src/**/*{.js,.ts}\" --fix && tsc",
-    "proxy": "bun pm cache rm && bunx reverse-proxy-node /^/api/=:8080 /^/static/=:8080 /^/ws/=:8080 /^//=:5173 --key privkey.pem --ca chain.pem --cert cert.pem",
+    "proxy": "npx reverse-proxy-node --key privkey.pem --ca chain.pem --cert cert.pem '/^/(api|static|ws)/=:64000' '/^//=:64002'",
     "deploy": "bun src/chiruno/deploy.ts"
   },
   "dependencies": {
     "@simplewebauthn/server": "^9.0.3",
     "@sinclair/typebox": "^0.32.20",
     "file-type": "^19.0.0",
-    "jose": "^5.2.3",
+    "jose": "^5.2.4",
     "mime-types": "^2.1.35"
   },
   "devDependencies": {
     "@simplewebauthn/types": "^9.0.1",
-    "@types/bun": "^1.0.11",
+    "@types/bun": "^1.0.12",
     "@types/mime-types": "^2.1.4",
-    "@typescript-eslint/eslint-plugin": "^7.5.0",
-    "@typescript-eslint/parser": "^7.5.0",
+    "@typescript-eslint/eslint-plugin": "^7.6.0",
+    "@typescript-eslint/parser": "^7.6.0",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-import-resolver-typescript": "^3.6.1",
     "eslint-plugin-import": "npm:eslint-plugin-i@^2.29.1",
     "eslint-plugin-prettier": "^5.1.3",
-    "eslint-plugin-sonarjs": "^0.25.0",
+    "eslint-plugin-sonarjs": "^0.25.1",
     "eslint-plugin-unused-imports": "^3.1.0",
     "prettier": "^3.2.5",
-    "typescript": "^5.4.3"
+    "typescript": "^5.4.4"
   }
 }

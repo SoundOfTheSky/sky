@@ -4,7 +4,6 @@ import {
   DB,
   DBTable,
   TableDefaults,
-  UpdateTableDTO,
   defaultColumns,
   DBRow,
   convertToDate,
@@ -59,7 +58,7 @@ export class UsersQuestionsTable extends DBTable<UserQuestion> {
         q.id,
         q.answers,
         q.question,
-        q.description_word_id,
+        q.description,
         q.subject_id,
         q.alternate_answers,
         q.choose,
@@ -84,13 +83,24 @@ export class UsersQuestionsTable extends DBTable<UserQuestion> {
         JOIN ${subjectsTable.name} s ON s.id == q.subject_id
         WHERE uq.user_id = ? AND s.theme_id = ?)`,
     ),
+    update: DB.prepare<unknown, [string | null, string | null, number, number]>(
+      `UPDATE ${this.name} SET synonyms = ?, note = ? WHERE question_id = ? AND user_id = ?`,
+    ),
+    exists: DB.prepare<{ a: number }, [number, number]>(
+      `SELECT count(*) a FROM ${this.name} WHERE question_id = ? AND user_id = ?`,
+    ),
+    delete: DB.prepare<unknown, [number, number]>(`DELETE FROM ${this.name} WHERE question_id = ? AND user_id = ?`),
   };
-  updateByQuestion(userId: number, questionId: number, data: UpdateTableDTO<UserQuestion>) {
-    const cols = this.convertTo(data);
-    if (cols.length === 0) return;
-    return DB.prepare(
-      `UPDATE ${this.name} SET ${cols.map((x) => x[0] + ' = ?').join(', ')} WHERE question_id = ? AND user_id = ?`,
-    ).run(...cols.map((x) => x[1]), questionId, userId);
+  updateByQuestion(userId: number, questionId: number, note?: string, synonyms?: string[]) {
+    if (this.queries.exists.get(questionId, userId)?.a === 0)
+      this.create({
+        questionId,
+        userId,
+        note,
+        synonyms,
+      });
+    else if (!synonyms?.length && !note) this.queries.delete.run(questionId, userId);
+    else this.queries.update.run(synonyms?.length ? synonyms.join('|') : null, note ? note : null, questionId, userId);
   }
   parseToDTO(x?: DBRow | null) {
     if (!x) return undefined;
@@ -101,9 +111,7 @@ export class UsersQuestionsTable extends DBTable<UserQuestion> {
     };
   }
   getQuestion(questionId: number, userId?: number) {
-    const question = this.parseToDTO(this.queries.getQuestion.get(questionId, userId ?? null));
-    if (!question) return;
-    return question;
+    return this.parseToDTO(this.queries.getQuestion.get(questionId, userId ?? null));
   }
   getUpdated(userId: number, updated: number) {
     const time = convertToDate(new Date(updated * 1000))!;

@@ -1,21 +1,15 @@
-/* eslint-disable unused-imports/no-unused-vars */
 import { spawnSync } from 'bun';
 import { Database } from 'bun:sqlite';
-import { readFileSync, rmSync } from 'fs';
+import { readFileSync, cpSync, rmSync } from 'fs';
 import { join } from 'path';
 
 import { furiganaToRuby } from '@/chiruno/utils';
-import { lastInsertRowIdQuery } from '@/services/db';
+import { DB, DBRow } from '@/services/db';
 import { questionsTable } from '@/services/study/questions';
-import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
-import { subjectsTable } from '@/services/study/subjects';
-import { themesTable } from '@/services/study/themes';
-import { wordsTable } from '@/services/words';
 
 console.log('Unzipping...');
 spawnSync({
-  // === File name ===
-  cmd: ['unzip', 'minna_no_nihongo.apkg', '-d', 'deck'],
+  cmd: ['unzip', 'Core 2k_6k Optimized Japanese Vocabulary.apkg', '-d', 'deck'],
   cwd: join('assets'),
 });
 const media = new Map(
@@ -25,78 +19,80 @@ const media = new Map(
 );
 const db = new Database(join('assets', 'deck', 'collection.anki2'), {
   create: false,
-  readwrite: true,
+  readonly: true,
 });
 console.log('Loading data...');
 const data = db
   .prepare<{ flds: string }, []>('SELECT flds FROM notes')
   .all()
   .map((x) => x.flds.split('\u001f'));
-themesTable.create({
-  // === Theme name ===
-  title: 'みんなの日本語',
-});
-const themeId = lastInsertRowIdQuery.get()!.id;
+// themesTable.create({
+//   title: 'JP Core 6k',
+// });
+//const themeId = lastInsertRowIdQuery.get()!.id;
+//const themeId = 4;
+//const subjectIds: number[] = [];
 /**
- * 0 - Question - 会社員company employee会社[かいしゃ] 員[いん]1
- * 1 - Answers - company employee, jjj(aaa)
- * 2 - Reading - 会社[かいしゃ] 員[いん] (или просто хирагана)
- * 3 - Lesson - 5
+ * 0 - kanji
+ * 1 - furigana
+ * 2 - kana
+ * 3 - english
+ * 4 - audio
+ * 5 - type?
+ * 6 - caution?
+ * 7 - example
+ * 8 - example furigana
+ * 9 - example kana
+ * 10 - example english
+ * 11 - example closed
+ * 12 - example audio
+ * 13 - image
+ * 14 - notes
+ * 15 - core-index
+ * 16 - voc-index main
+ * 17 - Sent-index
+ * 18 - tags?
  */
-const indexToId = new Map<number, number>();
+const q1 = DB.prepare<DBRow, [string]>(`SELECT * FROM ${questionsTable.name} WHERE question = ?`);
 for (let i = 0; i < data.length; i++) {
   const card = data[i];
-  console.log(card[3], card[0], card[1]);
+  console.log(i, card[0]);
   // If same question allow the first one
-  if (data.some((card2, i2) => i2 < i && card2[0] === card[0])) {
+  if (data.some((card2, i2) => i2 < i && card2[7] === card[7])) {
     console.log('Skip!');
     continue;
   }
-  subjectsTable.create({
-    srsId: 1,
-    themeId,
-    title: card[0],
-  });
-  const subjectId = lastInsertRowIdQuery.get()!.id;
-  indexToId.set(i, subjectId);
-  const descriptionWordId = wordsTable.create({
-    word: `<tab title="Description">Reading: ${furiganaToRuby(card[2])}
-Meaning: ${card[1]}</tab>`,
-  });
-  questionsTable.create({
+  // subjectsTable.create({
+  //   srsId: 2,
+  //   themeId,
+  //   title: card[0],
+  // });
+  //const subjectId = lastInsertRowIdQuery.get()!.id;
+  const existingQuestion = questionsTable.convertFrom(q1.get(card[7]));
+  if (!existingQuestion) throw new Error('Question not found!');
+  const subjectId = existingQuestion.subjectId;
+  //subjectIds.push(subjectId);
+  const media4 = card[4] && media.has(card[4].slice(7, -1)) && card[4].slice(7, -1);
+  const media12 = card[12] && media.has(card[12].slice(7, -1)) && card[12].slice(7, -1);
+  questionsTable.update(existingQuestion.id, {
     subjectId,
-    descriptionWordId,
+    description: `<tab title="Description">Word: ${card[0]}
+Type: ${card[5]}
+Reading: ${card[2]}
+Meaning: ${card[3]}${media4 ? `\n<audio s="/static/${media4}">Pronunciation</audio>` : ''}
+
+<example>${furiganaToRuby(card[8]).replaceAll(' ', '')}
+${card[10]}</example>${media12 ? `\n<audio s="/static/${media12}">Sentence</audio>` : ''}</tab>`,
     answers: ['Correct', 'Wrong'],
-    question: '日本語: ' + card[0],
+    question: card[7],
     choose: true,
   });
-  // === Find links in card and copy media ===
-  // if (card[5])
-  //   cpSync(join('assets', 'deck', media.get(card[5].slice(7, -1))!), join('static', 'static', card[5].slice(7, -1)));
-  // if (card[13])
-  //   cpSync(join('assets', 'deck', media.get(card[13].slice(7, -1))!), join('static', 'static', card[13].slice(7, -1)));
-}
-console.log('Generating dependencies');
-for (let i = 0; i < data.length; i++) {
-  const lesson = parseInt(data[i][3]);
-  if (lesson === 1) continue;
-  const id = indexToId.get(i);
-  if (!id) continue;
-  for (let i2 = 0; i2 < data.length; i2++) {
-    if (i2 === i) continue;
-    const lesson2 = parseInt(data[i2][3]);
-    if (lesson2 !== lesson - 1) continue;
-    const id2 = indexToId.get(i2);
-    if (!id2) continue;
-    subjectDependenciesTable.create({
-      percent: 90,
-      subjectId: id,
-      dependencyId: id2,
-    });
-  }
+  if (media4) cpSync(join('assets', 'deck', media.get(media4)!), join('static', 'static', media4));
+  if (media12) cpSync(join('assets', 'deck', media.get(media12)!), join('static', 'static', media12));
 }
 // Deps in batches
-// const BATCH = 10;
+// const BATCH = 25;
+// console.log('Generating dependencies');
 // for (let i = BATCH; i < subjectIds.length; i++)
 //   for (let i2 = i - BATCH - (i % BATCH); i2 < i - (i % BATCH); i2++)
 //     subjectDependenciesTable.create({
@@ -104,7 +100,6 @@ for (let i = 0; i < data.length; i++) {
 //       subjectId: subjectIds[i],
 //       dependencyId: subjectIds[i2],
 //     });
-
 rmSync(join('assets', 'deck'), {
   recursive: true,
 });
