@@ -12,8 +12,8 @@ const T = TypeCompiler.Compile(
   Type.Object({
     note: Type.Optional(
       Type.String({
-        minLength: 1,
-        maxLength: 512,
+        minLength: 0,
+        maxLength: 4096,
       }),
     ),
     synonyms: Type.Optional(
@@ -23,7 +23,7 @@ const T = TypeCompiler.Compile(
           maxLength: 64,
         }),
         {
-          minItems: 1,
+          minItems: 0,
           maxItems: 9,
         },
       ),

@@ -221,3 +221,22 @@ export async function retry<T>(fn: () => Promise<T>, retries: number, interval: 
 export const wait = (time: number) => new Promise((r) => setTimeout(r, time));
 /** Empty function that does nothing */
 export const noop = () => {};
+/** Find error in complex object */
+export function findErrorText(
+  error: unknown,
+  priorityErrorKeys = ['message', 'messages', 'msg', 'msgs', 'text', 'txt', 'error', 'errors', 'err', 'e'],
+): string | undefined {
+  if (!error) return;
+  if (typeof error === 'string') return error;
+  if (typeof error === 'object') {
+    const keys = Object.keys(error)
+      .map((k) => [k, priorityErrorKeys.indexOf(k)] as const)
+      .map(([k, v]) => [k, v === -1 ? Infinity : v] as const)
+      .toSorted(([_, v], [_k, v2]) => v - v2)
+      .map(([k]) => k);
+    for (const key of keys) {
+      const found = findErrorText(error[key as keyof typeof error]);
+      if (found) return found;
+    }
+  }
+}

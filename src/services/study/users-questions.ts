@@ -92,14 +92,14 @@ export class UsersQuestionsTable extends DBTable<UserQuestion> {
     delete: DB.prepare<unknown, [number, number]>(`DELETE FROM ${this.name} WHERE question_id = ? AND user_id = ?`),
   };
   updateByQuestion(userId: number, questionId: number, note?: string, synonyms?: string[]) {
-    if (this.queries.exists.get(questionId, userId)?.a === 0)
+    if (!synonyms?.length && !note) this.queries.delete.run(questionId, userId);
+    else if (this.queries.exists.get(questionId, userId)?.a === 0)
       this.create({
         questionId,
         userId,
         note,
         synonyms,
       });
-    else if (!synonyms?.length && !note) this.queries.delete.run(questionId, userId);
     else this.queries.update.run(synonyms?.length ? synonyms.join('|') : null, note ? note : null, questionId, userId);
   }
   parseToDTO(x?: DBRow | null) {
