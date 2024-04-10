@@ -1,4 +1,3 @@
-import server from '@/index';
 import { subscribeWSEvent } from '@/services/ws';
 
 let clicks = 0;

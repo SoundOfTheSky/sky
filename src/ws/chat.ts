@@ -1,4 +1,3 @@
-import server from '@/index';
 import { usersTable } from '@/services/session/user';
 import { WS, subscribeWSEvent } from '@/services/ws';
 

@@ -12,11 +12,11 @@ const httpServer = serve({
     let url = process.env['HTTP_ORIGIN']!;
     const i = req.url.indexOf('/', 8);
     if (i !== -1) url += req.url.slice(i);
-    return Response.redirect(url);
+    return Response.redirect(url, 301);
   },
   port: process.env['HTTP_PORT'] ?? 80,
 });
-const server = serve<WS['data']>({
+global.server = serve<WS['data']>({
   port: process.env['PORT'] ?? 443,
   key: process.env['KEY'] ? file(process.env['KEY']) : undefined,
   cert: process.env['CERT'] ? file(process.env['CERT']) : undefined,
@@ -40,8 +40,6 @@ function onExit() {
   DB.close();
   process.exit();
 }
-
-export default server;
 
 // setTimeout(() => void import('./chiruno/test.js'), 1000);
 // setTimeout(() => void import('./chiruno/clampIds.js'), 1000);

@@ -1,4 +1,3 @@
-import server from '@/index';
 import { HTTPHandler } from '@/services/http/types';
 import { ValidationError } from '@/utils';
 
