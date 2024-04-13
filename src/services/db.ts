@@ -106,7 +106,6 @@ export async function loadBackupDB(name?: string, restart?: boolean) {
   }
 }
 setInterval(() => void backupDB(), 86_400_000);
-setTimeout(() => void backupDB(), 5000);
 log('[Loading] DB ok!');
 
 // === DB Data Type convertations ===
