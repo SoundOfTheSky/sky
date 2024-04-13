@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { file, write } from 'bun';
+import { file } from 'bun';
 import { Database } from 'bun:sqlite';
 import { rm } from 'node:fs/promises';
 
@@ -66,16 +66,14 @@ export const DB = await (async () => {
 })();
 DB.prepare('PRAGMA journal_mode=WAL').run();
 DB.prepare('PRAGMA foreign_keys = ON').run();
-DB.prepare('PRAGMA wal_checkpoint').run();
-DB.prepare('VACUUM').run();
 
 export async function backupDB() {
   try {
     log('Started DB backup');
-    const buf = new Blob([DB.serialize()]);
-    await write('backup.db', buf);
-    await yandexDisk.write(`backups/${Date.now()}.db`, buf.stream());
-    await rm('backup.db');
+    DB.prepare('PRAGMA wal_checkpoint').run();
+    DB.prepare('VACUUM').run();
+    log('Start upload');
+    await yandexDisk.write(`backups/${Date.now()}.db`, file(DBFileName).stream());
     log('Backup done!');
   } catch {
     console.error('Error while updating db');
@@ -108,6 +106,7 @@ export async function loadBackupDB(name?: string, restart?: boolean) {
   }
 }
 setInterval(() => void backupDB(), 86_400_000);
+setTimeout(() => void backupDB(), 5000);
 log('[Loading] DB ok!');
 
 // === DB Data Type convertations ===

@@ -153,7 +153,7 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
     const isCorrect = answers.every((answer) => correctAnswers.has(answer.toLowerCase()));
     if (correct !== isCorrect) throw new ValidationError('Answer is actually ' + (isCorrect ? 'correct' : 'wrong'));
     // End of unnecessary block :)
-    const stage = Math.min(1, Math.max(SRS.timings.length + 1, (subject.stage ?? 0) + (correct ? 1 : -2)));
+    const stage = Math.max(1, Math.min(SRS.timings.length + 1, (subject.stage ?? 0) + (correct ? 1 : -2)));
     usersAnswersTable.create({
       created,
       correct,
@@ -249,5 +249,11 @@ export const srsMap = [
     ok: 5,
     timings: [2, 4, 8, 23, 167, 335, 719, 2879],
     title: 'Fast unlock',
+  },
+  {
+    id: 3,
+    ok: 5,
+    timings: [1, 2, 4, 8, 23, 167, 335, 719, 2879], // 10 levels
+    title: 'Hyper unlock',
   },
 ];
