@@ -48,15 +48,20 @@ export function cleanupHTML(
     'rt',
     'rp',
     'a',
+    'b',
+    'i',
   ],
 ) {
-  // Split <br> as \n and trim lines
   text = text
-    .replaceAll(/<br>/gs, '\n')
+    .replaceAll('<br>', '\n') // br to \n
     .split('\n')
-    .map((el) => el.trim())
+    .map((el) => el.trim()) // trim every line
     .join('\n')
-    .replaceAll(/\s{2,}/g, '\n');
+    .replaceAll(/\n{3,}/gs, '\n\n') // no more than two new lines
+    .replaceAll(/(\s+)<\/tab>/gs, '</tab>') // spaces before tab
+    .replaceAll(/<tab title="(.+)">(\s+)/gs, (_, x) => `<tab title="${x}">`) // spaces after tab
+    .replaceAll(/<(\S+)(>|\s[^>]*>)\s*<\/\1>/g, '') // empty tags
+    .trim(); // final trim
 
   return [...text.matchAll(/<.+?>/g)]
     .map((el) => [el[0].slice(1, -1).split(' ')[0], el.index] as const)

@@ -241,19 +241,19 @@ export const srsMap = [
   {
     id: 1,
     ok: 5,
-    timings: [4, 8, 23, 47, 167, 335, 719, 2879],
+    timings: [4, 8, 23, 47, 167, 335, 719, 2879], // 9 levels
     title: 'Default',
   },
   {
     id: 2,
     ok: 5,
-    timings: [2, 4, 8, 23, 167, 335, 719, 2879],
+    timings: [2, 4, 8, 23, 47, 167, 335, 719, 2879], // 10 levels
     title: 'Fast unlock',
   },
   {
     id: 3,
     ok: 5,
-    timings: [1, 2, 4, 8, 23, 167, 335, 719, 2879], // 10 levels
+    timings: [1, 2, 4, 8, 23, 47, 167, 335, 719, 2879], // 11 levels
     title: 'Hyper unlock',
   },
 ];
