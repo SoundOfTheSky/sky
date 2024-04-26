@@ -1,5 +1,5 @@
 /* eslint-disable sonarjs/no-duplicate-string */
-import { DB, DBRow, DBTable, TableDefaults, convertFromDate, convertToDate, defaultColumns } from '@/services/db';
+import { DB, DBRow, DBTable, TableDefaults, convertFromDate, convertToDate, DEFAULT_COLUMNS } from '@/services/db';
 import { usersTable } from '@/services/session/user';
 import { questionsTable } from '@/services/study/questions';
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
@@ -18,7 +18,7 @@ export type UserSubject = TableDefaults & {
 export class UserSubjectsTable extends DBTable<UserSubject> {
   constructor() {
     super('users_subjects', {
-      ...defaultColumns,
+      ...DEFAULT_COLUMNS,
       stage: {
         type: 'INTEGER',
         required: true,

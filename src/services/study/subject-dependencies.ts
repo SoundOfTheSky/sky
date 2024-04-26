@@ -1,4 +1,4 @@
-import { DBTable, TableDefaults, defaultColumns } from '@/services/db';
+import { DBTable, TableDefaults, DEFAULT_COLUMNS } from '@/services/db';
 import { subjectsTable } from '@/services/study/subjects';
 
 export type SubjectDependencies = TableDefaults & {
@@ -9,7 +9,7 @@ export type SubjectDependencies = TableDefaults & {
 export class SubjectDependenciesTable extends DBTable<SubjectDependencies> {
   constructor(table: string) {
     super(table, {
-      ...defaultColumns,
+      ...DEFAULT_COLUMNS,
       percent: {
         type: 'INTEGER',
         required: true,

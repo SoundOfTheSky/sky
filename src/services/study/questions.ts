@@ -4,7 +4,7 @@ import {
   DB,
   DBTable,
   TableDefaults,
-  defaultColumns,
+  DEFAULT_COLUMNS,
   TableDTO,
   convertToBoolean,
   convertFromBoolean,
@@ -23,7 +23,7 @@ export type QuestionDTO = TableDTO<Question>;
 export class QuestionsTable extends DBTable<Question, QuestionDTO> {
   constructor(table: string) {
     super(table, {
-      ...defaultColumns,
+      ...DEFAULT_COLUMNS,
       answers: {
         type: 'TEXT',
         required: true,

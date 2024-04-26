@@ -4,7 +4,7 @@ import {
   DB,
   DBTable,
   TableDefaults,
-  defaultColumns,
+  DEFAULT_COLUMNS,
   DBRow,
   convertToDate,
 } from '@/services/db';
@@ -21,7 +21,7 @@ export type UserQuestion = TableDefaults & {
 export class UsersQuestionsTable extends DBTable<UserQuestion> {
   constructor(table: string) {
     super(table, {
-      ...defaultColumns,
+      ...DEFAULT_COLUMNS,
       note: {
         type: 'TEXT',
       },

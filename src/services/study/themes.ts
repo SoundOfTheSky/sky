@@ -1,4 +1,4 @@
-import { DBTable, TableDefaults, defaultColumns } from '@/services/db';
+import { DBTable, TableDefaults, DEFAULT_COLUMNS } from '@/services/db';
 
 export type Theme = TableDefaults & {
   title: string;
@@ -6,7 +6,7 @@ export type Theme = TableDefaults & {
 export class ThemesTable extends DBTable<Theme> {
   constructor(table: string) {
     super(table, {
-      ...defaultColumns,
+      ...DEFAULT_COLUMNS,
       title: {
         type: 'TEXT',
         required: true,

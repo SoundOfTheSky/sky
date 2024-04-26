@@ -1,4 +1,4 @@
-import { DB, DBTable, TableDefaults, UpdateTableDTO, defaultColumns } from '@/services/db';
+import { DB, DBTable, TableDefaults, UpdateTableDTO, DEFAULT_COLUMNS } from '@/services/db';
 
 export type StoreData = {
   name: string;
@@ -10,7 +10,7 @@ export type StoreData = {
 export class StoreTable extends DBTable<TableDefaults & StoreData> {
   constructor(table: string) {
     super(table, {
-      ...defaultColumns,
+      ...DEFAULT_COLUMNS,
       name: {
         type: 'TEXT',
         required: true,

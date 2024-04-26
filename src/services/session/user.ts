@@ -8,11 +8,12 @@ import {
   convertFromBoolean,
   convertToArray,
   convertToBoolean,
-  defaultColumns,
+  DEFAULT_COLUMNS,
 } from '@/services/db';
 
 export enum PERMISSIONS {
   HOUSE = 'house',
+  PLAN = 'plan',
   DISK = 'disk',
   STUDY = 'study',
   ADMIN = 'admin',
@@ -26,7 +27,7 @@ export type User = TableDefaults & {
 export class UsersTable extends DBTable<User> {
   constructor(table: string) {
     super(table, {
-      ...defaultColumns,
+      ...DEFAULT_COLUMNS,
       username: {
         type: 'TEXT',
         required: true,
@@ -70,7 +71,7 @@ export type Authenticator = TableDefaults & {
 class AuthenticatorsTable extends DBTable<Authenticator> {
   constructor(table: string) {
     super(table, {
-      ...defaultColumns,
+      ...DEFAULT_COLUMNS,
       credentialID: {
         type: 'TEXT',
         required: true,

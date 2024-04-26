@@ -129,7 +129,7 @@ export const convertFromDate = (data: DBDataTypes) => (typeof data === 'string' 
 
 // === DB Table class ===
 export const lastInsertRowIdQuery = DB.prepare<{ id: number }, []>('SELECT last_insert_rowid() AS id');
-export const defaultColumns = {
+export const DEFAULT_COLUMNS = {
   id: {
     type: 'INTEGER',
     autoincrement: true,
@@ -234,11 +234,6 @@ export class DBTable<T, DTO = TableDTO<T>> {
   }
   delete(id: number | string) {
     return DB.query(`DELETE FROM ${this.name} WHERE id = ?`).run(id);
-  }
-  exists(id: number | string): boolean {
-    return (
-      DB.query<{ a: 0 | 1 }, [number | string]>(`SELECT COUNT(*) a FROM ${this.name} WHERE id = ?`).get(id)!.a !== 0
-    );
   }
 
   convertTo(data: UpdateTableDTO<DTO>) {

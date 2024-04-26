@@ -43,6 +43,7 @@ export function cleanupHTML(
     'warning', // Warning text [any]
     'ik', // ImmersionKit query [text]
     'tab', // Tabs always at root [any] title="text"
+    'jp-pitch-accent', // Pitch accent
     'img',
     'ruby',
     'rt',

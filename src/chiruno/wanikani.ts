@@ -6,11 +6,10 @@ import { CryptoHasher, file, write } from 'bun';
 import { readdirSync, readFileSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { DB, UpdateTableDTO, lastInsertRowIdQuery } from '@/services/db';
+import { DB, UpdateTableDTO } from '@/services/db';
 import { QuestionDTO, questionsTable } from '@/services/study/questions';
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
 import { SubjectDTO, subjectsTable } from '@/services/study/subjects';
-import { themesTable } from '@/services/study/themes';
 import { cleanupHTML, log } from '@/utils';
 
 type WKResponse<T> = {
@@ -214,10 +213,13 @@ async function parseWK() {
 
   // === Schemas ===
   const schemas: Record<string, (s: WKObject<WKAnySubject>) => string | Promise<string>> = {
-    radical: () => `<tab title="Description">{{meaningDesc}}</tab><tab title="Related">{{sameMeaning}}
+    radical: () => `<tab title="Description">{{level}}
+    
+{{meaningDesc}}</tab><tab title="Related">{{sameMeaning}}
   
 {{usedIn}}</tab>`,
-    kanjiMeaning: () => `<tab title="Description">{{deps}}
+    kanjiMeaning: () => `<tab title="Description">{{level}}
+{{deps}}
 {{strokeOrder}}
 
 {{meaningDesc}}</tab><tab title="Related">{{similar}}
@@ -228,7 +230,8 @@ async function parseWK() {
     kanjiReading: () => `<tab title="Description">{{deps}}
 
 {{readingDesc}}</tab><tab title="Related">{{sameReading}}</tab>`,
-    vocabularyMeaning: () => `<tab title="Description">{{deps}}
+    vocabularyMeaning: () => `<tab title="Description">{{level}}
+{{deps}}
 {{typeOfWord}}
 
 {{meaningDesc}}</tab><tab title="Related">{{similar}}
@@ -237,13 +240,16 @@ async function parseWK() {
     vocabularyReading: () => `<tab title="Description">{{deps}}
 {{pitchAccent}}
 {{audio}}
+{{conjugation}}
 
 {{readingDesc}}</tab><tab title="Examples">{{examples}}
 Anime sentences:
 <ik>{{title}}</ik></tab><tab title="Related">{{sameReading}}</tab>`,
-    kana: () => `<tab title="Description">{{typeOfWord}}
+    kana: () => `<tab title="Description">{{level}}
+{{typeOfWord}}
 {{pitchAccent}}
 {{audio}}
+{{conjugation}}
 
 {{meaningDesc}}</tab><tab title="Examples">{{examples}}
 Anime sentences:
@@ -347,7 +353,9 @@ Anime sentences:
             .join(', ')}`
         : '';
     },
+    conjugation: (s) => `<jp-conjugation>${s.data.characters ?? ''}</jp-conjugation>`,
     title: (s) => s.data.characters ?? '',
+    level: (s) => `Level: ` + s.data.level,
   };
   async function parseSchema(schemaName: string, subject: WKObject<WKAnySubject>): Promise<string> {
     const schema = schemas[schemaName];
@@ -357,10 +365,11 @@ Anime sentences:
     return text;
   }
   // CHANGE THIS IF YOU ARE NOT CREATING
-  themesTable.create({
-    title: 'JP WaniKani',
-  });
-  const themeId = lastInsertRowIdQuery.get()!.id;
+  // themesTable.create({
+  //   title: 'JP WaniKani',
+  // });
+  // const themeId = lastInsertRowIdQuery.get()!.id;
+  const themeId = 4;
   const dbsubjects = subjectsTable.getAll('theme_id = ' + themeId).map((s) => s.id);
   // END OF CHANGE BLOCK
   log('Deleting dependencies');
@@ -369,7 +378,7 @@ Anime sentences:
     WHERE subject_id IN (
       SELECT id FROM ${subjectsTable.name} WHERE theme_id = ?
     )`,
-  ).run(1);
+  ).run(themeId);
   const dbMap = new Map<number, number>();
   const idReplaces = new Map<number, number>([]);
   for (const subject of subjects) {
@@ -478,7 +487,7 @@ Anime sentences:
     }
 
     // === DB ===
-    let id =
+    const id =
       idReplaces.get(subject.id) ??
       DB.prepare<{ id: number }, [string]>(`SELECT id FROM ${subjectsTable.name} WHERE title = ?`).get(s.title)?.id;
     // === find subject by description ===
@@ -492,14 +501,14 @@ Anime sentences:
     //   if (q) id = q.subjectId;
     // }
     if (id) {
-      log(`[UPDATING SUBJECT] ${subject.id} ${s.title}`);
+      // log(`[UPDATING SUBJECT] ${subject.id} ${s.title}`);
       subjectsTable.update(id, s);
       dbsubjects.splice(dbsubjects.indexOf(id), 1);
     } else {
-      //throw new Error('It must exist');
-      //log(`[CREATING SUBJECT] ${subject.id} ${s.title}`);
-      subjectsTable.create(s);
-      id = lastInsertRowIdQuery.get()!.id;
+      throw new Error('It must exist');
+      // log(`[CREATING SUBJECT] ${subject.id} ${s.title}`);
+      // subjectsTable.create(s);
+      // id = lastInsertRowIdQuery.get()!.id;
     }
     dbMap.set(subject.id, id);
     const dbqs = questionsTable.getBySubject(id);
@@ -509,11 +518,12 @@ Anime sentences:
       const dbq = dbqs[i];
       q.subjectId = id;
       if (dbq) {
-        log(`[UPDATING QUESTION] ${i ? 'Meaning' : 'Reading'}`);
+        // log(`[UPDATING QUESTION] ${i ? 'Meaning' : 'Reading'}`);
         questionsTable.update(dbq.id, q);
       } else {
+        throw new Error('It must exist');
         //log(`[CREATING QUESTION] ${i ? 'Meaning' : 'Reading'}`);
-        questionsTable.create(q as QuestionDTO);
+        // questionsTable.create(q as QuestionDTO);
       }
     }
   }
@@ -560,10 +570,10 @@ Anime sentences:
 }
 
 // eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/require-await
-// setTimeout(async () => {
-//   log('Generating...');
-//   // await write(join('assets', 'WK.json'), JSON.stringify(await downloadWK(), undefined, 2));
-//   await parseWK();
-//   log('Done...');
-//   process.exit();
-// }, 3000);
+setTimeout(async () => {
+  log('Generating...');
+  // await write(join('assets', 'WK.json'), JSON.stringify(await downloadWK(), undefined, 2));
+  await parseWK();
+  log('Done...');
+  process.exit();
+}, 3000);

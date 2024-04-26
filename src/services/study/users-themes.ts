@@ -1,4 +1,4 @@
-import { DB, DBTable, TableDefaults, convertFromBoolean, convertToBoolean, defaultColumns } from '@/services/db';
+import { DB, DBTable, TableDefaults, convertFromBoolean, convertToBoolean, DEFAULT_COLUMNS } from '@/services/db';
 import { usersTable } from '@/services/session/user';
 import { themesTable } from '@/services/study/themes';
 import { usersAnswersTable } from '@/services/study/users-answers';
@@ -17,7 +17,7 @@ export type UserTheme = TableDefaults & {
 export class UsersThemesTable extends DBTable<UserTheme> {
   constructor(table: string) {
     super(table, {
-      ...defaultColumns,
+      ...DEFAULT_COLUMNS,
       userId: {
         type: 'INTEGER',
         required: true,

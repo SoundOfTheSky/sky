@@ -1,4 +1,4 @@
-import { DBTable, TableDefaults, TableDTO, defaultColumns } from '@/services/db';
+import { DBTable, TableDefaults, TableDTO, DEFAULT_COLUMNS } from '@/services/db';
 import { themesTable } from '@/services/study/themes';
 
 export type Subject = TableDefaults & {
@@ -10,7 +10,7 @@ export type SubjectDTO = TableDTO<Subject>;
 export class SubjectsTable extends DBTable<Subject, SubjectDTO> {
   constructor(table: string) {
     super(table, {
-      ...defaultColumns,
+      ...DEFAULT_COLUMNS,
       srsId: {
         type: 'INTEGER',
         required: true,

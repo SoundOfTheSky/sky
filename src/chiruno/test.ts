@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // console.log(DB.prepare(`DELETE FROM ${usersSubjectsTable.name} WHERE stage = 0`).run());
 // usersSubjectsTable.unlock(1);
 // console.log(usersSubjectsTable.getUserReviewsAndLessons(1)['1'].lessons.length);
@@ -38,21 +39,65 @@ import { cleanupHTML } from '@/utils';
 Meaning: to eat, drink (respectful equivalent of たべます and のみます)</tab>
  */
 const subjects = subjectsTable.getAll('theme_id = 2');
+const ui = {
+  います: 'う',
+  きます: 'く',
+  ぎます: 'ぐ',
+  します: 'す',
+  じます: 'ず',
+  ちます: 'つ',
+  ぢます: 'づ',
+  にます: 'ぬ',
+  ひます: 'ふ',
+  びます: 'ぶ',
+  ぴます: 'ぷ',
+  みます: 'む',
+  ります: 'る',
+};
 for (const subject of subjects) {
   const question = questionsTable.getBySubject(subject.id)[0];
-  const word = question.question.replace('日本語: ', '');
-  console.log(subject.id, word);
-  const wkSubject = DB.prepare<{ id: number }, [string]>('SELECT * FROM subjects WHERE title=?').get(
-    'Vocabulary ' + word,
-  );
-  if (wkSubject) {
-    question.description = question.description.replaceAll(
-      '</tab>',
-      `\nWaniKani link: <subject uid="${wkSubject.id}">${word}</subject></tab>`,
-    );
-    questionsTable.update(question.id, {
-      description: cleanupHTML(question.description.replaceAll('<b>', '<accent>').replaceAll('</b>', '</accent>')),
-    });
+  let word = question.question
+    .replace('日本語: ', '')
+    .replaceAll('。', '')
+    .replaceAll(/［.+?］/g, '')
+    .replaceAll(/（.+?）/g, '')
+    .replaceAll('～', '')
+    .replaceAll('　', '')
+    .split(' ')[0];
+  if (word.slice(-3) in ui) word = word.slice(0, -3) + ui[word.slice(-3) as keyof typeof ui];
+  else if (word.slice(-2) === 'ます') word = word.slice(0, -2) + 'る';
+  const wkSubject =
+    DB.prepare<{ id: number }, [string]>('SELECT id FROM subjects WHERE title=?').get('Vocabulary ' + word) ||
+    DB.prepare<{ id: number }, [string]>('SELECT id FROM subjects WHERE title=?').get('Kana vocabulary  ' + word);
+  const kanjiWK = [
+    ...new Set(
+      question.question
+        .replace('日本語: ', '')
+        .replaceAll(/[^一-龯]/g, '')
+        .split(''),
+    ),
+  ]
+    .map((x) =>
+      DB.prepare<{ id: number; title: string }, [string]>('SELECT id, title FROM subjects WHERE title=?').get(
+        'Kanji ' + x,
+      ),
+    )
+    .filter(Boolean);
+  console.log(subject.id, question.question, word, wkSubject?.id, kanjiWK.length);
+  if (wkSubject)
+    question.description = question.description
+      .replaceAll(/\nWaniKani link: .+?<\/tab>/g, '</tab>')
+      .replaceAll('</tab>', `\nWaniKani vacabulary: <subject uid="${wkSubject.id}">${word}</subject></tab>`);
+  if (kanjiWK.length) {
+    question.description = question.description
+      .replaceAll(/\nWaniKani link: .+?<\/tab>/g, '</tab>')
+      .replaceAll(
+        '</tab>',
+        `\nWaniKani kanji: ${kanjiWK.map((x) => `<subject uid="${x!.id}">${x!.title.replace('Kanji ', '')}</subject>`).join('+')}</tab>`,
+      );
   }
+  questionsTable.update(question.id, {
+    description: cleanupHTML(question.description.replaceAll('<b>', '<accent>').replaceAll('</b>', '</accent>')),
+  });
 }
 console.log('done');
