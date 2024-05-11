@@ -208,23 +208,24 @@ export class DBTable<T, DTO = TableDTO<T>> {
     ).run();
   }
 
-  get(id: number | string, condition?: string) {
-    let q = `SELECT * FROM ${this.name} WHERE id = ?`;
-    if (condition) q += ' AND ' + condition;
+  public get(id: number | string) {
+    const q = `SELECT * FROM ${this.name} WHERE id = ?`;
     return this.convertFrom(DB.query(q).get(id));
   }
-  getAll(condition?: string) {
-    let q = `SELECT * FROM ${this.name}`;
-    if (condition) q += ' WHERE ' + condition;
+
+  public getAll() {
+    const q = `SELECT * FROM ${this.name}`;
     return DB.query(q).all().map(this.convertFrom.bind(this)) as T[];
   }
-  create(data: DTO) {
+
+  public create(data: DTO) {
     const cols = this.convertTo(data);
     return DB.query(
       `INSERT INTO ${this.name} (${cols.map((x) => x[0]).join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
     ).run(...cols.map((x) => x[1]));
   }
-  update(id: number | string, data: UpdateTableDTO<DTO>) {
+
+  public update(id: number | string, data: UpdateTableDTO<DTO>) {
     const cols = this.convertTo(data);
     if (cols.length === 0) return;
     return DB.query(`UPDATE ${this.name} SET ${cols.map((x) => x[0] + ' = ?').join(', ')} WHERE id = ?`).run(
@@ -232,11 +233,12 @@ export class DBTable<T, DTO = TableDTO<T>> {
       id,
     );
   }
-  delete(id: number | string) {
+
+  public delete(id: number | string) {
     return DB.query(`DELETE FROM ${this.name} WHERE id = ?`).run(id);
   }
 
-  convertTo(data: UpdateTableDTO<DTO>) {
+  public convertTo(data: UpdateTableDTO<DTO>) {
     return Object.entries(data)
       .map(([k, v]) => {
         const tableColumnName = this.columnNamesMap.get(k);
@@ -249,7 +251,8 @@ export class DBTable<T, DTO = TableDTO<T>> {
       })
       .filter(Boolean) as [string, DBDataTypes][];
   }
-  convertFrom(data?: unknown) {
+
+  public convertFrom(data?: unknown) {
     if (!data) return;
     return Object.fromEntries(
       Object.entries(data)

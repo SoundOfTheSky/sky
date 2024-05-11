@@ -9,6 +9,7 @@ import {
   convertToArray,
   convertToBoolean,
   DEFAULT_COLUMNS,
+  DBRow,
 } from '@/services/db';
 
 export enum PERMISSIONS {
@@ -60,7 +61,7 @@ export class UsersTable extends DBTable<User> {
 }
 export const usersTable = new UsersTable('users');
 export type Authenticator = TableDefaults & {
-  credentialID: Buffer;
+  credentialID: string;
   credentialPublicKey: Buffer;
   counter: number;
   credentialDeviceType: CredentialDeviceType;
@@ -77,8 +78,6 @@ class AuthenticatorsTable extends DBTable<Authenticator> {
         required: true,
         primaryKey: true,
         rename: 'id',
-        to: (from: Buffer | undefined | null) => (from ? from.toString('base64url') : from),
-        from: (from) => (typeof from === 'string' ? Buffer.from(from, 'base64url') : from),
       },
       credentialPublicKey: {
         type: 'BLOB',
@@ -115,10 +114,15 @@ class AuthenticatorsTable extends DBTable<Authenticator> {
       },
     });
   }
+  private queries = {
+    updateCounter: DB.prepare<undefined, [number, number]>(`UPDATE ${this.name} SET counter = ? WHERE user_id = ?`),
+    getAllByUser: DB.prepare<DBRow, [number]>(`SELECT * FROM ${this.name} WHERE user_id = ?`),
+  };
+  updateCounter(userId: number, counter: number) {
+    this.queries.updateCounter.run(counter, userId);
+  }
   getAllByUser(userId: number): Authenticator[] {
-    return DB.prepare(`SELECT * FROM ${this.name} WHERE user_id = ?`)
-      .all(userId)
-      .map(this.convertFrom.bind(this)) as Authenticator[];
+    return this.queries.getAllByUser.all(userId).map((x) => this.convertFrom(x)) as Authenticator[];
   }
 }
 export const authenticatorsTable = new AuthenticatorsTable('authenticators');

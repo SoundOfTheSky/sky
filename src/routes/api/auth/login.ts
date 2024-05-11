@@ -32,6 +32,7 @@ export default (async function (req, res, route) {
     const verification = await verifyLogin(authenticator, expectedChallenge, data);
     removeChallenge(payload.sub);
     if (!verification.verified) throw new ValidationError('Not verified');
+    authenticatorsTable.updateCounter(user.id, verification.authenticationInfo.newCounter);
     setAuth(
       res,
       await signJWT(

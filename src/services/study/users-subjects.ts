@@ -138,22 +138,8 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
       throw new ValidationError('Subject is not available for review');
     if (subject.questionIds.length !== answers.length) throw new ValidationError('Every questions must be answered');
     const SRS = srsMap[subject.srsId - 1];
-    // Combines answers from all questions cause overwise it will be too complicated
-    // Correctness check can be disabled if it will be to detremental to performance
-    const correctAnswers = new Set(
-      subject.questionIds
-        .flatMap((id) => {
-          const q = usersQuestionsTable.getQuestion(id, userId)!;
-          if (!q.answers) return [];
-          if (q.choose) return [q.answers[0], ...(q.synonyms ?? [])];
-          return [...q.answers, ...(q.synonyms ?? [])];
-        })
-        .map((x) => x.toLowerCase()),
-    );
-    const isCorrect = answers.every((answer) => correctAnswers.has(answer.toLowerCase()));
-    if (correct !== isCorrect) throw new ValidationError('Answer is actually ' + (isCorrect ? 'correct' : 'wrong'));
-    // End of unnecessary block :)
     const stage = Math.max(1, Math.min(SRS.timings.length + 1, (subject.stage ?? 0) + (correct ? 1 : -2)));
+    answers = answers.filter((x) => !['wrong', 'correct'].includes(x.toLowerCase()));
     usersAnswersTable.create({
       created,
       correct,
@@ -168,7 +154,7 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
       subjectId,
       userId,
     );
-    if (correct && stage === SRS.ok) usersThemesTable.update(subject.themeId, { needUnlock: true });
+    if (correct && stage === SRS.ok) usersThemesTable.setNeedUnlock(userId, subject.themeId);
   }
   unlock(userId: number) {
     for (const { id } of this.queries.getUnlockables.all(userId, userId))

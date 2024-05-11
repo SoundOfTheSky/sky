@@ -44,6 +44,7 @@ export function cleanupHTML(
     'ik', // ImmersionKit query [text]
     'tab', // Tabs always at root [any] title="text"
     'jp-pitch-accent', // Pitch accent
+    'jp-conjugation',
     'img',
     'ruby',
     'rt',

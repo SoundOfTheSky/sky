@@ -65,6 +65,9 @@ export class UsersThemesTable extends DBTable<UserTheme> {
     deleteByUserTheme: DB.prepare<unknown, [number, number]>(
       `DELETE FROM ${this.name} WHERE user_id = ? AND theme_id = ?`,
     ),
+    setNeedUnlock: DB.prepare<unknown, [number, number]>(
+      `UPDATE ${this.name} SET need_unlock = 1 WHERE user_id = ? AND theme_id = ?`,
+    ),
     removeNeedUnlock: DB.prepare<unknown, [number]>(`UPDATE ${this.name} SET need_unlock = 0 WHERE user_id = ?`),
   };
   getThemesData(userId: number) {
@@ -109,6 +112,9 @@ export class UsersThemesTable extends DBTable<UserTheme> {
     usersAnswersTable.queries.deleteByUserTheme.run(userId, themeId);
     usersQuestionsTable.queries.deleteByUserTheme.run(userId, themeId);
     usersSubjectsTable.queries.deleteByUserTheme.run(userId, themeId);
+  }
+  setNeedUnlock(userId: number, themeId: number) {
+    this.queries.setNeedUnlock.run(userId, themeId);
   }
 }
 export const usersThemesTable = new UsersThemesTable('users_themes');

@@ -3,7 +3,7 @@
 // usersSubjectsTable.unlock(1);
 // console.log(usersSubjectsTable.getUserReviewsAndLessons(1)['1'].lessons.length);
 
-import { DB } from '@/services/db';
+import { DB, DBRow } from '@/services/db';
 import { questionsTable } from '@/services/study/questions';
 import { subjectsTable } from '@/services/study/subjects';
 import { cleanupHTML } from '@/utils';
@@ -38,7 +38,9 @@ import { cleanupHTML } from '@/utils';
 <tab title="Description">Reading: 召し<ruby>上<rt>めしあ</tr></ruby>がります
 Meaning: to eat, drink (respectful equivalent of たべます and のみます)</tab>
  */
-const subjects = subjectsTable.getAll('theme_id = 2');
+const subjects = DB.prepare<DBRow, [number]>(`SELECT * FROM ${subjectsTable.name}`)
+  .all(2)
+  .map((x) => subjectsTable.convertFrom(x)!);
 const ui = {
   います: 'う',
   きます: 'く',

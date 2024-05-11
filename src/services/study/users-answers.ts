@@ -42,7 +42,6 @@ export class UsersAnswersTable extends DBTable<UserAnswer> {
       },
       answers: {
         type: 'TEXT',
-        required: true,
         from: convertFromArray,
         to: convertToArray,
       },

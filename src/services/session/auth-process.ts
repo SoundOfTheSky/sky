@@ -4,6 +4,7 @@ import {
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
 } from '@simplewebauthn/server';
+import { isoUint8Array } from '@simplewebauthn/server/helpers';
 import { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/types';
 
 import { Authenticator } from '@/services/session/user';
@@ -62,7 +63,7 @@ export function getRegistrationOptions(username: string) {
   return generateRegistrationOptions({
     rpName: RP_NAME,
     rpID: RP_ID,
-    userID: username,
+    userID: isoUint8Array.fromUTF8String(username),
     userName: username,
     attestationType: 'none',
     timeout: CHALLENGE_TIMEOUT,

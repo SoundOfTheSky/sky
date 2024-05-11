@@ -6,7 +6,7 @@ import { CryptoHasher, file, write } from 'bun';
 import { readdirSync, readFileSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { DB, UpdateTableDTO } from '@/services/db';
+import { DB, TableDefaults, UpdateTableDTO } from '@/services/db';
 import { QuestionDTO, questionsTable } from '@/services/study/questions';
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
 import { SubjectDTO, subjectsTable } from '@/services/study/subjects';
@@ -370,7 +370,9 @@ Anime sentences:
   // });
   // const themeId = lastInsertRowIdQuery.get()!.id;
   const themeId = 4;
-  const dbsubjects = subjectsTable.getAll('theme_id = ' + themeId).map((s) => s.id);
+  const dbsubjects = DB.prepare<TableDefaults, [number]>(`SELECT * FROM ${subjectsTable.name} WHERE theme_id = ?`)
+    .all(themeId)
+    .map((x) => x.id);
   // END OF CHANGE BLOCK
   log('Deleting dependencies');
   DB.prepare(

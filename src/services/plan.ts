@@ -1,7 +1,7 @@
 import { Type } from '@sinclair/typebox';
 import { TypeCompiler } from '@sinclair/typebox/compiler';
 
-import { DBTable, TableDefaults, DEFAULT_COLUMNS } from '@/services/db';
+import { DBTable, TableDefaults, DEFAULT_COLUMNS, DB, DBRow, convertToDate } from '@/services/db';
 import { usersTable } from '@/services/session/user';
 
 export enum PlanEventStatus {
@@ -12,12 +12,13 @@ export enum PlanEventStatus {
 }
 export type PlanEvent = TableDefaults & {
   title: string;
-  description?: string;
-  start: number; // Minute in day
+  start: number; // unix minutes
   duration: number; // Minutes
   userId: number;
-  repeat?: number; // Minutes
   status: PlanEventStatus;
+  repeat?: string; // cron
+  description?: string;
+  parentId?: number;
 };
 const T = TypeCompiler.Compile(
   Type.Object({
@@ -43,12 +44,7 @@ const T = TypeCompiler.Compile(
       minimum: 0,
       maximum: Number.MAX_SAFE_INTEGER,
     }),
-    repeat: Type.Optional(
-      Type.Number({
-        minimum: 0,
-        maximum: Number.MAX_SAFE_INTEGER,
-      }),
-    ), // Minutes
+    repeat: Type.Optional(Type.String()), // cors
     status: Type.Enum({
       DEFAULT: 0,
       SUCCESS: 1,
@@ -66,9 +62,6 @@ export class PlanEventsTable extends DBTable<PlanEvent> {
         type: 'TEXT',
         required: true,
       },
-      description: {
-        type: 'TEXT',
-      },
       start: {
         type: 'INTEGER',
         required: true,
@@ -76,9 +69,6 @@ export class PlanEventsTable extends DBTable<PlanEvent> {
       duration: {
         type: 'INTEGER',
         required: true,
-      },
-      repeat: {
-        type: 'INTEGER',
       },
       userId: {
         type: 'INTEGER',
@@ -90,7 +80,77 @@ export class PlanEventsTable extends DBTable<PlanEvent> {
           onUpdate: 'CASCADE',
         },
       },
+      status: {
+        type: 'INTEGER',
+        required: true,
+      },
+      repeat: {
+        type: 'TEXT',
+      },
+      description: {
+        type: 'TEXT',
+      },
+      parentId: {
+        type: 'INTEGER',
+        ref: {
+          table: table,
+          column: 'id',
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
+        },
+      },
     });
+  }
+  queries = {
+    getByIdAndUser: DB.prepare<DBRow, [number, number]>(`SELECT * FROM ${this.name} WHERE id = ? AND user_id = ?`),
+    getUpdated: DB.prepare<{ id: number; updated: number }, [number, string]>(
+      `SELECT id, unixepoch(updated) updated FROM ${this.name} WHERE user_id = ? AND updated > ?`,
+    ),
+  };
+
+  getByIdAndUser(id: number, userId: number) {
+    return this.convertFrom(this.queries.getByIdAndUser.get(id, userId));
+  }
+
+  getUpdated(userId: number, updated: number) {
+    return this.queries.getUpdated.values(userId, convertToDate(new Date(updated * 1000))!) as [number, number][];
   }
 }
 export const planEventsTable = new PlanEventsTable('plan_events');
+
+// setTimeout(() => {
+//   console.log(1);
+//   // planEventsTable.create({
+//   //   start: ~~(Date.now() / 60000) - 60,
+//   //   duration: 30,
+//   //   status: PlanEventStatus.DEFAULT,
+//   //   title: 'Work out',
+//   //   userId: 1,
+//   //   description: 'test\ndesc',
+//   //   repeat: 1440,
+//   // });
+//   // planEventsTable.create({
+//   //   start: ~~(Date.now() / 60000) + 1440,
+//   //   duration: 30,
+//   //   status: PlanEventStatus.DEFAULT,
+//   //   title: 'Work out 2',
+//   //   userId: 1,
+//   //   repeat: 1440,
+//   //   parentId: 1,
+//   // });
+//   // planEventsTable.create({
+//   //   start: ~~(Date.now() / 60000) - 1440,
+//   //   duration: 30,
+//   //   status: PlanEventStatus.DEFAULT,
+//   //   title: 'test',
+//   //   userId: 1,
+//   // });
+//   // planEventsTable.create({
+//   //   start: ~~(Date.now() / 60000) + 1440,
+//   //   duration: 30,
+//   //   status: PlanEventStatus.DEFAULT,
+//   //   title: 'test2',
+//   //   userId: 1,
+//   // });
+//   console.log(planEventsTable.getActive(1, 0, Number.MAX_SAFE_INTEGER));
+// });

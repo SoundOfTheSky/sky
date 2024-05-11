@@ -45,7 +45,7 @@ export default (async function (req, res, route) {
       counter: verification.registrationInfo.counter,
       credentialBackedUp: verification.registrationInfo.credentialBackedUp,
       credentialDeviceType: verification.registrationInfo.credentialDeviceType,
-      credentialID: Buffer.from(verification.registrationInfo.credentialID),
+      credentialID: verification.registrationInfo.credentialID,
       credentialPublicKey: Buffer.from(verification.registrationInfo.credentialPublicKey),
       transports: data.response.transports,
       userId,
