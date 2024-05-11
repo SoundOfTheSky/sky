@@ -136,7 +136,6 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
     const time = ~~(created.getTime() / 3_600_000);
     if (subject.nextReview && subject.nextReview > time)
       throw new ValidationError('Subject is not available for review');
-    if (subject.questionIds.length !== answers.length) throw new ValidationError('Every questions must be answered');
     const SRS = srsMap[subject.srsId - 1];
     const stage = Math.max(1, Math.min(SRS.timings.length + 1, (subject.stage ?? 0) + (correct ? 1 : -2)));
     answers = answers.filter((x) => !['wrong', 'correct'].includes(x.toLowerCase()));
