@@ -21,6 +21,7 @@ global.server = serve<WS['data']>({
   key: process.env['KEY'] ? file(process.env['KEY']) : undefined,
   cert: process.env['CERT'] ? file(process.env['CERT']) : undefined,
   ca: process.env['CHAIN'] ? file(process.env['CHAIN']) : undefined,
+  rejectUnauthorized: false,
   fetch: handleHTTP,
   websocket: {
     message: wsMessageHandler,
