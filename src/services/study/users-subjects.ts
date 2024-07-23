@@ -1,5 +1,5 @@
 /* eslint-disable sonarjs/no-duplicate-string */
-import { DB, DBRow, DBTable, TableDefaults, convertFromDate, convertToDate, DEFAULT_COLUMNS } from '@/services/db';
+import { convertFromDate, convertToDate, DB, DBRow, DBTable, DEFAULT_COLUMNS, TableDefaults } from '@/services/db';
 import { usersTable } from '@/services/session/user';
 import { questionsTable } from '@/services/study/questions';
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
@@ -62,19 +62,22 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
     getBySubjectAndUser: DB.prepare<DBRow, [number, number]>(
       `SELECT * FROM ${this.name} WHERE ${this.name}.subject_id = ? AND user_id = ?`,
     ),
-    getSubject: DB.prepare<DBRow, [number, number | null]>(
+    getSubject: DB.prepare<DBRow, [number | null, number, number]>(
       `SELECT 
         s.id,
         s.title,
         s.theme_id,
         us.next_review,
         us.stage,
-        s.srs_id, 
+        s.srs_id,
         IIF(us.updated>s.updated, us.updated, s.updated) updated,
+        GROUP_CONCAT(q.id) question_ids,
         s.created
       FROM ${subjectsTable.name} s
-      LEFT JOIN ${this.name} us ON s.id = us.subject_id 
-      WHERE s.id = ? AND (user_id = ? OR user_id IS NULL)`,
+      LEFT JOIN ${this.name} us ON s.id = us.subject_id AND us.user_id = ?
+      JOIN ${questionsTable.name} q ON q.subject_id = ?
+      WHERE s.id = ?
+      GROUP BY s.id`,
     ),
     // TODO: SRS OK IS BASICALLY IGNORED
     getUnlockables: DB.prepare<{ id: number }, [number, number]>(
@@ -126,7 +129,7 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
     return this.convertFrom(this.queries.getBySubjectAndUser.get(subjectId, userId));
   }
   getSubject(subjectId: number, userId?: number) {
-    const subject = this.queries.getSubject.get(subjectId, userId ?? null);
+    const subject = this.queries.getSubject.get(userId ?? null, subjectId, subjectId);
     if (!subject) return;
     return this.parseToDTO(subject);
   }
@@ -209,7 +212,7 @@ export class UserSubjectsTable extends DBTable<UserSubject> {
       stage: x['stage'] as number | null,
       srsId: x['srs_id'] as number,
       themeId: x['theme_id'] as number,
-      questionIds: questionsTable.getBySubject(x['id'] as number).map((q) => q.id),
+      questionIds: (x['question_ids'] as string).split(',').map((x) => Number.parseInt(x)),
       updated: convertFromDate(x['updated']),
       created: convertFromDate(x['created']),
     };

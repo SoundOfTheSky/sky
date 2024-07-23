@@ -3,7 +3,7 @@
 /* eslint-disable sonarjs/cognitive-complexity */
 /* eslint-disable sonarjs/no-duplicate-string */
 import { CryptoHasher, file, write } from 'bun';
-import { readdirSync, readFileSync, cpSync } from 'node:fs';
+import { cpSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { DB, TableDefaults, UpdateTableDTO } from '@/services/db';
@@ -489,9 +489,13 @@ Anime sentences:
     }
 
     // === DB ===
-    const id =
+    let id =
       idReplaces.get(subject.id) ??
       DB.prepare<{ id: number }, [string]>(`SELECT id FROM ${subjectsTable.name} WHERE title = ?`).get(s.title)?.id;
+    if (!id && s.title.includes(' お'))
+      id = DB.prepare<{ id: number }, [string]>(`SELECT id FROM ${subjectsTable.name} WHERE title = ?`).get(
+        s.title.replace(' お', ' '),
+      )?.id;
     // === find subject by description ===
     // if (!id) {
     //   const q = questionsTable.convertFrom(

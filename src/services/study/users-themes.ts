@@ -1,4 +1,4 @@
-import { DB, DBTable, TableDefaults, convertFromBoolean, convertToBoolean, DEFAULT_COLUMNS } from '@/services/db';
+import { convertFromBoolean, convertToBoolean, DB, DBTable, DEFAULT_COLUMNS, TableDefaults } from '@/services/db';
 import { usersTable } from '@/services/session/user';
 import { themesTable } from '@/services/study/themes';
 import { usersAnswersTable } from '@/services/study/users-answers';
@@ -56,8 +56,7 @@ export class UsersThemesTable extends DBTable<UserTheme> {
         t.created,
         IIF(ut.updated>t.updated, ut.updated, t.updated) updated
       FROM ${themesTable.name} t 
-      LEFT JOIN ${this.name} ut ON t.id = ut.theme_id 
-      WHERE (user_id = ? OR user_id IS NULL)`,
+      LEFT JOIN ${this.name} ut ON t.id = ut.theme_id AND ut.user_id = ?`,
     ),
     countByUserAndTheme: DB.prepare<{ a: number }, [number, number]>(
       `SELECT COUNT(*) a FROM ${this.name} WHERE user_id = ? AND theme_id = ?`,

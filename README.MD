@@ -1,5 +1,5 @@
 # SKY
-Backend for my website. Accessible here: https://softsky.site
+Backend for my website. Accessible here: https://soft-sky.ru
 
 Main focus of this website is to teach myself japanese and other little tools. Many subsystems called after Touhou characters.
 ## Subsystems

@@ -7,6 +7,10 @@ import yandexDisk from '@/services/yandex-disk';
 import { ProgressLoggerTransform, camelToSnakeCase, log } from '@/utils';
 
 // === Types ===
+export type Changes = {
+  changes: number;
+  lastInsertRowid: number | bigint;
+};
 export type DBDataTypes = string | number | Uint8Array | null;
 export type DBRow = Record<string, DBDataTypes>;
 type TableColumn = {
@@ -218,14 +222,14 @@ export class DBTable<T, DTO = TableDTO<T>> {
     return DB.query(q).all().map(this.convertFrom.bind(this)) as T[];
   }
 
-  public create(data: DTO) {
+  public create(data: DTO): Changes {
     const cols = this.convertTo(data);
     return DB.query(
       `INSERT INTO ${this.name} (${cols.map((x) => x[0]).join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
     ).run(...cols.map((x) => x[1]));
   }
 
-  public update(id: number | string, data: UpdateTableDTO<DTO>) {
+  public update(id: number | string, data: UpdateTableDTO<DTO>): Changes | undefined {
     const cols = this.convertTo(data);
     if (cols.length === 0) return;
     return DB.query(`UPDATE ${this.name} SET ${cols.map((x) => x[0] + ' = ?').join(', ')} WHERE id = ?`).run(
@@ -234,7 +238,7 @@ export class DBTable<T, DTO = TableDTO<T>> {
     );
   }
 
-  public delete(id: number | string) {
+  public delete(id: number | string): Changes {
     return DB.query(`DELETE FROM ${this.name} WHERE id = ?`).run(id);
   }
 

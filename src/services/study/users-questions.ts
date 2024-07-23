@@ -1,12 +1,12 @@
 import {
   convertFromArray,
   convertToArray,
-  DB,
-  DBTable,
-  TableDefaults,
-  DEFAULT_COLUMNS,
-  DBRow,
   convertToDate,
+  DB,
+  DBRow,
+  DBTable,
+  DEFAULT_COLUMNS,
+  TableDefaults,
 } from '@/services/db';
 import { usersTable } from '@/services/session/user';
 import { questionsTable } from '@/services/study/questions';
@@ -53,7 +53,7 @@ export class UsersQuestionsTable extends DBTable<UserQuestion> {
     });
   }
   queries = {
-    getQuestion: DB.prepare<DBRow, [number, number | null]>(
+    getQuestion: DB.prepare<DBRow, [number | null, number]>(
       `SELECT 
         q.id,
         q.answers,
@@ -67,14 +67,14 @@ export class UsersQuestionsTable extends DBTable<UserQuestion> {
         IIF(uq.updated>q.updated, uq.updated, q.updated) updated,
         q.created
       FROM ${questionsTable.name} q
-      LEFT OUTER JOIN ${this.name} uq ON uq.question_id = q.id
-      WHERE q.id = ? AND (user_id = ? OR user_id IS NULL)`,
+      LEFT JOIN ${this.name} uq ON uq.question_id = q.id AND uq.user_id = ?
+      WHERE q.id = ?`,
     ),
     getUpdated: DB.prepare<{ id: number; updated: number }, [number, string, string]>(
       `SELECT q.id, unixepoch(IIF(uq.updated>q.updated, uq.updated, q.updated)) updated
       FROM ${questionsTable.name} q
-      LEFT JOIN ${this.name} uq ON uq.question_id = q.id
-      WHERE (user_id = ? OR user_id IS NULL) AND (uq.updated > ? OR q.updated > ?)`,
+      LEFT JOIN ${this.name} uq ON uq.question_id = q.id AND uq.user_id = ?
+      WHERE (uq.updated > ? OR q.updated > ?)`,
     ),
     deleteByUserTheme: DB.prepare<unknown, [number, number]>(
       `DELETE FROM ${this.name} WHERE id IN (
@@ -111,7 +111,7 @@ export class UsersQuestionsTable extends DBTable<UserQuestion> {
     };
   }
   getQuestion(questionId: number, userId?: number) {
-    return this.parseToDTO(this.queries.getQuestion.get(questionId, userId ?? null));
+    return this.parseToDTO(this.queries.getQuestion.get(userId ?? null, questionId));
   }
   getUpdated(userId: number, updated: number) {
     const time = convertToDate(new Date(updated * 1000))!;

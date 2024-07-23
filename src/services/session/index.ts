@@ -88,7 +88,6 @@ export async function sessionGuard(options: {
 }): Promise<JWTPayload | undefined> {
   const token = getCookies(options.req)['session'] ?? options.req.headers.get('authorization');
   const payload = token ? await verifyJWT(token.slice(7)) : undefined;
-
   // If no token
   if (!payload) {
     if (options.res) {
@@ -120,7 +119,7 @@ export async function sessionGuard(options: {
     (options.permissions &&
       (!payload.user ||
         (!payload.user.permissions.includes(PERMISSIONS.ADMIN) &&
-          !options.permissions.every((perm) => payload.user!.permissions.some((uPerm) => !perm.startsWith(uPerm))))))
+          options.permissions.some((perm) => payload.user!.permissions.every((uPerm) => !perm.startsWith(uPerm))))))
   ) {
     if (options.throw401) throw new HTTPError('Not allowed', 401);
     return;
