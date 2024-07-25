@@ -5,10 +5,10 @@ import { DBTable, TableDefaults, DEFAULT_COLUMNS, DB, DBRow, convertToDate } fro
 import { usersTable } from '@/services/session/user';
 
 export enum PlanEventStatus {
-  DEFAULT = 0,
-  SUCCESS = 1,
-  FAILURE = 2,
-  SKIP = 3,
+  TODO = 0,
+  DONE = 1,
+  FAILED = 2,
+  SKIPPED = 3,
 }
 export type PlanEvent = TableDefaults & {
   title: string;
@@ -16,11 +16,11 @@ export type PlanEvent = TableDefaults & {
   duration: number; // Minutes
   userId: number;
   status: PlanEventStatus;
-  repeat?: string; // cron
+  repeat?: string; // cron or interval
   description?: string;
   parentId?: number;
 };
-const T = TypeCompiler.Compile(
+export const T = TypeCompiler.Compile(
   Type.Object({
     title: Type.String({
       minLength: 1,

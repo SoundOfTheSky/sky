@@ -14,13 +14,13 @@ import {
 import { PERMISSIONS, authenticatorsTable, usersTable } from '@/services/session/user';
 import { ValidationError } from '@/utils';
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 export default (async function (req, res, route) {
-  const username = route.query['username'];
+  const registerId = route.query['key'] ? (await verifyJWT<{ id: number }>(route.query['key']))?.id : undefined;
+  const username = registerId ? (usersTable.get(registerId)?.username ?? '') : route.query['username'];
   if (!username || !/^(?!.*_{2})\w{2,24}$/u.test(username))
     throw new ValidationError('Username must be 2-24 letters long without spaces');
   const payload = await sessionGuard({ req, res });
-  const registerKey = route.query['key'];
-  const registerId = registerKey ? (await verifyJWT<{ id: number }>(registerKey))?.id : undefined;
   if (req.method === 'GET') {
     if (!registerId && usersTable.checkIfUsernameExists(username)) throw new ValidationError('Username taken');
     const options = await getRegistrationOptions(username);
