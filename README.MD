@@ -1,30 +1,18 @@
-# SKY
+# Sky
 Backend for my website. Accessible here: https://soft-sky.ru
 
-Main focus of this website is to teach myself japanese and other little tools. Many subsystems called after Touhou characters.
-## Subsystems
+Main focus of this website is to teach myself japanese and other little tools.
 
-### Remilia (Database)
-Remilia is the heart of this project.
-She is a SQLite database in WAL mode.
+## Stack
+- BunJS
+- SQLite
 
-### Marisa (Session & Authentication)
-To access website you must first pass through Marisa.
-Marisa gives you JWT session. This JWT session may be authenticated or not.
-Marisa automatically refreshes tokens and checks permissions.
-
-### Reimu (Protection)
-Marisa and Reimu work closely together. While Marisa is managing sessions, Reimu checks these sessions and protect website if any suspicious activity is found.
-
-
-### Pathouli (Study)
-Pathouli is a SRS (Spaced Repetition System) study tool. Based on tool called Anki and tailored for learning Japanese language but may be used for anything.
-
-### Sakuya (Planner tool) [TODO]
-Sakuya is a planner tool. It allows to create events like any other planner tool out there but with minor additions. It has a feature to add geolocation to any event and even plan the road you need to take to get somethere. It really helps to plan a route to visit everything I want most effeciently.
-
-### Chiruno (Tools)
-Used for weird stuff that I use mainly for bulk data processing.
+## Notable stuff
+- WebAuthn authentication
+- SRS like learning system
+- Backups
+- Sessions
+- WebSocket
 
 ## Code & style
 Project uses Bun for package management, running & building.
