@@ -1,18 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { file } from 'bun';
-import { Database } from 'bun:sqlite';
+import { Database, constants } from 'bun:sqlite';
 import { rm } from 'node:fs/promises';
 
 import yandexDisk from '@/services/yandex-disk';
-import { ProgressLoggerTransform, camelToSnakeCase, log } from '@/utils';
+import { Changes, DBDataTypes, DBRow, TableDTO } from '@/sky-shared/db';
+import { ProgressLoggerTransform, camelToSnakeCase, log } from '@/sky-utils';
 
 // === Types ===
-export type Changes = {
-  changes: number;
-  lastInsertRowid: number | bigint;
-};
-export type DBDataTypes = string | number | Uint8Array | null;
-export type DBRow = Record<string, DBDataTypes>;
 type TableColumn = {
   type: 'TEXT' | 'INTEGER' | 'REAL' | 'BLOB' | 'NULL';
   rename?: string;
@@ -30,12 +25,6 @@ type TableColumn = {
     onUpdate?: 'SET NULL' | 'SET DEFAULT' | 'CASCADE';
   };
 };
-export type TableDefaults = {
-  id: number;
-  created: Date;
-  updated: Date;
-};
-export type TableDTO<T> = Omit<T, keyof TableDefaults> & Partial<TableDefaults>;
 export type UpdateTableDTO<T> = {
   [P in keyof T]?: T[P] | null | undefined;
 };
@@ -43,12 +32,15 @@ export type UpdateTableDTO<T> = {
 // === DB initialization ===
 log('[Loading] DB...');
 const DBFileName = 'database.db';
+const DBBackupName = 'backup.db';
 export const DB = await (async () => {
   let db;
   try {
     db = new Database(DBFileName, {
       create: false,
       readwrite: true,
+      safeInteger: true,
+      strict: true,
     });
   } catch (e) {
     await rm(DBFileName, {
@@ -64,23 +56,33 @@ export const DB = await (async () => {
     db = new Database(DBFileName, {
       create: true,
       readwrite: true,
+      safeInteger: true,
+      strict: true,
     });
   }
   return db;
 })();
-DB.prepare('PRAGMA journal_mode=WAL').run();
-DB.prepare('PRAGMA foreign_keys = ON').run();
+DB.fileControl(constants.SQLITE_FCNTL_PERSIST_WAL, 0);
+// DB.exec('PRAGMA journal_mode = WAL');
+// DB.exec('PRAGMA synchronous = NORMAL');
+// DB.exec('PRAGMA wal_autocheckpoint = 1000');
+// DB.exec('PRAGMA cache_size = 2000');
+// DB.exec('PRAGMA busy_timeout = 5000');
+// DB.exec('PRAGMA locking_mode = NORMAL');
+DB.exec('PRAGMA journal_mode = DELETE');
+DB.exec('PRAGMA foreign_keys = ON');
+DB.exec('PRAGMA auto_vacuum = INCREMENTAL');
 
 export async function backupDB() {
   try {
     log('Started DB backup');
-    DB.prepare('PRAGMA wal_checkpoint').run();
-    DB.prepare('VACUUM').run();
+    DB.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    DB.exec(`VACUUM INTO '${DBBackupName}'`);
     log('Start upload');
-    await yandexDisk.write(`backups/${Date.now()}.db`, file(DBFileName).stream());
+    await yandexDisk.write(`backups/${Date.now()}.db`, file(DBBackupName).stream());
     log('Backup done!');
   } catch {
-    console.error('Error while updating db');
+    console.error('Error while backing up db');
   }
 }
 export async function loadBackupDB(name?: string, restart?: boolean) {
@@ -132,7 +134,6 @@ export const convertToDate = (d: Date | undefined | null) => {
 export const convertFromDate = (data: DBDataTypes) => (typeof data === 'string' ? new Date(data + 'Z') : undefined);
 
 // === DB Table class ===
-export const lastInsertRowIdQuery = DB.prepare<{ id: number }, []>('SELECT last_insert_rowid() AS id');
 export const DEFAULT_COLUMNS = {
   id: {
     type: 'INTEGER',
@@ -155,8 +156,12 @@ export const DEFAULT_COLUMNS = {
 export class DBTable<T, DTO = TableDTO<T>> {
   public name: string;
   public schema = new Map<string, TableColumn>();
-  private columnNamesMap = new Map<string, string>();
-  constructor(name: string, schema: Record<string, TableColumn>) {
+  protected columnNamesMap = new Map<string, string>();
+  protected $getById;
+  protected $deleteById;
+  protected $getUpdated;
+
+  public constructor(name: string, schema: Record<string, TableColumn>) {
     this.name = name;
     const schemaEntries = Object.entries(schema);
     for (const [k, v] of schemaEntries) {
@@ -166,9 +171,69 @@ export class DBTable<T, DTO = TableDTO<T>> {
       this.columnNamesMap.set(tableColumnName, k);
     }
     this.initializeTable();
+    this.$getById = DB.prepare<DBRow, [number | string]>(`SELECT * FROM ${this.name} WHERE id = ?`);
+    this.$deleteById = DB.prepare<undefined, [number | string]>(`DELETE FROM ${this.name} WHERE id = ?`);
+    this.$getUpdated = DB.prepare<{ id: number | string; u: number }, [string]>(
+      `SELECT id, unixepoch(updated) u FROM ${this.name} WHERE updated > ? ORDER BY u ASC`,
+    );
   }
 
-  private initializeTable() {
+  public getById(id: number | string) {
+    return this.convertFrom(this.$getById.get(id));
+  }
+
+  public getUpdated(time: Date) {
+    return this.$getUpdated.values(convertToDate(time)!) as [number, number][];
+  }
+
+  public create(data: DTO): Changes {
+    const cols = this.convertTo(data);
+    return DB.query(
+      `INSERT INTO ${this.name} (${cols.map((x) => x[0]).join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
+    ).run(...cols.map((x) => x[1]));
+  }
+
+  public update(id: number | string, data: UpdateTableDTO<DTO>): Changes {
+    const cols = this.convertTo(data);
+    if (cols.length === 0) throw new Error('No fields to update');
+    return DB.query(`UPDATE ${this.name} SET ${cols.map((x) => x[0] + ' = ?').join(', ')} WHERE id = ?`).run(
+      ...cols.map((x) => x[1]),
+      id,
+    );
+  }
+
+  public deleteById(id: number): Changes {
+    return this.$deleteById.run(id);
+  }
+
+  public convertTo(data: UpdateTableDTO<DTO>) {
+    return Object.entries(data)
+      .map(([k, v]) => {
+        const tableColumnName = this.columnNamesMap.get(k);
+        if (!tableColumnName) return;
+        const column = this.schema.get(tableColumnName)!;
+        if (column.to) v = column.to(v);
+        if (v === undefined) return;
+        if (!column.required && v === '') v = null;
+        return [tableColumnName, v];
+      })
+      .filter(Boolean) as [string, DBDataTypes][];
+  }
+
+  public convertFrom(data?: unknown) {
+    if (!data) return;
+    return Object.fromEntries(
+      Object.entries(data)
+        .filter(([, v]) => v !== null)
+        .map(([k, v]) => {
+          const columnName = this.columnNamesMap.get(k) ?? k;
+          const column = this.schema.get(k);
+          return [columnName, column?.from ? column.from(v as DBDataTypes) : v];
+        }),
+    ) as T;
+  }
+
+  protected initializeTable() {
     const append: string[] = [];
     DB.prepare(
       `CREATE TABLE IF NOT EXISTS ${this.name} (
@@ -199,140 +264,46 @@ export class DBTable<T, DTO = TableDTO<T>> {
     this.registerUpdateTrigger();
   }
 
-  private registerUpdateTrigger() {
+  protected registerUpdateTrigger() {
     if (this.schema.get('updated')?.type !== 'TEXT') return;
-    DB.prepare(
+    DB.exec(
       `CREATE TRIGGER IF NOT EXISTS tg_${this.name}_update
-      AFTER UPDATE
-      ON ${this.name} FOR EACH ROW
+      AFTER UPDATE ON ${this.name} FOR EACH ROW
       BEGIN
         UPDATE ${this.name} SET updated = current_timestamp
-      WHERE id = old.id;
-    END`,
-    ).run();
-  }
-
-  public get(id: number | string) {
-    const q = `SELECT * FROM ${this.name} WHERE id = ?`;
-    return this.convertFrom(DB.query(q).get(id));
-  }
-
-  public getAll() {
-    const q = `SELECT * FROM ${this.name}`;
-    return DB.query(q).all().map(this.convertFrom.bind(this)) as T[];
-  }
-
-  public create(data: DTO): Changes {
-    const cols = this.convertTo(data);
-    return DB.query(
-      `INSERT INTO ${this.name} (${cols.map((x) => x[0]).join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
-    ).run(...cols.map((x) => x[1]));
-  }
-
-  public update(id: number | string, data: UpdateTableDTO<DTO>): Changes | undefined {
-    const cols = this.convertTo(data);
-    if (cols.length === 0) return;
-    return DB.query(`UPDATE ${this.name} SET ${cols.map((x) => x[0] + ' = ?').join(', ')} WHERE id = ?`).run(
-      ...cols.map((x) => x[1]),
-      id,
+        WHERE id = old.id;
+      END`,
     );
   }
+}
+export class DBTableWithUser<T, DTO = TableDTO<T>> extends DBTable<T, DTO> {
+  protected $getByIdUser = DB.prepare<DBRow, [number, number]>(
+    `SELECT * FROM ${this.name} WHERE id = ? AND user_id = ?`,
+  );
+  protected $deleteByIdUser = DB.prepare<undefined, [number, number]>(
+    `DELETE FROM ${this.name} WHERE id = ? AND user_id = ?`,
+  );
+  protected $getUpdatedUser = DB.prepare<{ id: number | string; u: number }, [string, number]>(
+    `SELECT id, unixepoch(updated) u FROM ${this.name} WHERE updated > ? AND user_id = ? ORDER BY u ASC`,
+  );
 
-  public delete(id: number | string): Changes {
-    return DB.query(`DELETE FROM ${this.name} WHERE id = ?`).run(id);
+  public getByIdUser(id: number, userId: number) {
+    return this.convertFrom(this.$getByIdUser.get(id, userId));
   }
 
-  public convertTo(data: UpdateTableDTO<DTO>) {
-    return Object.entries(data)
-      .map(([k, v]) => {
-        const tableColumnName = this.columnNamesMap.get(k);
-        if (!tableColumnName) return;
-        const column = this.schema.get(tableColumnName)!;
-        if (column.to) v = column.to(v);
-        if (v === undefined) return;
-        if (!column.required && v === '') v = null;
-        return [tableColumnName, v];
-      })
-      .filter(Boolean) as [string, DBDataTypes][];
+  public deleteByIdUser(id: number, userId: number) {
+    return this.$deleteByIdUser.run(id, userId) as Changes;
   }
 
-  public convertFrom(data?: unknown) {
-    if (!data) return;
-    return Object.fromEntries(
-      Object.entries(data)
-        .filter(([, v]) => v !== null)
-        .map(([k, v]) => {
-          const columnName = this.columnNamesMap.get(k) ?? k;
-          const column = this.schema.get(k);
-          return [columnName, column?.from ? column.from(v as DBDataTypes) : v];
-        }),
-    ) as T;
+  public getUpdatedByUser(time: Date, userId: number) {
+    return this.$getUpdatedUser.values(convertToDate(time)!, userId) as [number, number][];
+  }
+
+  public updateByUser(id: number | string, data: UpdateTableDTO<DTO>, userId: number): Changes {
+    const cols = this.convertTo(data);
+    if (cols.length === 0) throw new Error('No fields to update');
+    return DB.query(
+      `UPDATE ${this.name} SET ${cols.map((x) => x[0] + ' = ?').join(', ')} WHERE id = ? AND user_id = ?`,
+    ).run(...cols.map((x) => x[1]), id, userId);
   }
 }
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-// class SelectQuery<T, DTO> {
-//   private query = '';
-//   from: DBTable<T, DTO> | SelectQuery<T, DTO>;
-//   _select = ['*'];
-//   _where?: string;
-//   _groupBy?: string[];
-//   _sort?: Record<string, 1 | -1>;
-//   _joins: { required: true | false; from: DBTable<T, DTO> | SelectQuery<T, DTO>; on: string[]; as?: string }[] = [];
-
-//   constructor(columns: string[], from: DBTable<T, DTO> | SelectQuery<T, DTO>) {
-//     this._select = columns;
-//     this.from = from;
-//   }
-
-//   groupBy(columns: typeof this._groupBy) {
-//     this._groupBy = columns;
-//     return this;
-//   }
-
-//   sort(columns: typeof this._sort) {
-//     this._sort = columns;
-//     return this;
-//   }
-
-//   join(from: DBTable<T, DTO> | SelectQuery<T, DTO>, on: string[], as?: string) {
-//     this._joins.push({ required: true, from, on, as });
-//     return this;
-//   }
-
-//   leftJoin(from: DBTable<T, DTO> | SelectQuery<T, DTO>, on: string[], as?: string) {
-//     this._joins.push({ required: false, from, on, as });
-//     return this;
-//   }
-
-//   where(condition: typeof this._where) {
-//     this._where = condition;
-//     return this;
-//   }
-
-//   private static getFromString<T, DTO>(source: DBTable<T, DTO> | SelectQuery<T, DTO>) {
-//     return source instanceof SelectQuery ? source.toString() : source.name;
-//   }
-
-//   update() {
-//     this.query = `SELECT ${this._select.join(',')} FROM ${SelectQuery.getFromString(this.from)}`;
-//     for (const { required, from, on, as } of this._joins) {
-//       this.query += ` ${required ? 'JOIN' : 'LEFT JOIN'} ${SelectQuery.getFromString(from)}${
-//         as ? ` ${as}` : ''
-//       } ON ${on.join(' AND ')}`;
-//     }
-//     if (this._where) this.query += ` WHERE ${this._where}`;
-//     if (this._groupBy) this.query += ` GROUP BY ${this._groupBy.join(',')}`;
-//     if (this._sort)
-//       this.query += ` ORDER BY ${Object.entries(this._sort)
-//         .map(([k, v]) => `${k} ${v === 1 ? 'ASC' : 'DESC'}`)
-//         .join(',')}`;
-//   }
-
-//   toString() {
-//     return this.query;
-//   }
-// }
-
-// DB.prepare(`UPDATE authenticators SET user_id = 1`).run();
-// DB.prepare(`DELETE FROM users WHERE id != 1`).run();

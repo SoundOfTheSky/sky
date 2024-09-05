@@ -5,7 +5,7 @@ import '@/preload';
 import { DB } from '@/services/db';
 import handleHTTP from '@/services/http';
 import { WS, wsCloseHandler, wsMessageHandler, wsOpenHandler } from '@/services/ws';
-import { log } from '@/utils';
+import { log } from '@/sky-utils';
 
 const httpServer = serve({
   fetch: (req) => {
@@ -32,7 +32,8 @@ global.server = serve<WS['data']>({
     close: wsCloseHandler,
     open: wsOpenHandler,
   },
-  maxRequestBodySize: 1024 * 1024, // 1mb
+  maxRequestBodySize: 1024 * 1024 * 10, // 10mb
+  idleTimeout: 30,
 });
 log('Started on ports', server.port, httpServer.port);
 

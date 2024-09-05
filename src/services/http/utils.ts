@@ -2,14 +2,15 @@ import { HTTPResponse } from '@/services/http/types';
 
 /** If thrown in handler will return response with code */
 export class HTTPError extends Error {
-  constructor(
+  public constructor(
     msg: string,
     public code: number,
     public body?: BodyInit | null | undefined,
   ) {
     super(msg);
   }
-  override name = 'HTTPError';
+
+  public override name = 'HTTPError';
 }
 
 /** Send any parsable data as json */

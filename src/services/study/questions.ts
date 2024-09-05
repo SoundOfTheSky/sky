@@ -1,28 +1,36 @@
 import {
   convertFromArray,
   convertToArray,
-  DB,
   DBTable,
-  TableDefaults,
   DEFAULT_COLUMNS,
-  TableDTO,
   convertToBoolean,
   convertFromBoolean,
+  DB,
 } from '@/services/db';
-import { subjectsTable } from '@/services/study/subjects';
+import TABLES from '@/services/tables';
+import { DBRow } from '@/sky-shared/db';
+import { StudyQuestion } from '@/sky-shared/study';
 
-export type Question = TableDefaults & {
-  answers: string[];
-  question: string;
-  description: string;
-  subjectId: number;
-  alternateAnswers?: Record<string, string>;
-  choose?: boolean;
-};
-export type QuestionDTO = TableDTO<Question>;
-export class QuestionsTable extends DBTable<Question, QuestionDTO> {
-  constructor(table: string) {
-    super(table, {
+export class QuestionsTable extends DBTable<StudyQuestion> {
+  protected $getById = DB.prepare<DBRow, [number]>(
+    `SELECT 
+      q.id,
+      q.created,
+      q.subject_id,
+      q.answers,
+      q.question,
+      q.description,
+      q.alternate_answers,
+      q.choose,
+      uq.id userQuestionId,
+      MAX(q.updated, IIF(uq.created, uq.created, 0)) updated
+    FROM ${this.name} q
+    LEFT JOIN ${TABLES.STUDY_USERS_QUESTIONS} uq ON q.id = uq.question_id
+    WHERE q.id = ?`,
+  );
+
+  public constructor() {
+    super(TABLES.STUDY_QUESTIONS, {
       ...DEFAULT_COLUMNS,
       answers: {
         type: 'TEXT',
@@ -44,7 +52,7 @@ export class QuestionsTable extends DBTable<Question, QuestionDTO> {
         type: 'INTEGER',
         required: true,
         ref: {
-          table: subjectsTable.name,
+          table: TABLES.STUDY_SUBJECTS,
           column: 'id',
           onDelete: 'CASCADE',
           onUpdate: 'CASCADE',
@@ -69,12 +77,18 @@ export class QuestionsTable extends DBTable<Question, QuestionDTO> {
         to: convertToBoolean,
       },
     });
+    this.createDeleteTrigger();
   }
-  queries = {
-    getBySubject: DB.prepare(`SELECT * FROM ${this.name} WHERE subject_id = ?`),
-  };
-  getBySubject(subjectId: number) {
-    return this.queries.getBySubject.all(subjectId).map((el) => this.convertFrom(el)!);
+
+  protected createDeleteTrigger() {
+    DB.exec(`CREATE TRIGGER IF NOT EXISTS tg_${this.name}_delete
+      AFTER DELETE ON ${this.name}
+      FOR EACH ROW
+      BEGIN
+        UPDATE ${TABLES.STUDY_SUBJECTS} SET updated = current_timestamp
+        WHERE id = old.subject_id;
+      END
+      `);
   }
 }
-export const questionsTable = new QuestionsTable('questions');
+export const questionsTable = new QuestionsTable();

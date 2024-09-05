@@ -9,7 +9,7 @@ import {
   verifyLogin,
 } from '@/services/session/auth-process';
 import { authenticatorsTable, usersTable } from '@/services/session/user';
-import { ValidationError } from '@/utils';
+import { ValidationError } from '@/sky-utils';
 
 import type { AuthenticationResponseJSON } from '@simplewebauthn/types';
 
@@ -27,7 +27,7 @@ export default (async function (req, res, route) {
     const expectedChallenge = getChallenge(payload.sub);
     if (!expectedChallenge) throw new ValidationError('Challenge timeout');
     const data = (await req.json()) as AuthenticationResponseJSON;
-    const authenticator = authenticatorsTable.get(data.id);
+    const authenticator = authenticatorsTable.getById(data.id);
     if (!authenticator) throw new ValidationError('Authenticator not found');
     const verification = await verifyLogin(authenticator, expectedChallenge, data);
     removeChallenge(payload.sub);

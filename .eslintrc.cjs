@@ -7,7 +7,7 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
     'plugin:@typescript-eslint/recommended-requiring-type-checking',
     'plugin:@typescript-eslint/strict',
-    'plugin:sonarjs/recommended',
+    'plugin:sonarjs/recommended-legacy',
     'plugin:prettier/recommended',
     'plugin:import/recommended',
     'plugin:import/typescript',
@@ -16,7 +16,7 @@ module.exports = {
     'import/resolver': {
       typescript: true,
     },
-    'import/core-modules': ['bun', 'bun:sqlite']
+    'import/core-modules': ['bun', 'bun:sqlite'],
   },
   rules: {
     'prettier/prettier': 1,
@@ -24,9 +24,10 @@ module.exports = {
     'sonarjs/cognitive-complexity': ['error', 20],
     'sonarjs/no-nested-template-literals': 0,
 
-    '@typescript-eslint/no-non-null-assertion': 0,
-    '@typescript-eslint/no-misused-promises': 0,
+    '@typescript-eslint/explicit-member-accessibility': 1,
     '@typescript-eslint/consistent-type-definitions': [2, 'type'],
+    '@typescript-eslint/no-misused-promises': 0,
+    '@typescript-eslint/no-non-null-assertion': 0,
     '@typescript-eslint/no-unused-vars': 0,
 
     'unused-imports/no-unused-imports': 1,
@@ -45,7 +46,12 @@ module.exports = {
             pattern: '@/**',
             group: 'external',
             position: 'after',
-          }, 
+          },
+          {
+            pattern: './**.scss',
+            group: 'object',
+            position: 'after',
+          },
         ],
         'newlines-between': 'always',
         alphabetize: {

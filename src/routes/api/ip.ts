@@ -1,5 +1,5 @@
 import { HTTPHandler } from '@/services/http/types';
-import { ValidationError } from '@/utils';
+import { ValidationError } from '@/sky-utils';
 
 export default (function (req, res) {
   const data = server.requestIP(req);

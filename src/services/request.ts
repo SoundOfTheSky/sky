@@ -53,7 +53,7 @@ export function HTTPSRequest(url: string, options: HTTPSRequestOptions = {}): Pr
 export class HTTPSClient {
   public cookies: Record<string, string> = {};
 
-  constructor(
+  public constructor(
     public host: string,
     public defaultHeaders: HTTPSRequestOptions['headers'] = {},
   ) {
@@ -91,6 +91,7 @@ export class HTTPSClient {
     // === Follow redirects ===
     if (res.headers.location && res.statusCode && res.statusCode >= 300 && res.statusCode < 400)
       return this.request(res.headers.location, options as never);
+
     // === Decode data ===
     return decodeReponse(res, options.raw as never);
   }

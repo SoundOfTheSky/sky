@@ -1,25 +1,18 @@
 import { DB } from '@/services/db';
-import { usersTable } from '@/services/session/user';
-import { storeTable } from '@/services/store';
 import { questionsTable } from '@/services/study/questions';
-import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
-import { subjectsTable } from '@/services/study/subjects';
-import { themesTable } from '@/services/study/themes';
-import { usersAnswersTable } from '@/services/study/users-answers';
-import { usersQuestionsTable } from '@/services/study/users-questions';
-import { usersSubjectsTable } from '@/services/study/users-subjects';
-import { usersThemesTable } from '@/services/study/users-themes';
+import TABLES from '@/services/tables';
 
 const tables = [
-  usersTable.name,
-  subjectDependenciesTable.name,
-  questionsTable.name,
-  storeTable.name,
-  themesTable.name,
-  usersAnswersTable.name,
-  usersQuestionsTable.name,
-  usersSubjectsTable.name,
-  usersThemesTable.name,
+  TABLES.AUTHENTICATORS,
+  TABLES.USERS,
+  TABLES.STORE,
+  TABLES.STUDY_ANSWERS,
+  TABLES.STUDY_QUESTIONS,
+  TABLES.STUDY_SUBJECTS,
+  TABLES.STUDY_THEMES,
+  TABLES.STUDY_USERS_QUESTIONS,
+  TABLES.STUDY_USERS_SUBJECTS,
+  TABLES.STUDY_USERS_THEMES,
 ];
 console.log('Starting to clamp...');
 for (const table of tables) {
@@ -36,14 +29,14 @@ for (const table of tables) {
 
 // === Subjects ===
 console.log('Clamping subjects');
-const ids = DB.prepare<{ id: number }, []>(`SELECT id FROM ${subjectsTable.name} ORDER BY id asc`)
+const ids = DB.prepare<{ id: number }, []>(`SELECT id FROM ${TABLES.STUDY_SUBJECTS} ORDER BY id asc`)
   .all()
   .map((x) => x.id);
 for (let i = 0; i < ids.length; i++) {
   console.log(i, ids.length);
   if (i + 1 === ids[i]) continue;
-  DB.prepare(`UPDATE ${subjectsTable.name} SET id = ? WHERE id = ?`).run(i + 1, ids[i]);
-  for (const question of DB.query(`SELECT * FROM ${questionsTable.name} WHERE description LIKE ?`)
+  DB.prepare(`UPDATE subjects SET id = ? WHERE id = ?`).run(i + 1, ids[i]);
+  for (const question of DB.query(`SELECT * FROM ${TABLES.STUDY_QUESTIONS} WHERE description LIKE ?`)
     .all(`%<subject uid="${ids[i]}"%`)
     .map((x) => questionsTable.convertFrom(x)!)) {
     questionsTable.update(question.id, {
@@ -51,7 +44,7 @@ for (let i = 0; i < ids.length; i++) {
     });
   }
 }
-DB.prepare(`UPDATE sqlite_sequence SET seq = ? WHERE name = ?`).run(ids.length, subjectsTable.name);
+DB.prepare(`UPDATE sqlite_sequence SET seq = ? WHERE name = ?`).run(ids.length, 'subjects');
 
 console.log('Done');
 process.exit();

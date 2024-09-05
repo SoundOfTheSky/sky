@@ -3,7 +3,7 @@ import { rm, mkdir } from 'node:fs/promises';
 import { join, sep } from 'node:path';
 
 import yandexDisk from '@/services/yandex-disk';
-import { ProgressLoggerTransform, log } from '@/utils';
+import { ProgressLoggerTransform, log } from '@/sky-utils';
 
 const STATIC_PATH = 'static';
 const INDEX = 'index.html';

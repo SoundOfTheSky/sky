@@ -1,6 +1,5 @@
 import { RegistrationResponseJSON } from '@simplewebauthn/types';
 
-import { lastInsertRowIdQuery } from '@/services/db';
 import { HTTPHandler } from '@/services/http/types';
 import { sendJSON } from '@/services/http/utils';
 import { sessionGuard, setAuth, signJWT, verifyJWT } from '@/services/session';
@@ -11,13 +10,13 @@ import {
   setChallenge,
   verifyRegistration,
 } from '@/services/session/auth-process';
-import { PERMISSIONS, authenticatorsTable, usersTable } from '@/services/session/user';
-import { ValidationError } from '@/utils';
+import { authenticatorsTable, usersTable } from '@/services/session/user';
+import { ValidationError } from '@/sky-utils';
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
 export default (async function (req, res, route) {
   const registerId = route.query['key'] ? (await verifyJWT<{ id: number }>(route.query['key']))?.id : undefined;
-  const username = registerId ? (usersTable.get(registerId)?.username ?? '') : route.query['username'];
+  const username = registerId ? (usersTable.getById(registerId)?.username ?? '') : route.query['username'];
   if (!username || !/^(?!.*_{2})\w{2,24}$/u.test(username))
     throw new ValidationError('Username must be 2-24 letters long without spaces');
   const payload = await sessionGuard({ req, res });
@@ -34,13 +33,13 @@ export default (async function (req, res, route) {
     removeChallenge(payload.sub);
     if (!verification.verified || !verification.registrationInfo) throw new ValidationError('Not verified');
     if (!registerId && usersTable.checkIfUsernameExists(username)) throw new ValidationError('Username taken');
-    if (!registerId)
-      usersTable.create({
+    const userId =
+      registerId ??
+      (usersTable.create({
         username,
         status: 0,
-        permissions: [PERMISSIONS.STUDY],
-      });
-    const userId = registerId ?? lastInsertRowIdQuery.get()!.id;
+        permissions: ['STUDY'],
+      }).lastInsertRowid as number);
     authenticatorsTable.create({
       counter: verification.registrationInfo.counter,
       credentialBackedUp: verification.registrationInfo.credentialBackedUp,

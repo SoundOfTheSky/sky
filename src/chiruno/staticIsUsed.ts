@@ -4,10 +4,12 @@ import { CryptoHasher, file } from 'bun';
 import { readdirSync, statSync, rmSync, renameSync, existsSync } from 'fs';
 import { join } from 'node:path';
 
-import { DB, DBRow } from '@/services/db';
+import { DB } from '@/services/db';
 import { questionsTable } from '@/services/study/questions';
 import { subjectsTable } from '@/services/study/subjects';
-import { log } from '@/utils';
+import TABLES from '@/services/tables';
+import { DBRow } from '@/sky-shared/db';
+import { log } from '@/sky-utils';
 
 const STATIC_PATH = join('static', 'static');
 function fsArray(path: string): string[] {
@@ -16,11 +18,11 @@ function fsArray(path: string): string[] {
   return [path];
 }
 function findUses(path: string) {
-  const subjects = DB.prepare<DBRow, [string]>(`SELECT * FROM ${subjectsTable.name} WHERE title LIKE ?`)
+  const subjects = DB.prepare<DBRow, [string]>(`SELECT * FROM ${TABLES.STUDY_SUBJECTS} WHERE title LIKE ?`)
     .all(`%${path.slice(7)}%`)
     .map((x) => subjectsTable.convertFrom(x)!);
   const questions = DB.prepare<DBRow, [string, string]>(
-    `SELECT * FROM ${questionsTable.name} WHERE question LIKE ? OR description LIKE ?`,
+    `SELECT * FROM ${TABLES.STUDY_QUESTIONS} WHERE question LIKE ? OR description LIKE ?`,
   )
     .all(`%${path.slice(7)}%`, `%${path.slice(7)}%`)
     .map((x) => questionsTable.convertFrom(x)!);
@@ -66,11 +68,11 @@ async function recalcCache() {
   }
 }
 function findRowsWithUses() {
-  const subjects = DB.prepare<DBRow, []>(`SELECT * FROM ${subjectsTable.name} WHERE title LIKE "%/static/%"`)
+  const subjects = DB.prepare<DBRow, []>(`SELECT * FROM ${TABLES.STUDY_SUBJECTS} WHERE title LIKE "%/static/%"`)
     .all()
     .map((x) => subjectsTable.convertFrom(x)!);
   const questions = DB.prepare<DBRow, []>(
-    `SELECT * FROM ${questionsTable.name} WHERE question LIKE "%/static/%" OR description LIKE "%/static/%"`,
+    `SELECT * FROM ${TABLES.STUDY_QUESTIONS} WHERE question LIKE "%/static/%" OR description LIKE "%/static/%"`,
   )
     .all()
     .map((x) => questionsTable.convertFrom(x)!);

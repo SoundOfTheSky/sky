@@ -20,14 +20,14 @@ export type FileInfo = {
 };
 
 export class YandexDisk {
-  constructor(
-    private token: string,
-    private rootPath: string,
+  public constructor(
+    protected token: string,
+    protected rootPath: string,
   ) {}
 
-  private p = (path: string) => this.rootPath + path;
+  protected p = (path: string) => this.rootPath + path;
 
-  private parseToFileInfo(yFile: YandexFile): FileInfo {
+  protected parseToFileInfo(yFile: YandexFile): FileInfo {
     const fileInfo: FileInfo = {
       path: yFile.path.replace(`disk:${this.rootPath}`, ''),
       isDir: yFile.type === 'dir',
@@ -40,7 +40,7 @@ export class YandexDisk {
     return fileInfo;
   }
 
-  async mkDir(path: string): Promise<void> {
+  public async mkDir(path: string): Promise<void> {
     await fetch(`https://cloud-api.yandex.net/v1/disk/resources?path=${this.p(path)}`, {
       method: 'PUT',
       headers: {
@@ -49,7 +49,7 @@ export class YandexDisk {
     });
   }
 
-  async getInfo(path: string): Promise<FileInfo> {
+  public async getInfo(path: string): Promise<FileInfo> {
     return this.parseToFileInfo(
       (await fetch(
         `https://cloud-api.yandex.net/v1/disk/resources?path=${this.p(path)}&limit=999999&preview_crop=false`,
@@ -63,7 +63,7 @@ export class YandexDisk {
     );
   }
 
-  async read(path: string) {
+  public async read(path: string) {
     const { href } = (await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${this.p(path)}`, {
       method: 'GET',
       headers: {
@@ -73,7 +73,7 @@ export class YandexDisk {
     return fetch(href);
   }
 
-  async write(path: string, stream: ReadableStream<Uint8Array>) {
+  public async write(path: string, stream: ReadableStream<Uint8Array>) {
     const { href, method } = (await fetch(
       `https://cloud-api.yandex.net/v1/disk/resources/upload?path=${this.p(path)}&overwrite=true`,
       {
@@ -89,7 +89,7 @@ export class YandexDisk {
     });
   }
 
-  async delete(path: string): Promise<void> {
+  public async delete(path: string): Promise<void> {
     await fetch(
       `https://cloud-api.yandex.net/v1/disk/resources?path=${this.p(path)}&force_async=false&permanently=true`,
       {
@@ -101,7 +101,7 @@ export class YandexDisk {
     );
   }
 
-  async copy(from: string, path: string): Promise<void> {
+  public async copy(from: string, path: string): Promise<void> {
     await fetch(
       `https://cloud-api.yandex.net/v1/disk/resources/copy?force_async=false&overwrite=true&from=${this.p(
         from,
@@ -115,7 +115,7 @@ export class YandexDisk {
     );
   }
 
-  async move(from: string, path: string): Promise<void> {
+  public async move(from: string, path: string): Promise<void> {
     await fetch(
       `https://cloud-api.yandex.net/v1/disk/resources/move?force_async=false&overwrite=true&from=${this.p(
         from,
@@ -129,7 +129,7 @@ export class YandexDisk {
     );
   }
 
-  async emptyBin() {
+  public async emptyBin() {
     await fetch('https://cloud-api.yandex.net/v1/disk/trash/resources?force_async=false', {
       method: 'DELETE',
       headers: {
