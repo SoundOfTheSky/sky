@@ -1,6 +1,10 @@
 import zlib from 'node:zlib';
 
-import { HTTPResponse } from '@/services/http/types';
+import { TSchema } from '@sinclair/typebox';
+import { TypeCheck } from '@sinclair/typebox/compiler';
+
+import { BodyInit, HTTPResponse } from '@/services/http/types';
+import { GetTypeFromCompiled } from '@/sky-shared/type-checker';
 
 /** If thrown in handler will return response with code */
 export class HTTPError extends Error {
@@ -22,7 +26,7 @@ export function sendJSON(res: HTTPResponse, data: unknown) {
 }
 
 export function sendCompressedJSON(res: HTTPResponse, data: unknown) {
-  res.body = zlib.deflateSync(JSON.stringify(data)) as unknown as Uint8Array;
+  res.body = zlib.deflateSync(JSON.stringify(data));
   res.headers.set('Content-Type', 'application/json');
   res.headers.set('Content-Encoding', 'deflate');
 }
@@ -48,4 +52,13 @@ export function getCookies(req: Request) {
   const cookie = req.headers.get('cookie');
   if (!cookie) return {};
   return Object.fromEntries(cookie.split('; ').map((cookie) => cookie.split('='))) as Record<string, string>;
+}
+
+export async function getRequestBodyT<T extends TypeCheck<TSchema>>(
+  req: Request,
+  T: T,
+): Promise<GetTypeFromCompiled<T>> {
+  const body = await req.json();
+  if (!T.Check(body)) throw new HTTPError('Validation error', 400, JSON.stringify([...T.Errors(body)]));
+  return body as GetTypeFromCompiled<T>;
 }

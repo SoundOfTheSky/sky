@@ -71,25 +71,28 @@ export class AnswersTable extends TableWithUser<StudyAnswer, StudyAnswerDTO> {
           took: number;
           theme_id: number;
         }
-      >(`FROM ${TABLES.STUDY_ANSWERS} ua`, [
-        'ua.id',
-        'ua.updated',
-        'ua.created',
-        'ua.subject_id',
-        'ua.correct',
-        'ua.answers',
-        'ua.took',
-        's.theme_id',
-        'ua.user_id',
-      ]).join(`${TABLES.STUDY_SUBJECTS} s`, 's.id = ua.subject_id'),
+      >(TABLES.STUDY_ANSWERS, [
+        `${TABLES.STUDY_ANSWERS}.id`,
+        `${TABLES.STUDY_ANSWERS}.updated`,
+        `${TABLES.STUDY_ANSWERS}.created`,
+        `${TABLES.STUDY_ANSWERS}.subject_id`,
+        `${TABLES.STUDY_ANSWERS}.correct`,
+        `${TABLES.STUDY_ANSWERS}.answers`,
+        `${TABLES.STUDY_ANSWERS}.took`,
+        `s.theme_id`,
+        `${TABLES.STUDY_ANSWERS}.user_id`,
+      ]).join(`${TABLES.STUDY_SUBJECTS} s`, `s.id = ${TABLES.STUDY_ANSWERS}.subject_id`),
     );
   }
 
   public create(data: StudyAnswerDTO): Changes {
-    data.answers = data.answers.filter((x) => !['wrong', 'correct'].includes(x.toLowerCase()));
-    const changes = super.create(data);
-    changes.changes += usersSubjectsTable.answer(data).changes;
-    return changes;
+    data.answers = data.answers?.filter((x) => !['wrong', 'correct'].includes(x.toLowerCase()));
+    let changes: Changes;
+    DB.transaction(() => {
+      changes = super.create(data);
+      changes.changes += usersSubjectsTable.answer(data).changes;
+    })();
+    return changes!;
   }
 }
 export const answersTable = new AnswersTable();

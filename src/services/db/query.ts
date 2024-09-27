@@ -47,7 +47,7 @@ export class Query<
   protected _sort?: {
     field: string;
     desc: boolean;
-  };
+  }[];
   protected _limit?: {
     offset?: number;
     limit: number;
@@ -85,17 +85,18 @@ export class Query<
     return this as Query<FIELDS & JOIN_FIELDS, RETURN, PARAMETERS>;
   }
 
-  public groupBy(field: string) {
+  public group(field: string) {
     this._group = field;
     delete this._query;
     return this;
   }
 
-  public sortBy(field: string, desc?: boolean) {
-    this._sort = {
+  public sort(field: string, desc?: boolean) {
+    if (!this._sort) this._sort = [];
+    this._sort.push({
       field,
       desc: desc ?? false,
-    };
+    });
     delete this._query;
     return this;
   }
@@ -167,8 +168,8 @@ export class Query<
     if (this._joins)
       for (const { tableName, condition, left } of this._joins) query.join<FIELDS>(tableName, condition, left);
     if (this._conditions) for (const condition of this._conditions) query.where(condition);
-    if (this._group) query.groupBy(this._group);
-    if (this._sort) query.sortBy(this._sort.field, this._sort.desc);
+    if (this._group) query.group(this._group);
+    if (this._sort) for (const { field, desc } of this._sort) query.sort(field, desc);
     if (this._limit) query.limit(this._limit.limit, this._limit.offset);
     switch (this.mode) {
       case QUERY_MODE.DELETE:
@@ -208,7 +209,7 @@ export class Query<
 
   protected sortByToString() {
     if (!this._sort) return '';
-    return ` SORT BY ${this._sort.field} ${this._sort.desc ? 'DESC' : 'ASC'}`;
+    return ' SORT BY ' + this._sort.map(({ field, desc }) => field + (desc ? ' DESC' : '')).join(',');
   }
 
   protected limitToString() {
@@ -217,77 +218,3 @@ export class Query<
     return ` LIMIT ${this._limit.limit}`;
   }
 }
-// console.log(
-//   new Query<
-//     ObjectAddPrefix<StudySubjectTable, 's.'>,
-//     StudySubjectTable,
-//     {
-//       sid: number;
-//     }
-//   >(`${TABLES.STUDY_SUBJECTS} s`, [
-//     's.id',
-//     's.created',
-//     's.theme_id',
-//     's.title',
-//     'us.id userSubjectId',
-//     'GROUP_CONCAT(q.id) question_ids',
-//     'MAX(s.updated, IIF(us.created, us.created, 0), q.created) updated',
-//   ])
-
-//     .join<ObjectAddPrefix<StudyQuestionTable, 'q.'>>(`${TABLES.STUDY_QUESTIONS} q`, {
-//       'q.subject_id': 's.id',
-//     })
-//     .join<ObjectAddPrefix<StudyUserSubjectTable, 'us.'>>(
-//       `${TABLES.STUDY_USERS_SUBJECTS} us`,
-//       {
-//         'us.subject_id': 's.id',
-//       },
-//       true,
-//     )
-//     .groupBy('s.id')
-//     .where({
-//       's.id': '$sid',
-//     })
-//     .toDBQuery()
-//     .all({
-//       sid: 1,
-//     }),
-// );
-
-// console.log(
-//   new Query<
-//     { 's.id': number; 's.theme_id': number; 's.title': string },
-//     {},
-//     {
-//       title: string;
-//     }
-//   >(`${TABLES.STUDY_SUBJECTS} s`, ['s.id', 's.title t1', 't.title t2'])
-//     // .join<{
-//     //   't.id': number;
-//     //   't.title': number;
-//     // }>(`${TABLES.STUDY_THEMES} t`, {
-//     //   't.id': 's.theme_id',
-//     // })
-//     // .update({
-//     //   's.title': '$title',
-//     // })
-//     .delete()
-//     .where<{
-//       id: number;
-//     }>({
-//       $or: [
-//         {
-//           's.id': '$id',
-//         },
-//         {
-//           's.title': '$title',
-//         },
-//       ],
-//     })
-//     .toString(),
-//   // .toDBQuery()
-//   // .all({
-//   //   id: 100,
-//   //   title: 'え',
-//   // }),
-// );

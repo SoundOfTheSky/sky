@@ -1,55 +1,41 @@
+import { Type } from '@sinclair/typebox';
+import { TypeCompiler } from '@sinclair/typebox/compiler';
+
 import { HTTPHandler } from '@/services/http/types';
-import { sendCompressedJSON } from '@/services/http/utils';
+import { getRequestBodyT, HTTPError } from '@/services/http/utils';
 import { sessionGuard, setAuth, signJWT } from '@/services/session';
-import {
-  getChallenge,
-  getLoginOptions,
-  removeChallenge,
-  setChallenge,
-  verifyLogin,
-} from '@/services/session/auth-process';
-import { authenticatorsTable, usersTable } from '@/services/session/user';
-import { ValidationError } from '@/sky-utils';
+import { usersTable } from '@/services/session/users';
 
-import type { AuthenticationResponseJSON } from '@simplewebauthn/types';
+export const LoginT = TypeCompiler.Compile(
+  Type.Object({
+    username: Type.RegExp(/^(?!.*_{2})\w{3,16}$/u),
+    password: Type.String({
+      minLength: 3,
+      maxLength: 32,
+    }),
+  }),
+);
 
-export default (async function (req, res, route) {
-  const username = route.query['username'];
-  if (!username) throw new ValidationError('Invalid username');
-  const user = usersTable.convertFrom(usersTable.$getByUsername.get({ username }));
-  if (!user) throw new ValidationError('User not found');
-  const payload = await sessionGuard({ req, res });
-  if (req.method === 'GET') {
-    const options = await getLoginOptions(
-      authenticatorsTable.convertFromMany(authenticatorsTable.$getByUserId.all({ id: user.id })),
-    );
-    setChallenge(payload.sub, options.challenge);
-    sendCompressedJSON(res, options);
-  } else if (req.method === 'POST') {
-    const expectedChallenge = getChallenge(payload.sub);
-    if (!expectedChallenge) throw new ValidationError('Challenge timeout');
-    const data = (await req.json()) as AuthenticationResponseJSON;
-    const authenticator = authenticatorsTable.getById(data.id);
-    if (!authenticator) throw new ValidationError('Authenticator not found');
-    const verification = await verifyLogin(authenticator, expectedChallenge, data);
-    removeChallenge(payload.sub);
-    if (!verification.verified) throw new ValidationError('Not verified');
-    authenticatorsTable.$updateCounter.run({ user_id: user.id, counter: verification.authenticationInfo.newCounter });
-    setAuth(
-      res,
-      await signJWT(
-        {
-          ...payload,
-          user: {
-            id: user.id,
-            permissions: user.permissions,
-            status: user.status,
-          },
+// eslint-disable-next-line sonarjs/cognitive-complexity
+export default (async function (req, res) {
+  if (req.method !== 'POST') return;
+  const [payload, body] = await Promise.all([sessionGuard({ req, res }), getRequestBodyT(req, LoginT)]);
+  const user = usersTable.convertFrom(usersTable.$getByUsername.get(body));
+  if (!user || !(await Bun.password.verify(body.password, user.password))) throw new HTTPError('Not found', 404);
+  setAuth(
+    res,
+    await signJWT(
+      {
+        ...payload,
+        user: {
+          id: user.id,
+          permissions: user.permissions,
+          status: user.status,
         },
-        {
-          expiresIn: ~~(payload.exp - Date.now() / 1000),
-        },
-      ),
-    );
-  }
+      },
+      {
+        expiresIn: ~~(payload.exp - Date.now() / 1000),
+      },
+    ),
+  );
 } satisfies HTTPHandler);

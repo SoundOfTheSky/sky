@@ -7,13 +7,17 @@ import { usersSubjectsTable } from '@/services/study/users-subjects';
 import TABLES from '@/services/tables';
 import { Changes, TableDefaults } from '@/sky-shared/db';
 import { StudyTheme } from '@/sky-shared/study';
+import { Optional, ValidationError } from '@/sky-utils';
 
 export type UserTheme = TableDefaults & {
   userId: number;
+  themeId: number;
   lessons: number[];
   reviews: Record<string, number[]>;
+  needUnlock: boolean;
 };
-export class UsersThemesTable extends TableWithUser<UserTheme> {
+type UserThemesDTO = Optional<Omit<UserTheme, 'lessons' | 'reviews'>, 'needUnlock' | keyof TableDefaults>;
+export class UsersThemesTable extends TableWithUser<UserTheme, UserThemesDTO> {
   public $setNeedUnlock = DB.prepare<undefined, { needUnlock: 0 | 1; userId: number }>(
     `UPDATE ${this.name} SET need_unlock = $needUnlock WHERE user_id = $userId`,
   );
@@ -30,6 +34,14 @@ export class UsersThemesTable extends TableWithUser<UserTheme> {
       IIF(ut.updated>t.updated, ut.updated, t.updated) updated
     FROM ${TABLES.STUDY_THEMES} t
     LEFT JOIN ${this.name} ut ON t.id = ut.theme_id AND ut.user_id = ?`,
+  );
+
+  protected $countByUserAndTheme = DB.prepare<{ a: number }, { userId: number; themeId: number }>(
+    `SELECT COUNT(*) a FROM ${this.name} WHERE user_id = $userId AND theme_id = $themeId`,
+  );
+
+  protected $deleteByUserTheme = DB.prepare<undefined, { themeId: number; userId: number }>(
+    `DELETE FROM ${this.name} WHERE theme_id = $themeId AND user_id = $userId`,
   );
 
   public constructor() {
@@ -57,9 +69,9 @@ export class UsersThemesTable extends TableWithUser<UserTheme> {
       },
       needUnlock: {
         type: 'INTEGER',
-        required: true,
         to: convertToBoolean,
         from: convertFromBoolean,
+        default: 1,
       },
     });
   }
@@ -96,9 +108,14 @@ export class UsersThemesTable extends TableWithUser<UserTheme> {
     return themes as unknown as StudyTheme[];
   }
 
+  public create(data: UserThemesDTO): Changes {
+    if (this.$countByUserAndTheme.get(data)!.a !== 0) throw new ValidationError('User already have this theme');
+    return super.create(data);
+  }
+
   public deleteByIdUser(themeId: number, userId: number): Changes {
-    const changes = super.deleteByIdUser(themeId, userId);
     const options = { themeId, userId };
+    const changes = this.$deleteByUserTheme.run(options);
     changes.changes += answersTable.$deleteByUserTheme.run(options).changes;
     changes.changes += usersSubjectsTable.$deleteByUserTheme.run(options).changes;
     changes.changes += usersQuestionsTable.$deleteByUserTheme.run(options).changes;

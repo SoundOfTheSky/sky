@@ -6,7 +6,7 @@ import { TypeCheck } from '@sinclair/typebox/compiler';
 
 import { Query } from '@/services/db/query';
 import { Table, TableWithUser } from '@/services/db/table';
-import { DBRow, TableDTO } from '@/services/db/types';
+import { DBDataType, DBRow, TableDTO } from '@/services/db/types';
 import { HTTPHandler } from '@/services/http/types';
 import { HTTPError, sendCompressedJSON } from '@/services/http/utils';
 import { sessionGuard } from '@/services/session';
@@ -14,65 +14,33 @@ import { TableDefaults } from '@/sky-shared/db';
 import { parseInt } from '@/sky-utils';
 
 const QUERY_MODIFIERS = {
-  '<': '<',
-  '>': '>',
-  '!': '<>',
-  '~': 'LIKE',
+  '<': ['<', 'l'],
+  '>': ['>', 'g'],
+  '!': ['<>', 'n'],
+  '~': ['LIKE', 's'],
 } as const;
-
-const queryCache = new Map<string, Statement<DBRow, [{}]>>();
-/**
- * Parses queries
- * - key=value - Search for exact value
- * - key!=value - Search without this value
- * - key~=value - Search for substring. Accepts %
- * - key<=value - Less or equal
- * - key>=value - More or equal
- */
-function queryWhere<
-  OUTPUT extends TableDefaults = TableDefaults,
-  INPUT extends object = TableDTO<OUTPUT>,
-  QUERY extends Query<TableDefaults> = Query<TableDefaults, TableDefaults, undefined>,
->(table: Table<OUTPUT, INPUT, QUERY>, query: Record<string, string> = {}): OUTPUT[] {
-  const params: DBRow = {};
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let where = '';
-  for (const key of Object.keys(query)) {
-    const modifier = QUERY_MODIFIERS[key.at(-1) as keyof typeof QUERY_MODIFIERS];
-    const tableColumnName = modifier ? key.slice(0, -1) : key;
-    const column = table.schema.get(tableColumnName);
-    if (!column) continue;
-    where += ` AND ${tableColumnName} ${modifier} $${tableColumnName}`;
-    switch (column.type) {
-      case 'INTEGER':
-        params[key] = parseInt(query[key]);
-        break;
-      case 'REAL':
-        params[key] = parseFloat(query[key]);
-        break;
-      default:
-        params[key] = query[key];
-        break;
-    }
-  }
-  const cacheKey = table.name + Object.keys(query).join(',');
-  let cachedQuery = queryCache.get(cacheKey);
-  if (!cachedQuery) {
-    cachedQuery = table.query.clone().where(where).toDBQuery();
-    queryCache.set(cacheKey, cachedQuery);
-  }
-  return table.convertFromMany(cachedQuery.all(params));
-}
 
 export class RESTApi<
   OUTPUT extends TableDefaults = TableDefaults,
   INPUT extends object = TableDTO<OUTPUT>,
   QUERY extends Query<TableDefaults> = Query<TableDefaults, TableDefaults, undefined>,
 > {
-  public constructor(public table: Table<OUTPUT, INPUT, QUERY>) {}
+  protected queryCache = new Map<string, Statement<DBRow, [{}]>>();
 
-  public getAll(params: Record<string, string>): OUTPUT[] {
-    return queryWhere(this.table, params);
+  public constructor(
+    public table: Table<OUTPUT, INPUT, QUERY>,
+    public queryFields: Record<
+      string,
+      {
+        sql: (modifier: string, param: string) => string;
+        convertTo: (data: string) => DBDataType;
+      }
+    > = {},
+    public sortableFields: Record<string, string[]> = {},
+  ) {}
+
+  public getAll(query: Record<string, string>): OUTPUT[] {
+    return this.query(query);
   }
 
   public get(params: { id: number }): OUTPUT | undefined {
@@ -92,6 +60,43 @@ export class RESTApi<
   public delete(params: { id: number }): void {
     this.table.deleteById(params.id);
   }
+
+  /**
+   * Parses queries
+   * - key=value - Search for exact value
+   * - key!=value - Search without this value
+   * - key~=value - Search for substring. Accepts %
+   * - key<=value - Less
+   * - key>=value - Greater
+   * - sort+=column - sort ascending WIP
+   * - sort-=column - sort descending WIP
+   */
+  protected query(query: Record<string, string>): OUTPUT[] {
+    const params: DBRow = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let where = '';
+    if (query)
+      for (const key in query) {
+        let name;
+        let modifier = QUERY_MODIFIERS[key.at(-1) as keyof typeof QUERY_MODIFIERS] as [string, string];
+        if (modifier) name = key.slice(0, -1);
+        else {
+          name = key;
+          modifier = ['=', 'e'];
+        }
+        const field = this.queryFields[name];
+        if (!field) continue;
+        const param = name + modifier[1];
+        where += ` AND ${field.sql(modifier[0], param)}`;
+        params[param] = field.convertTo(query[key]);
+      }
+    let cachedQuery = this.queryCache.get(where);
+    if (!cachedQuery) {
+      cachedQuery = this.table.query.clone().where(where.slice(5)).toDBQuery();
+      this.queryCache.set(where, cachedQuery);
+    }
+    return this.table.convertFromMany(cachedQuery.all(params));
+  }
 }
 
 export class RESTApiUser<
@@ -107,6 +112,16 @@ export class RESTApiUser<
 
   public delete(params: { id: number; user_id: number }): void {
     this.table.deleteByIdUser(params.id, params.user_id);
+  }
+
+  public create(data: INPUT): OUTPUT {
+    const changes = this.table.create(data);
+    return this.get({ id: changes.lastInsertRowid as number, user_id: (data as { user_id: number }).user_id })!;
+  }
+
+  public update(id: number, data: INPUT): OUTPUT {
+    const changes = this.table.update(id, data);
+    return this.get({ id: changes.lastInsertRowid as number, user_id: (data as { user_id: number }).user_id })!;
   }
 }
 
@@ -144,13 +159,20 @@ export function createRestEndpointHandler(
           user_id: session.user.id,
         } as never);
         break;
-      case 'POST':
+      case 'POST': {
         const body = (await req.json()) as { user_id: number };
         if (!T.Check(body)) throw new HTTPError('Validation error', 400, JSON.stringify([...T.Errors(body)]));
         body['user_id'] = session.user.id;
-        if (param) sendCompressedJSON(res, api.update(parseInt(param), body));
-        else sendCompressedJSON(res, api.create(body));
+        sendCompressedJSON(res, api.create(body));
         break;
+      }
+      case 'PUT': {
+        const body = (await req.json()) as { user_id: number };
+        if (!T.Check(body)) throw new HTTPError('Validation error', 400, JSON.stringify([...T.Errors(body)]));
+        body['user_id'] = session.user.id;
+        sendCompressedJSON(res, api.update(parseInt(param), body));
+        break;
+      }
     }
   };
 }

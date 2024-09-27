@@ -1,4 +1,4 @@
-import { usersTable } from '@/services/session/user';
+import { usersTable } from '@/services/session/users';
 import { WS, subscribeWSEvent } from '@/services/ws';
 
 type ChatMessage = {

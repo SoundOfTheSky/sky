@@ -34,6 +34,7 @@ global.server = serve<WS['data']>({
   },
   maxRequestBodySize: 1024 * 1024 * 10, // 10mb
   idleTimeout: 30,
+  development: false,
 });
 log('Started on ports', server.port, httpServer.port);
 

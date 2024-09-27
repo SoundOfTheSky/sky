@@ -1,13 +1,13 @@
 import { HTTPHandler } from '@/services/http/types';
 import { HTTPError, sendCompressedJSON } from '@/services/http/utils';
 import { sessionGuard } from '@/services/session';
-import { usersTable } from '@/services/session/user';
-import { ValidationError } from '@/sky-utils';
+import { User, usersTable } from '@/services/session/users';
+import { Optional, ValidationError } from '@/sky-utils';
 
 export default (async function (req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') return;
   const payload = await sessionGuard({ req, res, permissions: [], throw401: true });
-  let user = usersTable.getById(payload.user.id);
+  let user = usersTable.getById(payload.user.id) as Optional<User, 'password'>;
   if (!user) throw new HTTPError('Not logged in', 401);
   if (req.method === 'POST') {
     const data = (await req.json()) as {
@@ -24,5 +24,6 @@ export default (async function (req, res) {
     usersTable.update(user.id, data);
     user = usersTable.getById(payload.user.id)!;
   }
+  delete user.password;
   sendCompressedJSON(res, user);
 } satisfies HTTPHandler);

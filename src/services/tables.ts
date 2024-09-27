@@ -1,6 +1,5 @@
 enum TABLES {
   USERS = 'users',
-  AUTHENTICATORS = 'authenticators',
   STORE = 'store',
   STUDY_QUESTIONS = 'study_questions',
   STUDY_SUBJECTS = 'study_subjects',
