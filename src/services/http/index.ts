@@ -1,4 +1,4 @@
-import { Server } from 'bun';
+import { Server, FileSystemRouter } from 'bun';
 import { join, relative } from 'node:path';
 
 import { HTTPHandler, HTTPResponse } from '@/services/http/types';
@@ -6,7 +6,7 @@ import { HTTPError } from '@/services/http/utils';
 import { sessionGuard } from '@/services/session';
 import { ValidationError, formatTime, log } from '@/sky-utils';
 
-const router = new Bun.FileSystemRouter({
+const router = new FileSystemRouter({
   style: 'nextjs',
   dir: join(import.meta.dir, '../../routes'),
   origin: import.meta.dir,

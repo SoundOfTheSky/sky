@@ -2,7 +2,7 @@ import { file, serve } from 'bun';
 
 import '@/preload';
 
-import { DB } from '@/services/db';
+import { DB } from '@/services/db/db';
 import handleHTTP from '@/services/http';
 import { WS, wsCloseHandler, wsMessageHandler, wsOpenHandler } from '@/services/ws';
 import { log } from '@/sky-utils';
@@ -46,7 +46,6 @@ function onExit() {
   DB.close();
   process.exit();
 }
-
 // setTimeout(() => void import('./chiruno/test.js'), 1000);
 // setTimeout(() => void import('./chiruno/clampIds.js'), 1000);
 // setTimeout(() => void import('./chiruno/wanikani.js'), 1000);

@@ -1,4 +1,5 @@
-import { DB, DBTable, UpdateTableDTO, DEFAULT_COLUMNS } from '@/services/db';
+import { DEFAULT_COLUMNS, Table } from '@/services/db/table';
+import { UpdateTableDTO } from '@/services/db/types';
 import TABLES from '@/services/tables';
 import { TableDefaults } from '@/sky-shared/db';
 
@@ -9,8 +10,9 @@ export type StoreData = {
   f?: number;
   b?: Buffer;
 };
-export class StoreTable extends DBTable<TableDefaults & StoreData> {
-  private $getByName = DB.prepare<StoreData, [string]>(`SELECT * FROM ${this.name} WHERE name = ?`);
+export class StoreTable extends Table<TableDefaults & StoreData> {
+  protected $getByName = this.query.clone().where<{ name: string }>('name = $name').toDBQuery();
+
   public constructor() {
     super(TABLES.STORE, {
       ...DEFAULT_COLUMNS,
@@ -35,13 +37,13 @@ export class StoreTable extends DBTable<TableDefaults & StoreData> {
   }
 
   public getValue(name: string): string | number | Buffer | undefined {
-    const data = this.convertFrom(this.$getByName.get(name));
+    const data = this.convertFrom(this.$getByName.get({ name }));
     if (data) return data.s ?? data.n ?? data.f ?? data.b;
     return undefined;
   }
 
   public setValue(name: string, value?: string | number | Buffer) {
-    const exists = this.convertFrom(this.$getByName.get(name));
+    const exists = this.convertFrom(this.$getByName.get({ name }));
     const newVal: UpdateTableDTO<StoreData> = {
       name,
       b: null,

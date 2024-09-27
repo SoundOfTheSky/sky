@@ -1,4 +1,4 @@
-import { DBTable, DEFAULT_COLUMNS } from '@/services/db';
+import { DEFAULT_COLUMNS, Table } from '@/services/db/table';
 import TABLES from '@/services/tables';
 import { TableDefaults } from '@/sky-shared/db';
 import { log } from '@/sky-utils';
@@ -10,7 +10,7 @@ export type SubjectDependencies = TableDefaults & {
   subjectId: number;
   dependencyId: number;
 };
-export class SubjectDependenciesTable extends DBTable<SubjectDependencies> {
+export class SubjectDependenciesTable extends Table<SubjectDependencies> {
   public constructor() {
     super(TABLES.STUDY_SUBJECT_DEPS, {
       ...DEFAULT_COLUMNS,

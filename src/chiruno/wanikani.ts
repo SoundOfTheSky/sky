@@ -6,7 +6,8 @@ import { CryptoHasher, file, write } from 'bun';
 import { cpSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { DB, UpdateTableDTO } from '@/services/db';
+import { DB } from '@/services/db/db';
+import { UpdateTableDTO } from '@/services/db/types';
 import { questionsTable } from '@/services/study/questions';
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
 import { subjectsTable } from '@/services/study/subjects';
@@ -576,13 +577,9 @@ Anime sentences:
   }
   // === Replace subject ids ===
   log('Fixing stuff in descriptions...');
-  const questions = DB.prepare(
-    `SELECT q.id, q.description, q.question FROM questions q
-    JOIN ${TABLES.STUDY_SUBJECTS} s ON s.id = q.subject_id
-    WHERE s.theme_id = ?`,
-  )
-    .all(themeId)
-    .map((x) => questionsTable.convertFrom(x)!);
+  const questions = questionsTable.convertFromMany(
+    questionsTable.query.clone().where<{ themeId: number }>('s.theme_id = $themeId').toDBQuery().all({ themeId }),
+  );
   for (const question of questions) {
     log(question.id);
     questionsTable.update(question.id, {

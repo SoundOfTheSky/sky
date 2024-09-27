@@ -1,4 +1,6 @@
-import { convertFromBoolean, convertToBoolean, DB, DBTableWithUser, DEFAULT_COLUMNS } from '@/services/db';
+import { convertFromBoolean, convertToBoolean } from '@/services/db/convetrations';
+import { DB } from '@/services/db/db';
+import { DEFAULT_COLUMNS, TableWithUser } from '@/services/db/table';
 import { answersTable } from '@/services/study/answers';
 import { usersQuestionsTable } from '@/services/study/users-questions';
 import { usersSubjectsTable } from '@/services/study/users-subjects';
@@ -11,9 +13,9 @@ export type UserTheme = TableDefaults & {
   lessons: number[];
   reviews: Record<string, number[]>;
 };
-export class UsersThemesTable extends DBTableWithUser<UserTheme> {
-  public $setNeedUnlock = DB.prepare<undefined, [0 | 1, number]>(
-    `UPDATE ${this.name} SET need_unlock = ? WHERE user_id = ?`,
+export class UsersThemesTable extends TableWithUser<UserTheme> {
+  public $setNeedUnlock = DB.prepare<undefined, { needUnlock: 0 | 1; userId: number }>(
+    `UPDATE ${this.name} SET need_unlock = $needUnlock WHERE user_id = $userId`,
   );
 
   protected $getThemeAndThemeData = DB.prepare<
@@ -82,7 +84,7 @@ export class UsersThemesTable extends DBTableWithUser<UserTheme> {
     }[];
     if (themes.some((t) => t.needUnlock)) {
       usersSubjectsTable.unlock(userId);
-      this.$setNeedUnlock.run(0, userId);
+      this.$setNeedUnlock.run({ needUnlock: 0, userId });
     }
     const reviewsAndLessons = usersSubjectsTable.getUserReviewsAndLessons(userId);
     for (let i = 0; i < themes.length; i++) {
@@ -94,11 +96,12 @@ export class UsersThemesTable extends DBTableWithUser<UserTheme> {
     return themes as unknown as StudyTheme[];
   }
 
-  public deleteByIdUser(id: number, userId: number): Changes {
-    const changes = super.deleteByIdUser(id, userId);
-    changes.changes += answersTable.$deleteByUserTheme.run(id, userId).changes;
-    changes.changes += usersSubjectsTable.$deleteByUserTheme.run(id, userId).changes;
-    changes.changes += usersQuestionsTable.deleteByIdUser(id, userId).changes;
+  public deleteByIdUser(themeId: number, userId: number): Changes {
+    const changes = super.deleteByIdUser(themeId, userId);
+    const options = { themeId, userId };
+    changes.changes += answersTable.$deleteByUserTheme.run(options).changes;
+    changes.changes += usersSubjectsTable.$deleteByUserTheme.run(options).changes;
+    changes.changes += usersQuestionsTable.$deleteByUserTheme.run(options).changes;
     return changes;
   }
 }

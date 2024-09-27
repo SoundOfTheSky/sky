@@ -1,77 +1,117 @@
+/* eslint-disable @typescript-eslint/ban-types */
+import { Statement } from 'bun:sqlite';
+
 import { TSchema } from '@sinclair/typebox';
 import { TypeCheck } from '@sinclair/typebox/compiler';
 
-import { DBTable, DBTableWithUser } from '@/services/db';
+import { Query } from '@/services/db/query';
+import { Table, TableWithUser } from '@/services/db/table';
+import { DBRow, TableDTO } from '@/services/db/types';
 import { HTTPHandler } from '@/services/http/types';
-import { HTTPError, sendJSON } from '@/services/http/utils';
+import { HTTPError, sendCompressedJSON } from '@/services/http/utils';
 import { sessionGuard } from '@/services/session';
-import { TableDTO } from '@/sky-shared/db';
-import { parseInt, ValidationError } from '@/sky-utils';
+import { TableDefaults } from '@/sky-shared/db';
+import { parseInt } from '@/sky-utils';
 
-export class RESTApi<T, DTO = TableDTO<T>, O = T, I = DTO, TABLE extends DBTable<T, DTO> = DBTable<T, DTO>> {
-  public constructor(public table: TABLE) {}
+const QUERY_MODIFIERS = {
+  '<': '<',
+  '>': '>',
+  '!': '<>',
+  '~': 'LIKE',
+} as const;
 
-  public getUpdated(time: Date, _userId: number): [number, number][] {
-    return this.table.getUpdated(time);
+const queryCache = new Map<string, Statement<DBRow, [{}]>>();
+/**
+ * Parses queries
+ * - key=value - Search for exact value
+ * - key!=value - Search without this value
+ * - key~=value - Search for substring. Accepts %
+ * - key<=value - Less or equal
+ * - key>=value - More or equal
+ */
+function queryWhere<
+  OUTPUT extends TableDefaults = TableDefaults,
+  INPUT extends object = TableDTO<OUTPUT>,
+  QUERY extends Query<TableDefaults> = Query<TableDefaults, TableDefaults, undefined>,
+>(table: Table<OUTPUT, INPUT, QUERY>, query: Record<string, string> = {}): OUTPUT[] {
+  const params: DBRow = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let where = '';
+  for (const key of Object.keys(query)) {
+    const modifier = QUERY_MODIFIERS[key.at(-1) as keyof typeof QUERY_MODIFIERS];
+    const tableColumnName = modifier ? key.slice(0, -1) : key;
+    const column = table.schema.get(tableColumnName);
+    if (!column) continue;
+    where += ` AND ${tableColumnName} ${modifier} $${tableColumnName}`;
+    switch (column.type) {
+      case 'INTEGER':
+        params[key] = parseInt(query[key]);
+        break;
+      case 'REAL':
+        params[key] = parseFloat(query[key]);
+        break;
+      default:
+        params[key] = query[key];
+        break;
+    }
+  }
+  const cacheKey = table.name + Object.keys(query).join(',');
+  let cachedQuery = queryCache.get(cacheKey);
+  if (!cachedQuery) {
+    cachedQuery = table.query.clone().where(where).toDBQuery();
+    queryCache.set(cacheKey, cachedQuery);
+  }
+  return table.convertFromMany(cachedQuery.all(params));
+}
+
+export class RESTApi<
+  OUTPUT extends TableDefaults = TableDefaults,
+  INPUT extends object = TableDTO<OUTPUT>,
+  QUERY extends Query<TableDefaults> = Query<TableDefaults, TableDefaults, undefined>,
+> {
+  public constructor(public table: Table<OUTPUT, INPUT, QUERY>) {}
+
+  public getAll(params: Record<string, string>): OUTPUT[] {
+    return queryWhere(this.table, params);
   }
 
-  public get(id: number, _userId: number): O | undefined {
-    return this.table.getById(id) as O | undefined;
+  public get(params: { id: number }): OUTPUT | undefined {
+    return this.table.getById(params.id);
   }
 
-  public create(data: I, _userId: number): O {
-    const changes = this.table.create(data as unknown as DTO);
-    return this.table.getById(changes.lastInsertRowid as number) as O;
+  public create(data: INPUT): OUTPUT {
+    const changes = this.table.create(data);
+    return this.get({ id: changes.lastInsertRowid as number })!;
   }
 
-  public update(id: number, data: I, _userId: number): O | undefined {
-    const changes = this.table.update(id, data as unknown as DTO);
-    return this.table.getById(changes.lastInsertRowid as number) as O | undefined;
+  public update(id: number, data: INPUT): OUTPUT {
+    const changes = this.table.update(id, data);
+    return this.get({ id: changes.lastInsertRowid as number })!;
   }
 
-  public delete(id: number, _userId: number): void {
-    this.table.deleteById(id);
+  public delete(params: { id: number }): void {
+    this.table.deleteById(params.id);
   }
 }
 
 export class RESTApiUser<
-  T,
-  DTO = TableDTO<T>,
-  O = T,
-  I = DTO,
-  TABLE extends DBTableWithUser<T, DTO> = DBTableWithUser<T, DTO>,
-> extends RESTApi<T, DTO, O, I, TABLE> {
-  public constructor(table: TABLE) {
-    super(table);
+  OUTPUT extends TableDefaults & { userId: number } = TableDefaults & { userId: number },
+  INPUT extends object = TableDTO<OUTPUT>,
+  QUERY extends Query<TableDefaults & { user_id: number }> = Query<TableDefaults & { user_id: number }>,
+> extends RESTApi<OUTPUT, INPUT, QUERY> {
+  public declare table: TableWithUser<OUTPUT, INPUT, QUERY>;
+
+  public get(params: { id: number; user_id: number }): OUTPUT | undefined {
+    return this.table.getByIdUser(params.id, params.user_id);
   }
 
-  public getUpdated(time: Date, userId: number): [number, number][] {
-    return this.table.getUpdatedByUser(time, userId);
-  }
-
-  public get(id: number, userId: number): O | undefined {
-    return this.table.getByIdUser(id, userId) as O | undefined;
-  }
-
-  public create(data: I, userId: number): O {
-    (data as { user_id: number })['user_id'] = userId;
-    const changes = this.table.create(data as unknown as DTO);
-    return this.table.getById(changes.lastInsertRowid as number) as O;
-  }
-
-  public update(id: number, data: I, userId: number): O | undefined {
-    (data as { user_id: number })['user_id'] = userId;
-    const changes = this.table.updateByUser(id, data as unknown as DTO, userId);
-    return this.table.getById(changes.lastInsertRowid as number) as O | undefined;
-  }
-
-  public delete(id: number, userId: number): void {
-    this.table.deleteByIdUser(id, userId);
+  public delete(params: { id: number; user_id: number }): void {
+    this.table.deleteByIdUser(params.id, params.user_id);
   }
 }
 
-export function createRestEndpointHandler<T, DTO>(
-  api: RESTApi<T, DTO>,
+export function createRestEndpointHandler(
+  api: RESTApi,
   T: TypeCheck<TSchema>,
   viewPermission: string,
   editPermission: string,
@@ -86,27 +126,30 @@ export function createRestEndpointHandler<T, DTO>(
     const param = route.params['id'];
     switch (req.method) {
       case 'GET':
-        if (param.startsWith('updated/')) {
-          const time = Number.parseInt(param.slice(8));
-          if (Number.isNaN(time)) throw new ValidationError('Invalid time');
-          res.body = api
-            .getUpdated(new Date(time * 1000), session.user.id)
-            .map(([id, time]) => id + ',' + time)
-            .join('\n');
-        } else if (param) {
-          const item = api.get(parseInt(param), session.user.id);
+        if (param) {
+          const item = api.get({
+            id: parseInt(param),
+            user_id: session.user.id,
+          } as never);
           if (!item) throw new HTTPError('Not found', 404);
-          sendJSON(res, item);
+          sendCompressedJSON(res, item);
+        } else {
+          route.query.user_id = session.user.id.toString();
+          sendCompressedJSON(res, api.getAll(route.query));
         }
         break;
       case 'DELETE':
-        api.delete(parseInt(param), session.user.id);
+        api.delete({
+          id: parseInt(param),
+          user_id: session.user.id,
+        } as never);
         break;
       case 'POST':
-        const body = (await req.json()) as DTO;
+        const body = (await req.json()) as { user_id: number };
         if (!T.Check(body)) throw new HTTPError('Validation error', 400, JSON.stringify([...T.Errors(body)]));
-        if (param) sendJSON(res, api.update(parseInt(param), body, session.user.id));
-        else sendJSON(res, api.create(body, session.user.id));
+        body['user_id'] = session.user.id;
+        if (param) sendCompressedJSON(res, api.update(parseInt(param), body));
+        else sendCompressedJSON(res, api.create(body));
         break;
     }
   };

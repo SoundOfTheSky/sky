@@ -1,8 +1,8 @@
-import { DBTable, DEFAULT_COLUMNS } from '@/services/db';
+import { DEFAULT_COLUMNS, Table } from '@/services/db/table';
 import TABLES from '@/services/tables';
 import { StudyTheme } from '@/sky-shared/study';
 
-export class ThemesTable extends DBTable<StudyTheme> {
+export class ThemesTable extends Table<StudyTheme> {
   public constructor() {
     super(TABLES.STUDY_THEMES, {
       ...DEFAULT_COLUMNS,

@@ -1,3 +1,5 @@
+import zlib from 'node:zlib';
+
 import { HTTPResponse } from '@/services/http/types';
 
 /** If thrown in handler will return response with code */
@@ -17,6 +19,12 @@ export class HTTPError extends Error {
 export function sendJSON(res: HTTPResponse, data: unknown) {
   res.body = JSON.stringify(data);
   res.headers.set('Content-Type', 'application/json');
+}
+
+export function sendCompressedJSON(res: HTTPResponse, data: unknown) {
+  res.body = zlib.deflateSync(JSON.stringify(data)) as unknown as Uint8Array;
+  res.headers.set('Content-Type', 'application/json');
+  res.headers.set('Content-Encoding', 'deflate');
 }
 
 /** Send redirect to location */

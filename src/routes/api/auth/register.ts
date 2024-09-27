@@ -1,7 +1,7 @@
 import { RegistrationResponseJSON } from '@simplewebauthn/types';
 
 import { HTTPHandler } from '@/services/http/types';
-import { sendJSON } from '@/services/http/utils';
+import { sendCompressedJSON } from '@/services/http/utils';
 import { sessionGuard, setAuth, signJWT, verifyJWT } from '@/services/session';
 import {
   getChallenge,
@@ -21,10 +21,10 @@ export default (async function (req, res, route) {
     throw new ValidationError('Username must be 2-24 letters long without spaces');
   const payload = await sessionGuard({ req, res });
   if (req.method === 'GET') {
-    if (!registerId && usersTable.checkIfUsernameExists(username)) throw new ValidationError('Username taken');
+    if (!registerId && usersTable.$getByUsername.get({ username })) throw new ValidationError('Username taken');
     const options = await getRegistrationOptions(username);
     setChallenge(payload.sub, options.challenge);
-    sendJSON(res, options);
+    sendCompressedJSON(res, options);
   } else if (req.method === 'POST') {
     const expectedChallenge = getChallenge(payload.sub);
     if (!expectedChallenge) throw new ValidationError('Challenge timeout');
@@ -32,7 +32,7 @@ export default (async function (req, res, route) {
     const verification = await verifyRegistration(expectedChallenge, data);
     removeChallenge(payload.sub);
     if (!verification.verified || !verification.registrationInfo) throw new ValidationError('Not verified');
-    if (!registerId && usersTable.checkIfUsernameExists(username)) throw new ValidationError('Username taken');
+    if (!registerId && usersTable.$getByUsername.get({ username })) throw new ValidationError('Username taken');
     const userId =
       registerId ??
       (usersTable.create({

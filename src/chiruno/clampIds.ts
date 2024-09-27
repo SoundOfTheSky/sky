@@ -1,4 +1,4 @@
-import { DB } from '@/services/db';
+import { DB } from '@/services/db/db';
 import { questionsTable } from '@/services/study/questions';
 import TABLES from '@/services/tables';
 
@@ -36,9 +36,13 @@ for (let i = 0; i < ids.length; i++) {
   console.log(i, ids.length);
   if (i + 1 === ids[i]) continue;
   DB.prepare(`UPDATE subjects SET id = ? WHERE id = ?`).run(i + 1, ids[i]);
-  for (const question of DB.query(`SELECT * FROM ${TABLES.STUDY_QUESTIONS} WHERE description LIKE ?`)
-    .all(`%<subject uid="${ids[i]}"%`)
-    .map((x) => questionsTable.convertFrom(x)!)) {
+  for (const question of questionsTable.convertFromMany(
+    questionsTable.query
+      .clone()
+      .where<{ description: string }>('description LIKE ?')
+      .toDBQuery()
+      .all({ description: `%<subject uid="${ids[i]}"%` }),
+  )) {
     questionsTable.update(question.id, {
       description: question.description.replaceAll(`<subject uid="${ids[i]}"`, `<subject uid="${i + 1}"`),
     });

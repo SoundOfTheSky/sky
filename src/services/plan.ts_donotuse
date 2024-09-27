@@ -1,7 +1,7 @@
 import { Type } from '@sinclair/typebox';
 import { TypeCompiler } from '@sinclair/typebox/compiler';
 
-import { DBTable, DEFAULT_COLUMNS, DB, convertToDate } from '@/services/db';
+import { Table, DEFAULT_COLUMNS, DB, convertToDate } from '@/services/db';
 import { usersTable } from '@/services/session/user';
 import { TableDefaults } from '@/sky-shared/db';
 
@@ -57,7 +57,7 @@ export const T = TypeCompiler.Compile(
   }),
 );
 
-export class PlanEventsTable extends DBTable<PlanEvent> {
+export class PlanEventsTable extends Table<PlanEvent> {
   public constructor(table: string) {
     super(table, {
       ...DEFAULT_COLUMNS,

@@ -1,4 +1,4 @@
-import { backupDB } from '@/services/db';
+import { backupDB } from '@/services/db/db';
 import { HTTPHandler } from '@/services/http/types';
 import { sessionGuard } from '@/services/session';
 

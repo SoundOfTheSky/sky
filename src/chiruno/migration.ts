@@ -6,7 +6,7 @@ import { log } from '@/sky-utils';
 const DB = new Database('database.db', {
   create: false,
   readwrite: true,
-  safeInteger: true,
+  safeIntegers: false,
   strict: true,
 });
 DB.fileControl(constants.SQLITE_FCNTL_PERSIST_WAL, 0);

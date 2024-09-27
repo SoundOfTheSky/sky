@@ -1,3 +1,21 @@
+/* eslint-disable unused-imports/no-unused-vars */
+import { Database, constants } from 'bun:sqlite';
+
+import TABLES from '@/services/tables';
+
+const DB = new Database('database.db', {
+  create: false,
+  readwrite: true,
+  safeIntegers: false,
+  strict: true,
+});
+DB.fileControl(constants.SQLITE_FCNTL_PERSIST_WAL, 0);
+DB.exec('PRAGMA journal_mode = DELETE');
+DB.exec('PRAGMA foreign_keys = ON');
+DB.exec('PRAGMA auto_vacuum = INCREMENTAL');
+
+console.log(DB.prepare(`SELECT * FROM ${TABLES.STUDY_SUBJECTS} WHERE title LIKE ?`).all('%ン%'));
+
 // /* eslint-disable sonarjs/no-duplicate-string */
 // // console.log(DB.prepare(`DELETE FROM users_subjects WHERE stage = 0`).run());
 // // usersSubjectsTable.unlock(1);

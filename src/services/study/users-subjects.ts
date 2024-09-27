@@ -1,24 +1,26 @@
-/* eslint-disable sonarjs/no-duplicate-string */
-import { DB, DBTableWithUser, DEFAULT_COLUMNS } from '@/services/db';
+import { DB } from '@/services/db/db';
+import { DEFAULT_COLUMNS, TableWithUser } from '@/services/db/table';
 import { usersThemesTable } from '@/services/study/users-themes';
 import TABLES from '@/services/tables';
 import { Changes } from '@/sky-shared/db';
 import { srs, StudyAnswerDTO, StudyUserSubject } from '@/sky-shared/study';
-import { ValidationError } from '@/sky-utils';
+import { ObjectCamelToSnakeCase, ValidationError } from '@/sky-utils';
 
-export class UserSubjectsTable extends DBTableWithUser<StudyUserSubject> {
-  public $deleteByUserTheme = DB.prepare<unknown, [number, number]>(
+export type StudyUserSubjectTable = ObjectCamelToSnakeCase<StudyUserSubject>;
+
+export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
+  public $deleteByUserTheme = DB.prepare<unknown, { themeId: number; userId: number }>(
     `DELETE FROM ${this.name} WHERE id IN (
       SELECT a.id FROM ${this.name} a
       JOIN ${TABLES.STUDY_SUBJECTS} s ON s.id == a.subject_id
-      WHERE s.theme_id = ? AND a.user_id = ?)`,
+      WHERE s.theme_id = $themeId AND a.user_id = $userId)`,
   );
 
-  protected $getUserReviews = DB.prepare<{ next_review: number; theme_id: number; ids: string }, [number]>(
+  protected $getUserReviews = DB.prepare<{ next_review: number; theme_id: number; ids: string }, { userId: number }>(
     `SELECT s.theme_id, us.next_review, GROUP_CONCAT(us.subject_id) ids
   FROM ${this.name} us
   JOIN ${TABLES.STUDY_SUBJECTS} s ON s.id = us.subject_id 
-  WHERE us.user_id = ? AND (us.next_review IS NOT NULL OR us.stage = 0)
+  WHERE us.user_id = $userId AND (us.next_review IS NOT NULL OR us.stage = 0)
   GROUP BY theme_id, next_review ORDER BY next_review ASC`,
   );
 
@@ -37,9 +39,10 @@ export class UserSubjectsTable extends DBTableWithUser<StudyUserSubject> {
     WHERE locks = 0`,
   );
 
-  protected $getSubjectData = DB.prepare<{ next_review?: number; stage: number }, [number, number]>(
-    `SELECT next_review, stage FROM ${this.name} WHERE subject_id = ? AND user_id = ?`,
-  );
+  protected $getSubjectData = DB.prepare<
+    { next_review?: number; stage: number },
+    { subjectId: number; userId: number }
+  >(`SELECT next_review, stage FROM ${this.name} WHERE subject_id = $subjectId AND user_id = $userId`);
 
   protected $updateStage = DB.prepare<
     undefined,
@@ -101,7 +104,7 @@ export class UserSubjectsTable extends DBTableWithUser<StudyUserSubject> {
    */
   public getUserReviewsAndLessons(userId: number) {
     const data = new Map<number, { reviews: Record<number, number[]>; lessons: number[] }>();
-    const userReviews = this.$getUserReviews.all(userId);
+    const userReviews = this.$getUserReviews.all({ userId });
     for (const el of userReviews) {
       let theme = data.get(el.theme_id);
       if (!theme) {
@@ -117,7 +120,7 @@ export class UserSubjectsTable extends DBTableWithUser<StudyUserSubject> {
 
   /** Register an answer for subject */
   public answer(data: StudyAnswerDTO): Changes {
-    const subject = this.$getSubjectData.get(data.subjectId, data.userId);
+    const subject = this.$getSubjectData.get(data);
     if (!subject) throw new ValidationError('Subject not found');
     const time = ~~(new Date(data.created).getTime() / 3_600_000);
     if (subject.next_review && subject.next_review > time)
@@ -129,7 +132,8 @@ export class UserSubjectsTable extends DBTableWithUser<StudyUserSubject> {
       subjectId: data.subjectId,
       userId: data.userId,
     });
-    if (data.correct && stage === 5) changes.changes += usersThemesTable.$setNeedUnlock.run(1, data.userId).changes;
+    if (data.correct && stage === 5)
+      changes.changes += usersThemesTable.$setNeedUnlock.run({ needUnlock: 1, userId: data.userId }).changes;
     return changes;
   }
 }

@@ -1,5 +1,5 @@
 import { HTTPHandler } from '@/services/http/types';
-import { sendJSON } from '@/services/http/utils';
+import { sendCompressedJSON } from '@/services/http/utils';
 import { sessionGuard, setAuth, signJWT } from '@/services/session';
 import {
   getChallenge,
@@ -16,13 +16,15 @@ import type { AuthenticationResponseJSON } from '@simplewebauthn/types';
 export default (async function (req, res, route) {
   const username = route.query['username'];
   if (!username) throw new ValidationError('Invalid username');
-  const user = usersTable.getByUsername(username);
+  const user = usersTable.convertFrom(usersTable.$getByUsername.get({ username }));
   if (!user) throw new ValidationError('User not found');
   const payload = await sessionGuard({ req, res });
   if (req.method === 'GET') {
-    const options = await getLoginOptions(authenticatorsTable.getAllByUser(user.id));
+    const options = await getLoginOptions(
+      authenticatorsTable.convertFromMany(authenticatorsTable.$getByUserId.all({ id: user.id })),
+    );
     setChallenge(payload.sub, options.challenge);
-    sendJSON(res, options);
+    sendCompressedJSON(res, options);
   } else if (req.method === 'POST') {
     const expectedChallenge = getChallenge(payload.sub);
     if (!expectedChallenge) throw new ValidationError('Challenge timeout');
@@ -32,7 +34,7 @@ export default (async function (req, res, route) {
     const verification = await verifyLogin(authenticator, expectedChallenge, data);
     removeChallenge(payload.sub);
     if (!verification.verified) throw new ValidationError('Not verified');
-    authenticatorsTable.updateCounter(user.id, verification.authenticationInfo.newCounter);
+    authenticatorsTable.$updateCounter.run({ user_id: user.id, counter: verification.authenticationInfo.newCounter });
     setAuth(
       res,
       await signJWT(

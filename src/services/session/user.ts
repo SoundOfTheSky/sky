@@ -1,16 +1,10 @@
 import { AuthenticatorTransportFuture, CredentialDeviceType } from '@simplewebauthn/types';
 
-import {
-  DB,
-  DBTable,
-  convertFromArray,
-  convertFromBoolean,
-  convertToArray,
-  convertToBoolean,
-  DEFAULT_COLUMNS,
-} from '@/services/db';
+import { convertFromArray, convertFromBoolean, convertToArray, convertToBoolean } from '@/services/db/convetrations';
+import { DB } from '@/services/db/db';
+import { DEFAULT_COLUMNS, Table, TableWithUser } from '@/services/db/table';
 import TABLES from '@/services/tables';
-import { DBRow, TableDefaults } from '@/sky-shared/db';
+import { TableDefaults } from '@/sky-shared/db';
 
 export type User = TableDefaults & {
   username: string;
@@ -18,11 +12,8 @@ export type User = TableDefaults & {
   permissions: string[];
   avatar?: string;
 };
-export class UsersTable extends DBTable<User> {
-  private $checkIfUsernameExists = DB.prepare<{ a: number }, string>(
-    `SELECT COUNT(*) a FROM ${this.name} WHERE username = ?`,
-  );
-  private $getByUsername = DB.prepare<User, [string]>(`SELECT * FROM ${this.name} WHERE username = ?`);
+export class UsersTable extends Table<User> {
+  public $getByUsername = this.query.clone().where<{ username: string }>('username = $username').toDBQuery();
 
   public constructor() {
     super(TABLES.USERS, {
@@ -46,14 +37,6 @@ export class UsersTable extends DBTable<User> {
       },
     });
   }
-
-  public checkIfUsernameExists(username: string) {
-    return this.$checkIfUsernameExists.get(username)!.a !== 0;
-  }
-
-  public getByUsername(username: string) {
-    return this.convertFrom(this.$getByUsername.get(username));
-  }
 }
 export const usersTable = new UsersTable();
 export type Authenticator = TableDefaults & {
@@ -65,11 +48,13 @@ export type Authenticator = TableDefaults & {
   userId: number;
   transports?: AuthenticatorTransportFuture[];
 };
-class AuthenticatorsTable extends DBTable<Authenticator> {
-  protected $updateCounter = DB.prepare<undefined, [number, number]>(
-    `UPDATE ${this.name} SET counter = ? WHERE user_id = ?`,
+class AuthenticatorsTable extends TableWithUser<Authenticator> {
+  public $updateCounter = DB.prepare<undefined, { counter: number; user_id: number }>(
+    `UPDATE ${this.name} SET counter = $counter WHERE user_id = $user_id`,
   );
-  protected $getAllByUser = DB.prepare<DBRow, [number]>(`SELECT * FROM ${this.name} WHERE user_id = ?`);
+
+  public $getByUserId = this.query.clone().where<{ id: number }>('user_id = $id').toDBQuery();
+
   public constructor() {
     super(TABLES.AUTHENTICATORS, {
       ...DEFAULT_COLUMNS,
@@ -113,14 +98,6 @@ class AuthenticatorsTable extends DBTable<Authenticator> {
         },
       },
     });
-  }
-
-  public updateCounter(userId: number, counter: number) {
-    this.$updateCounter.run(counter, userId);
-  }
-
-  public getAllByUser(userId: number): Authenticator[] {
-    return this.$getAllByUser.all(userId).map((x) => this.convertFrom(x)) as Authenticator[];
   }
 }
 export const authenticatorsTable = new AuthenticatorsTable();

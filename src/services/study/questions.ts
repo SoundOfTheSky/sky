@@ -1,82 +1,97 @@
-import {
-  convertFromArray,
-  convertToArray,
-  DBTable,
-  DEFAULT_COLUMNS,
-  convertToBoolean,
-  convertFromBoolean,
-  DB,
-} from '@/services/db';
+import { convertFromArray, convertFromBoolean, convertToArray, convertToBoolean } from '@/services/db/convetrations';
+import { DB } from '@/services/db/db';
+import { Query } from '@/services/db/query';
+import { DEFAULT_COLUMNS, Table } from '@/services/db/table';
 import TABLES from '@/services/tables';
-import { DBRow } from '@/sky-shared/db';
+import { TableDefaults } from '@/sky-shared/db';
 import { StudyQuestion } from '@/sky-shared/study';
+import { ObjectCamelToSnakeCase } from '@/sky-utils';
 
-export class QuestionsTable extends DBTable<StudyQuestion> {
-  protected $getById = DB.prepare<DBRow, [number]>(
-    `SELECT 
-      q.id,
-      q.created,
-      q.subject_id,
-      q.answers,
-      q.question,
-      q.description,
-      q.alternate_answers,
-      q.choose,
-      uq.id userQuestionId,
-      MAX(q.updated, IIF(uq.created, uq.created, 0)) updated
-    FROM ${this.name} q
-    LEFT JOIN ${TABLES.STUDY_USERS_QUESTIONS} uq ON q.id = uq.question_id
-    WHERE q.id = ?`,
-  );
+export type StudyQuestionTable = ObjectCamelToSnakeCase<
+  TableDefaults & {
+    answers: string;
+    question: string;
+    description: string;
+    subjectId: string;
+    alternateAnswers: string;
+    choose: number;
+  }
+>;
 
+export class QuestionsTable extends Table<StudyQuestion> {
   public constructor() {
-    super(TABLES.STUDY_QUESTIONS, {
-      ...DEFAULT_COLUMNS,
-      answers: {
-        type: 'TEXT',
-        required: true,
-        from: convertFromArray,
-        to: convertToArray,
-      },
-      question: {
-        type: 'TEXT',
-        required: true,
-        unique: true,
-      },
-      description: {
-        type: 'TEXT',
-        required: true,
-        unique: true,
-      },
-      subjectId: {
-        type: 'INTEGER',
-        required: true,
-        ref: {
-          table: TABLES.STUDY_SUBJECTS,
-          column: 'id',
-          onDelete: 'CASCADE',
-          onUpdate: 'CASCADE',
+    super(
+      TABLES.STUDY_QUESTIONS,
+      {
+        ...DEFAULT_COLUMNS,
+        answers: {
+          type: 'TEXT',
+          required: true,
+          from: convertFromArray,
+          to: convertToArray,
+        },
+        question: {
+          type: 'TEXT',
+          required: true,
+          unique: true,
+        },
+        description: {
+          type: 'TEXT',
+          required: true,
+          unique: true,
+        },
+        subjectId: {
+          type: 'INTEGER',
+          required: true,
+          ref: {
+            table: TABLES.STUDY_SUBJECTS,
+            column: 'id',
+            onDelete: 'CASCADE',
+            onUpdate: 'CASCADE',
+          },
+        },
+        alternateAnswers: {
+          type: 'TEXT',
+          from: (from) =>
+            typeof from === 'string'
+              ? (Object.fromEntries(from.split('|').map((el) => el.split('='))) as Record<string, string>)
+              : undefined,
+          to: (from: Record<string, string> | null | undefined) =>
+            from
+              ? Object.entries(from)
+                  .map((el) => el.join('='))
+                  .join('|')
+              : from,
+        },
+        choose: {
+          type: 'INTEGER',
+          from: convertFromBoolean,
+          to: convertToBoolean,
         },
       },
-      alternateAnswers: {
-        type: 'TEXT',
-        from: (from) =>
-          typeof from === 'string'
-            ? (Object.fromEntries(from.split('|').map((el) => el.split('='))) as Record<string, string>)
-            : undefined,
-        to: (from: Record<string, string> | null | undefined) =>
-          from
-            ? Object.entries(from)
-                .map((el) => el.join('='))
-                .join('|')
-            : from,
-      },
-      choose: {
-        type: 'INTEGER',
-        from: convertFromBoolean,
-        to: convertToBoolean,
-      },
-    });
+      new Query<
+        TableDefaults & {
+          subject_id: number;
+          answers: string;
+          question: string;
+          description: string;
+          alternate_answers: string;
+          choose: number;
+          userQuestionId?: number;
+        }
+      >(`${TABLES.STUDY_QUESTIONS} q`, [
+        'q.id',
+        'q.created',
+        'q.subject_id',
+        'q.answers',
+        'q.question',
+        'q.description',
+        'q.alternate_answers',
+        'q.choose',
+        'uq.id userQuestionId',
+        'MAX(q.updated, IIF(uq.created, uq.created, 0)) updated',
+      ]).join(`${TABLES.STUDY_USERS_QUESTIONS} uq`, 'q.id = uq.question_id'),
+    );
     this.createDeleteTrigger();
   }
 
