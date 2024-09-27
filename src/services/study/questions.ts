@@ -79,18 +79,18 @@ export class QuestionsTable extends Table<StudyQuestion> {
           choose: number;
           userQuestionId?: number;
         }
-      >(`${TABLES.STUDY_QUESTIONS} q`, [
-        'q.id',
-        'q.created',
-        'q.subject_id',
-        'q.answers',
-        'q.question',
-        'q.description',
-        'q.alternate_answers',
-        'q.choose',
-        'uq.id userQuestionId',
-        'MAX(q.updated, IIF(uq.created, uq.created, 0)) updated',
-      ]).join(`${TABLES.STUDY_USERS_QUESTIONS} uq`, 'q.id = uq.question_id'),
+      >(TABLES.STUDY_QUESTIONS, [
+        `${TABLES.STUDY_QUESTIONS}.id`,
+        `${TABLES.STUDY_QUESTIONS}.created`,
+        `${TABLES.STUDY_QUESTIONS}.subject_id`,
+        `${TABLES.STUDY_QUESTIONS}.answers`,
+        `${TABLES.STUDY_QUESTIONS}.question`,
+        `${TABLES.STUDY_QUESTIONS}.description`,
+        `${TABLES.STUDY_QUESTIONS}.alternate_answers`,
+        `${TABLES.STUDY_QUESTIONS}.choose`,
+        `uq.id userQuestionId`,
+        `MAX(${TABLES.STUDY_QUESTIONS}.updated, IIF(uq.created, uq.created, 0)) updated`,
+      ]).join(`${TABLES.STUDY_USERS_QUESTIONS} uq`, `uq.question_id = ${TABLES.STUDY_QUESTIONS}.id`, true),
     );
     this.createDeleteTrigger();
   }

@@ -46,6 +46,7 @@ export default async function handleHTTP(req: Request, server: Server): Promise<
   try {
     await handler(req, res, routerResult);
   } catch (e) {
+    console.error(e);
     if (e instanceof HTTPError) {
       res.status = e.code;
       res.body = e.body;

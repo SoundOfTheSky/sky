@@ -111,8 +111,6 @@ export async function sessionGuard(options: {
     disposedTokens.set(payload.sub, Date.now());
     setAuth(options.res, await signJWT(payload));
   }
-
-  // Check auth and permissions
   if (
     alreadyDisposed ||
     (options.permissions &&

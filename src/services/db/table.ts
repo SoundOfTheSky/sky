@@ -51,7 +51,7 @@ export class Table<
     }
     this.initializeTable();
     this.query = query ?? (new Query(this.name) as QUERY);
-    this.$getById = this.query.clone().where<{ id: number | string }>('id = $id').toDBQuery();
+    this.$getById = this.query.clone().where<{ id: number | string }>(`${this.name}.id = $id`).toDBQuery();
     this.$deleteById = DB.prepare<undefined, { id: number | string }>(`DELETE FROM ${this.name} WHERE id = $id`);
   }
 
@@ -111,7 +111,7 @@ export class Table<
 
   protected initializeTable() {
     const append: string[] = [];
-    DB.prepare(
+    DB.exec(
       `CREATE TABLE IF NOT EXISTS ${this.name} (
         ${[
           [...this.schema.entries()].map(([name, options]) => {
@@ -136,8 +136,9 @@ export class Table<
           }),
           ...append,
         ].join(',')})`,
-    ).run();
+    );
     this.registerUpdateTrigger();
+    this.registerUpdateIndex();
   }
 
   protected registerUpdateTrigger() {
@@ -151,6 +152,11 @@ export class Table<
       END`,
     );
   }
+
+  protected registerUpdateIndex() {
+    if (this.schema.get('updated')?.type !== 'TEXT') return;
+    DB.exec(`CREATE INDEX IF NOT EXISTS idx_${this.name}_updated ON ${this.name} (updated)`);
+  }
 }
 export class TableWithUser<
   OUTPUT extends TableDefaults & { userId: number } = TableDefaults & { userId: number },
@@ -159,7 +165,7 @@ export class TableWithUser<
 > extends Table<OUTPUT, INPUT, QUERY> {
   protected $getByIdUser = this.query
     .clone()
-    .where<{ id: string | number; userId: number }>('id = $id AND user_id = $userId')
+    .where<{ id: string | number; userId: number }>(`${this.name}.id = $id AND ${this.name}.user_id = $userId`)
     .toDBQuery();
 
   protected $deleteByIdUser = DB.prepare<undefined, { id: number | string; userId: number }>(

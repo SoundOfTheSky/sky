@@ -7,7 +7,7 @@ export const convertFromArray = (data: DBDataType) => (typeof data === 'string' 
 export const convertFromNumberArray = (data: DBDataType) =>
   typeof data === 'string' ? data.split('|').map((el) => +el) : undefined;
 export const convertToDate = (d: Date | undefined | null) => {
-  if (!d) return d;
+  if (!d || !(d instanceof Date)) return d;
   return `${d.getUTCFullYear()}-${`${d.getUTCMonth() + 1}`.padStart(2, '0')}-${d
     .getUTCDate()
     .toString()

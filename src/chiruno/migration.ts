@@ -105,6 +105,9 @@ function migration1() {
       .replace('FOREIGN KEY(srs_id) REFERENCES srs(id) ON DELETE CASCADE ON UPDATE CASCADE,', '')
       .replace('srs_id INTEGER NOT NULL,', ''),
   );
+  editTableSchema('users_themes', (schema) =>
+    schema.replace('need_unlock INTEGER NOT NULL,', 'need_unlock INTEGER DEFAULT 1,'),
+  );
   dropTable('srs');
   renameTable('questions', 'study_questions');
   renameTable('subject_dependencies', 'study_subject_deps');

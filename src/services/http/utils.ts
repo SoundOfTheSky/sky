@@ -22,7 +22,7 @@ export function sendJSON(res: HTTPResponse, data: unknown) {
 }
 
 export function sendCompressedJSON(res: HTTPResponse, data: unknown) {
-  res.body = zlib.deflateSync(JSON.stringify(data)) as unknown as Uint8Array;
+  res.body = zlib.deflateSync(JSON.stringify(data));
   res.headers.set('Content-Type', 'application/json');
   res.headers.set('Content-Encoding', 'deflate');
 }

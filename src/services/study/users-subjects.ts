@@ -55,7 +55,7 @@ export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
   >(`UPDATE ${this.name} SET next_review=$nextReview, stage=$stage WHERE subject_id=$subjectId AND user_id=$userId`);
 
   public constructor() {
-    super('users_subjects', {
+    super(TABLES.STUDY_USERS_SUBJECTS, {
       ...DEFAULT_COLUMNS,
       stage: {
         type: 'INTEGER',

@@ -9,7 +9,7 @@ export class UsersQuestionsTable extends TableWithUser<StudyUserQuestion> {
     `DELETE FROM ${this.name} WHERE id IN (
       SELECT a.id FROM ${this.name} a
       JOIN ${TABLES.STUDY_QUESTIONS} q ON q.id == a.question_id
-      JOIN ${TABLES.STUDY_SUBJECTS} s ON s.id == a.subject_id
+      JOIN ${TABLES.STUDY_SUBJECTS} s ON s.id == q.subject_id
       WHERE s.theme_id = $themeId AND a.user_id = $userId)`,
   );
 
