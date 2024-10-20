@@ -5,7 +5,6 @@ import { SignJWT, jwtVerify } from 'jose';
 
 import { HTTPResponse } from '@/services/http/types';
 import { HTTPError, getCookies, setCookie } from '@/services/http/utils';
-import { PERMISSIONS } from '@/services/session/user';
 import { storeTable } from '@/services/store';
 
 // === TOKENS ===
@@ -13,7 +12,7 @@ type JWTBody = {
   user?: {
     id: number;
     status: number;
-    permissions: PERMISSIONS[];
+    permissions: string[];
   };
   version: number;
 };
@@ -71,19 +70,19 @@ export async function sessionGuard(options: { req: Request; res: HTTPResponse })
 export async function sessionGuard(options: {
   req: Request;
   res?: HTTPResponse;
-  permissions: PERMISSIONS[];
+  permissions: string[];
   throw401?: false;
 }): Promise<(Omit<JWTPayload, 'user'> & { user: NonNullable<JWTPayload['user']> }) | undefined>;
 export async function sessionGuard(options: {
   req: Request;
   res?: HTTPResponse;
-  permissions: PERMISSIONS[];
+  permissions: string[];
   throw401: true;
 }): Promise<Omit<JWTPayload, 'user'> & { user: NonNullable<JWTPayload['user']> }>;
 export async function sessionGuard(options: {
   req: Request;
   res?: HTTPResponse;
-  permissions?: PERMISSIONS[];
+  permissions?: string[];
   throw401?: boolean;
 }): Promise<JWTPayload | undefined> {
   const token = getCookies(options.req)['session'] ?? options.req.headers.get('authorization');
@@ -112,14 +111,12 @@ export async function sessionGuard(options: {
     disposedTokens.set(payload.sub, Date.now());
     setAuth(options.res, await signJWT(payload));
   }
-
-  // Check auth and permissions
   if (
     alreadyDisposed ||
     (options.permissions &&
       (!payload.user ||
-        (!payload.user.permissions.includes(PERMISSIONS.ADMIN) &&
-          options.permissions.some((perm) => payload.user!.permissions.every((uPerm) => !perm.startsWith(uPerm))))))
+        (!payload.user.permissions.includes('ADMIN') &&
+          options.permissions.some((perm) => !payload.user!.permissions.includes(perm)))))
   ) {
     if (options.throw401) throw new HTTPError('Not allowed', 401);
     return;

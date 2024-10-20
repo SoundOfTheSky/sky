@@ -1,4 +1,4 @@
-import { usersTable } from '@/services/session/user';
+import { usersTable } from '@/services/session/users';
 import { WS, subscribeWSEvent } from '@/services/ws';
 
 type ChatMessage = {
@@ -17,29 +17,29 @@ export class Chat {
   public history: ChatMessage[] = [];
   public historyLength = 20;
   public subscribers = 0;
-  private lastAnonymousId = 1;
+  protected lastAnonymousId = 1;
 
-  constructor(public name: string) {
+  public constructor(public name: string) {
     subscribeWSEvent(name, this.onMessage.bind(this));
     subscribeWSEvent(name + 'Subscribe', this.onSubscribe.bind(this));
     subscribeWSEvent(name + 'Unsubscribe', this.onUnsubscribe.bind(this));
     subscribeWSEvent('close', this.onUnsubscribe.bind(this));
   }
 
-  private onMessage(ws: WS, payload?: string) {
+  protected onMessage(ws: WS, payload?: string) {
     if (!ws.data.chat) return ws.send('error [PublicChat] Not subscribed');
-    if (!payload) return ws.send('error [PublicChat] Max message length is 256 characters');
+    if (!payload) return ws.send('error [PublicChat] Max message length is 255 characters');
     const text = payload.trim().replaceAll('\n', '');
-    if (text.length > 256 || text.length === 0)
-      return ws.send('error [PublicChat] Max message length is 256 characters');
+    if (text.length > 255 || text.length === 0)
+      return ws.send('error [PublicChat] Max message length is 255 characters');
     if (this.history.length === this.historyLength) this.history.shift();
     const message = { ...ws.data.chat, text, time: Date.now() } as ChatMessage;
     this.history.push(message);
     server.publish(this.name, `${this.name} ${JSON.stringify([message])}`);
   }
 
-  private onSubscribe(ws: WS) {
-    const user = ws.data.jwt.user && usersTable.get(ws.data.jwt.user.id);
+  protected onSubscribe(ws: WS) {
+    const user = ws.data.jwt.user && usersTable.getById(ws.data.jwt.user.id);
     ws.data.chat = {
       username: user?.username ?? `Anonymous#${this.lastAnonymousId++}`,
       avatar: user?.avatar,
@@ -50,7 +50,7 @@ export class Chat {
     this.subscribers++;
   }
 
-  private onUnsubscribe(ws: WS) {
+  protected onUnsubscribe(ws: WS) {
     ws.unsubscribe(this.name);
     delete ws.data.chat;
     this.subscribers--;

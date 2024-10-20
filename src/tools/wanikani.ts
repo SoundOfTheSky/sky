@@ -6,11 +6,15 @@ import { CryptoHasher, file, write } from 'bun';
 import { cpSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { DB, TableDefaults, UpdateTableDTO } from '@/services/db';
-import { QuestionDTO, questionsTable } from '@/services/study/questions';
+import { DB } from '@/services/db/db';
+import { UpdateTableDTO } from '@/services/db/types';
+import { questionsTable } from '@/services/study/questions';
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
-import { SubjectDTO, subjectsTable } from '@/services/study/subjects';
-import { cleanupHTML, log } from '@/utils';
+import { subjectsTable } from '@/services/study/subjects';
+import TABLES from '@/services/tables';
+import { TableDefaults } from '@/sky-shared/db';
+import { StudyQuestionDTO, StudySubjectDTO } from '@/sky-shared/study';
+import { log } from '@/sky-utils';
 
 type WKResponse<T> = {
   object: string;
@@ -112,6 +116,45 @@ type WKVocab = WKKana & {
 type WKAnySubject = WKRadical | WKKanji | WKKana | WKVocab;
 
 // === Main logic ===
+/** Format HTML to simple string */
+function cleanupHTML(
+  text: string,
+  whitelist: string[] = [
+    'accent', // Current subject [any]
+    'subject', // Link another subject [any](uid=number)
+    'example', // example sentence? [any]
+    'audio', // Audio [any] (s="link")
+    'warning', // Warning text [any]
+    'ik', // ImmersionKit query [text]
+    'tab', // Tabs always at root [any] title="text"
+    'jp-pitch-accent', // Pitch accent
+    'jp-conjugation',
+    'img',
+    'ruby',
+    'rt',
+    'rp',
+    'a',
+    'b',
+    'i',
+  ],
+) {
+  text = text
+    .replaceAll('<br>', '\n') // br to \n
+    .split('\n')
+    .map((el) => el.trim()) // trim every line
+    .join('\n')
+    .replaceAll(/\n{3,}/gs, '\n\n') // no more than two new lines
+    .replaceAll(/(\s+)<\/tab>/gs, '</tab>') // spaces before tab
+    .replaceAll(/<tab title="(.+)">(\s+)/gs, (_, x) => `<tab title="${x}">`) // spaces after tab
+    .replaceAll(/<(\S+)(>|\s[^>]*>)\s*<\/\1>/g, '') // empty tags
+    .trim(); // final trim
+
+  return [...text.matchAll(/<.+?>/g)]
+    .map((el) => [el[0].slice(1, -1).split(' ')[0], el.index] as const)
+    .filter(([t]) => whitelist.every((w) => t !== w && t !== `/${w}`))
+    .reverse()
+    .reduce((acc, [, index]) => acc.slice(0, index) + acc.slice(acc.indexOf('>', index) + 1), text);
+}
 async function downloadWK() {
   const subjects: WKObject<WKAnySubject>[] = [];
   let nextUrl: string | undefined = 'https://api.wanikani.com/v2/subjects';
@@ -370,27 +413,26 @@ Anime sentences:
   // });
   // const themeId = lastInsertRowIdQuery.get()!.id;
   const themeId = 4;
-  const dbsubjects = DB.prepare<TableDefaults, [number]>(`SELECT * FROM ${subjectsTable.name} WHERE theme_id = ?`)
+  const dbsubjects = DB.prepare<TableDefaults, [number]>(`SELECT * FROM ${TABLES.STUDY_SUBJECTS} WHERE theme_id = ?`)
     .all(themeId)
     .map((x) => x.id);
   // END OF CHANGE BLOCK
   log('Deleting dependencies');
   DB.prepare(
-    `DELETE FROM ${subjectDependenciesTable.name}
+    `DELETE FROM ${TABLES.STUDY_SUBJECT_DEPS}
     WHERE subject_id IN (
-      SELECT id FROM ${subjectsTable.name} WHERE theme_id = ?
+      SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE theme_id = ?
     )`,
   ).run(themeId);
   const dbMap = new Map<number, number>();
   const idReplaces = new Map<number, number>([]);
   for (const subject of subjects) {
     log(`Subject ${subject.id} ${subject.object} ${subject.data.characters ?? subject.data.slug}`);
-    const s: SubjectDTO = {
+    const s: StudySubjectDTO = {
       themeId,
-      srsId: 2,
       title: '',
     };
-    const qs: UpdateTableDTO<QuestionDTO>[] = [];
+    const qs: UpdateTableDTO<StudyQuestionDTO>[] = [];
     const sameTitle = subjects.filter((s) => s.data.characters === subject.data.characters && s.id !== subject.id);
     const meanings = getSubjectMeanings(subject);
     const alternateMeanings = sameTitle.flatMap(getSubjectMeanings).filter((a) => !meanings.includes(a));
@@ -491,15 +533,15 @@ Anime sentences:
     // === DB ===
     let id =
       idReplaces.get(subject.id) ??
-      DB.prepare<{ id: number }, [string]>(`SELECT id FROM ${subjectsTable.name} WHERE title = ?`).get(s.title)?.id;
+      DB.prepare<{ id: number }, [string]>(`SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`).get(s.title)?.id;
     if (!id && s.title.includes(' お'))
-      id = DB.prepare<{ id: number }, [string]>(`SELECT id FROM ${subjectsTable.name} WHERE title = ?`).get(
+      id = DB.prepare<{ id: number }, [string]>(`SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`).get(
         s.title.replace(' お', ' '),
       )?.id;
     // === find subject by description ===
     // if (!id) {
     //   const q = questionsTable.convertFrom(
-    //     DB.prepare(`SELECT * FROM ${questionsTable.name} WHERE answers = ? AND question LIKE ?`).get(
+    //     DB.prepare(`SELECT * FROM questions WHERE answers = ? AND question LIKE ?`).get(
     //       getSubjectMeanings(subject).join('|'),
     //       qs[0].question!.slice(0, 5) + '%',
     //     ),
@@ -517,7 +559,7 @@ Anime sentences:
       // id = lastInsertRowIdQuery.get()!.id;
     }
     dbMap.set(subject.id, id);
-    const dbqs = questionsTable.getBySubject(id);
+    const dbqs = subjectsTable.getById(id)!.questionIds;
     if (dbqs.length > qs.length) throw new Error('DBQS is larger than needed');
     for (let i = 0; i < qs.length; i++) {
       const q = qs[i];
@@ -525,7 +567,7 @@ Anime sentences:
       q.subjectId = id;
       if (dbq) {
         // log(`[UPDATING QUESTION] ${i ? 'Meaning' : 'Reading'}`);
-        questionsTable.update(dbq.id, q);
+        questionsTable.update(dbq, q);
       } else {
         throw new Error('It must exist');
         //log(`[CREATING QUESTION] ${i ? 'Meaning' : 'Reading'}`);
@@ -535,13 +577,9 @@ Anime sentences:
   }
   // === Replace subject ids ===
   log('Fixing stuff in descriptions...');
-  const questions = DB.prepare(
-    `SELECT q.id, q.description, q.question FROM ${questionsTable.name} q
-    JOIN ${subjectsTable.name} s ON s.id = q.subject_id
-    WHERE s.theme_id = ?`,
-  )
-    .all(themeId)
-    .map((x) => questionsTable.convertFrom(x)!);
+  const questions = questionsTable.convertFromMany(
+    questionsTable.query.clone().where<{ themeId: number }>('s.theme_id = $themeId').toDBQuery().all({ themeId }),
+  );
   for (const question of questions) {
     log(question.id);
     questionsTable.update(question.id, {

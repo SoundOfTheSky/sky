@@ -1,8 +1,9 @@
 import { Type } from '@sinclair/typebox';
 import { TypeCompiler } from '@sinclair/typebox/compiler';
 
-import { DBTable, TableDefaults, DEFAULT_COLUMNS, DB, DBRow, convertToDate } from '@/services/db';
+import { Table, DEFAULT_COLUMNS, DB, convertToDate } from '@/services/db';
 import { usersTable } from '@/services/session/user';
+import { TableDefaults } from '@/sky-shared/db';
 
 export enum PlanEventStatus {
   TODO = 0,
@@ -24,12 +25,12 @@ export const T = TypeCompiler.Compile(
   Type.Object({
     title: Type.String({
       minLength: 1,
-      maxLength: 256,
+      maxLength: 255,
     }),
     description: Type.Optional(
       Type.String({
         minLength: 1,
-        maxLength: 256,
+        maxLength: 255,
       }),
     ),
     start: Type.Number({
@@ -40,22 +41,24 @@ export const T = TypeCompiler.Compile(
       minimum: 0,
       maximum: Number.MAX_SAFE_INTEGER,
     }), // Minutes
-    userId: Type.Number({
-      minimum: 0,
-      maximum: Number.MAX_SAFE_INTEGER,
+    status: Type.Enum({
+      TODO: 0,
+      DONE: 1,
+      FAILED: 2,
+      SKIPPED: 3,
     }),
     repeat: Type.Optional(Type.String()), // cors
-    status: Type.Enum({
-      DEFAULT: 0,
-      SUCCESS: 1,
-      FAILURE: 2,
-      SKIP: 3,
-    }),
+    parentId: Type.Optional(
+      Type.Number({
+        minimum: 0,
+        maximum: Number.MAX_SAFE_INTEGER,
+      }),
+    ),
   }),
 );
 
-export class PlanEventsTable extends DBTable<PlanEvent> {
-  constructor(table: string) {
+export class PlanEventsTable extends Table<PlanEvent> {
+  public constructor(table: string) {
     super(table, {
       ...DEFAULT_COLUMNS,
       title: {
@@ -74,7 +77,7 @@ export class PlanEventsTable extends DBTable<PlanEvent> {
         type: 'INTEGER',
         required: true,
         ref: {
-          table: usersTable.name,
+          table: 'users',
           column: 'id',
           onDelete: 'CASCADE',
           onUpdate: 'CASCADE',
@@ -101,12 +104,7 @@ export class PlanEventsTable extends DBTable<PlanEvent> {
       },
     });
   }
-  queries = {
-    getByIdAndUser: DB.prepare<DBRow, [number, number]>(`SELECT * FROM ${this.name} WHERE id = ? AND user_id = ?`),
-    getUpdated: DB.prepare<{ id: number; updated: number }, [number, string]>(
-      `SELECT id, unixepoch(updated) updated FROM ${this.name} WHERE user_id = ? AND updated > ?`,
-    ),
-  };
+  queries = {};
 
   getByIdAndUser(id: number, userId: number) {
     return this.convertFrom(this.queries.getByIdAndUser.get(id, userId));

@@ -1,35 +1,64 @@
-import { DBTable, TableDefaults, TableDTO, DEFAULT_COLUMNS } from '@/services/db';
-import { themesTable } from '@/services/study/themes';
+import { Query } from '@/services/db/query';
+import { Table, DEFAULT_COLUMNS } from '@/services/db/table';
+import { DBRow } from '@/services/db/types';
+import TABLES from '@/services/tables';
+import { TableDefaults } from '@/sky-shared/db';
+import { StudySubject, StudySubjectDTO } from '@/sky-shared/study';
 
-export type Subject = TableDefaults & {
-  srsId: number;
-  themeId: number;
+export type StudySubjectTable = TableDefaults & {
   title: string;
+  theme_id: number;
 };
-export type SubjectDTO = TableDTO<Subject>;
-export class SubjectsTable extends DBTable<Subject, SubjectDTO> {
-  constructor(table: string) {
-    super(table, {
-      ...DEFAULT_COLUMNS,
-      srsId: {
-        type: 'INTEGER',
-        required: true,
-      },
-      themeId: {
-        type: 'INTEGER',
-        required: true,
-        ref: {
-          table: themesTable.name,
-          column: 'id',
-          onDelete: 'CASCADE',
-          onUpdate: 'CASCADE',
+
+export class SubjectsTable extends Table<StudySubject, StudySubjectDTO> {
+  public constructor() {
+    super(
+      TABLES.STUDY_SUBJECTS,
+      {
+        ...DEFAULT_COLUMNS,
+        themeId: {
+          type: 'INTEGER',
+          required: true,
+          ref: {
+            table: TABLES.STUDY_THEMES,
+            column: 'id',
+            onDelete: 'CASCADE',
+            onUpdate: 'CASCADE',
+          },
+        },
+        title: {
+          type: 'TEXT',
+          required: true,
         },
       },
-      title: {
-        type: 'TEXT',
-        required: true,
-      },
-    });
+      new Query<
+        TableDefaults & {
+          theme_id: number;
+          title: number;
+          questionsIds: number;
+          userSubjectId?: number;
+        }
+      >(TABLES.STUDY_SUBJECTS, [
+        `${TABLES.STUDY_SUBJECTS}.id`,
+        `${TABLES.STUDY_SUBJECTS}.created`,
+        `${TABLES.STUDY_SUBJECTS}.theme_id`,
+        `${TABLES.STUDY_SUBJECTS}.title`,
+        `us.id userSubjectId`,
+        `GROUP_CONCAT(q.id) questionIds`,
+        `MAX(${TABLES.STUDY_SUBJECTS}.updated, IIF(us.created, us.created, 0), q.created) updated`,
+      ])
+        .join(`${TABLES.STUDY_QUESTIONS} q`, `q.subject_id = ${TABLES.STUDY_SUBJECTS}.id`)
+        .join(`${TABLES.STUDY_USERS_SUBJECTS} us`, `${TABLES.STUDY_SUBJECTS}.id = us.subject_id`, true)
+        .group(`${TABLES.STUDY_SUBJECTS}.id`),
+    );
+  }
+
+  public convertFrom(data?: DBRow | null): StudySubject | undefined {
+    if (!data) return;
+    (data as unknown as StudySubject)['questionIds'] = (data['questionIds'] as string)
+      .split(',')
+      .map((x) => Number.parseInt(x));
+    return super.convertFrom(data);
   }
 }
-export const subjectsTable = new SubjectsTable('subjects');
+export const subjectsTable = new SubjectsTable();

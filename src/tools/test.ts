@@ -1,12 +1,29 @@
+/* eslint-disable unused-imports/no-unused-vars */
+import { Database, constants } from 'bun:sqlite';
+
+import TABLES from '@/services/tables';
+
+const DB = new Database('database.db', {
+  create: false,
+  readwrite: true,
+  safeIntegers: false,
+  strict: true,
+});
+DB.fileControl(constants.SQLITE_FCNTL_PERSIST_WAL, 0);
+DB.exec('PRAGMA journal_mode = DELETE');
+DB.exec('PRAGMA foreign_keys = ON');
+DB.exec('PRAGMA auto_vacuum = INCREMENTAL');
+
+console.log(DB.prepare(`SELECT * FROM ${TABLES.STUDY_SUBJECTS} WHERE title LIKE ?`).all('%ン%'));
+
 // /* eslint-disable sonarjs/no-duplicate-string */
-// // console.log(DB.prepare(`DELETE FROM ${usersSubjectsTable.name} WHERE stage = 0`).run());
+// // console.log(DB.prepare(`DELETE FROM users_subjects WHERE stage = 0`).run());
 // // usersSubjectsTable.unlock(1);
 // // console.log(usersSubjectsTable.getUserReviewsAndLessons(1)['1'].lessons.length);
 
 // import { DB, DBRow } from '@/services/db';
 // import { questionsTable } from '@/services/study/questions';
 // import { subjectsTable } from '@/services/study/subjects';
-// import { cleanupHTML } from '@/utils';
 
 // // const db2 = new Database('1706800232495.db', {
 // //   create: false,
@@ -38,7 +55,7 @@
 // <tab title="Description">Reading: 召し<ruby>上<rt>めしあ</tr></ruby>がります
 // Meaning: to eat, drink (respectful equivalent of たべます and のみます)</tab>
 //  */
-// const subjects = DB.prepare<DBRow, [number]>(`SELECT * FROM ${subjectsTable.name}`)
+// const subjects = DB.prepare<DBRow, [number]>(`SELECT * FROM ${TABLES.STUDY_SUBJECTS}`)
 //   .all(2)
 //   .map((x) => subjectsTable.convertFrom(x)!);
 // const ui = {
@@ -69,8 +86,8 @@
 //   if (word.slice(-3) in ui) word = word.slice(0, -3) + ui[word.slice(-3) as keyof typeof ui];
 //   else if (word.slice(-2) === 'ます') word = word.slice(0, -2) + 'る';
 //   const wkSubject =
-//     DB.prepare<{ id: number }, [string]>('SELECT id FROM subjects WHERE title=?').get('Vocabulary ' + word) ||
-//     DB.prepare<{ id: number }, [string]>('SELECT id FROM subjects WHERE title=?').get('Kana vocabulary  ' + word);
+//     DB.prepare<{ id: number }, [string]>('SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title=?').get('Vocabulary ' + word) ||
+//     DB.prepare<{ id: number }, [string]>('SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title=?').get('Kana vocabulary  ' + word);
 //   const kanjiWK = [
 //     ...new Set(
 //       question.question
@@ -80,7 +97,7 @@
 //     ),
 //   ]
 //     .map((x) =>
-//       DB.prepare<{ id: number; title: string }, [string]>('SELECT id, title FROM subjects WHERE title=?').get(
+//       DB.prepare<{ id: number; title: string }, [string]>('SELECT id, title FROM ${TABLES.STUDY_SUBJECTS} WHERE title=?').get(
 //         'Kanji ' + x,
 //       ),
 //     )

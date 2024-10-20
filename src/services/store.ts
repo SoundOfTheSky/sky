@@ -1,4 +1,7 @@
-import { DB, DBTable, TableDefaults, UpdateTableDTO, DEFAULT_COLUMNS } from '@/services/db';
+import { DEFAULT_COLUMNS, Table } from '@/services/db/table';
+import { UpdateTableDTO } from '@/services/db/types';
+import TABLES from '@/services/tables';
+import { TableDefaults } from '@/sky-shared/db';
 
 export type StoreData = {
   name: string;
@@ -7,9 +10,11 @@ export type StoreData = {
   f?: number;
   b?: Buffer;
 };
-export class StoreTable extends DBTable<TableDefaults & StoreData> {
-  constructor(table: string) {
-    super(table, {
+export class StoreTable extends Table<TableDefaults & StoreData> {
+  protected $getByName = this.query.clone().where<{ name: string }>('name = $name').toDBQuery();
+
+  public constructor() {
+    super(TABLES.STORE, {
       ...DEFAULT_COLUMNS,
       name: {
         type: 'TEXT',
@@ -30,16 +35,15 @@ export class StoreTable extends DBTable<TableDefaults & StoreData> {
       },
     });
   }
-  queries = {
-    getByName: DB.prepare(`SELECT * FROM ${this.name} WHERE name = ?`),
-  };
-  getValue(name: string): string | number | Buffer | undefined {
-    const data = this.convertFrom(this.queries.getByName.get(name));
+
+  public getValue(name: string): string | number | Buffer | undefined {
+    const data = this.convertFrom(this.$getByName.get({ name }));
     if (data) return data.s ?? data.n ?? data.f ?? data.b;
     return undefined;
   }
-  setValue(name: string, value?: string | number | Buffer) {
-    const exists = this.convertFrom(this.queries.getByName.get(name));
+
+  public setValue(name: string, value?: string | number | Buffer) {
+    const exists = this.convertFrom(this.$getByName.get({ name }));
     const newVal: UpdateTableDTO<StoreData> = {
       name,
       b: null,
@@ -52,9 +56,8 @@ export class StoreTable extends DBTable<TableDefaults & StoreData> {
       else newVal.f = value;
     } else if (typeof value === 'string') newVal.s = value;
     else if (Buffer.isBuffer(value)) newVal.b = value;
-
     if (exists) return this.update(exists.id, newVal);
     return this.create(newVal as StoreData);
   }
 }
-export const storeTable = new StoreTable('store');
+export const storeTable = new StoreTable();

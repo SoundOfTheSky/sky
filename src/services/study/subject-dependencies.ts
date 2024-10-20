@@ -1,14 +1,18 @@
-import { DBTable, TableDefaults, DEFAULT_COLUMNS } from '@/services/db';
-import { subjectsTable } from '@/services/study/subjects';
+import { DEFAULT_COLUMNS, Table } from '@/services/db/table';
+import TABLES from '@/services/tables';
+import { TableDefaults } from '@/sky-shared/db';
+import { log } from '@/sky-utils';
+
+log('Loaded', import.meta.path);
 
 export type SubjectDependencies = TableDefaults & {
   percent: number;
   subjectId: number;
   dependencyId: number;
 };
-export class SubjectDependenciesTable extends DBTable<SubjectDependencies> {
-  constructor(table: string) {
-    super(table, {
+export class SubjectDependenciesTable extends Table<SubjectDependencies> {
+  public constructor() {
+    super(TABLES.STUDY_SUBJECT_DEPS, {
       ...DEFAULT_COLUMNS,
       percent: {
         type: 'INTEGER',
@@ -18,7 +22,7 @@ export class SubjectDependenciesTable extends DBTable<SubjectDependencies> {
         type: 'INTEGER',
         required: true,
         ref: {
-          table: subjectsTable.name,
+          table: TABLES.STUDY_SUBJECTS,
           column: 'id',
           onDelete: 'CASCADE',
           onUpdate: 'CASCADE',
@@ -28,7 +32,7 @@ export class SubjectDependenciesTable extends DBTable<SubjectDependencies> {
         type: 'INTEGER',
         required: true,
         ref: {
-          table: subjectsTable.name,
+          table: TABLES.STUDY_SUBJECTS,
           column: 'id',
           onDelete: 'CASCADE',
           onUpdate: 'CASCADE',
@@ -37,4 +41,4 @@ export class SubjectDependenciesTable extends DBTable<SubjectDependencies> {
     });
   }
 }
-export const subjectDependenciesTable = new SubjectDependenciesTable('subject_dependencies');
+export const subjectDependenciesTable = new SubjectDependenciesTable();

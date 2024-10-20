@@ -1,5 +1,16 @@
 import { MatchedRoute } from 'bun';
 
+export type BodyInit =
+  | ArrayBuffer
+  | AsyncIterable<Uint8Array>
+  | Blob
+  | FormData
+  | Iterable<Uint8Array>
+  | NodeJS.ArrayBufferView
+  | URLSearchParams
+  | null
+  | string;
+
 export type HTTPResponse = {
   headers: Headers;
   body?: BodyInit | null | undefined;

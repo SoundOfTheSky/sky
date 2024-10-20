@@ -1,11 +1,10 @@
-import { DBTable, TableDefaults, DEFAULT_COLUMNS } from '@/services/db';
+import { DEFAULT_COLUMNS, Table } from '@/services/db/table';
+import TABLES from '@/services/tables';
+import { StudyTheme } from '@/sky-shared/study';
 
-export type Theme = TableDefaults & {
-  title: string;
-};
-export class ThemesTable extends DBTable<Theme> {
-  constructor(table: string) {
-    super(table, {
+export class ThemesTable extends Table<StudyTheme> {
+  public constructor() {
+    super(TABLES.STUDY_THEMES, {
       ...DEFAULT_COLUMNS,
       title: {
         type: 'TEXT',
@@ -14,4 +13,4 @@ export class ThemesTable extends DBTable<Theme> {
     });
   }
 }
-export const themesTable = new ThemesTable('themes');
+export const themesTable = new ThemesTable();

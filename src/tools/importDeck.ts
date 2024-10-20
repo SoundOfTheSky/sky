@@ -4,7 +4,6 @@ import { cpSync, readFileSync, rmSync } from 'fs';
 import { join } from 'path';
 
 import { furiganaToRuby } from '@/chiruno/utils';
-import { DB, DBRow, lastInsertRowIdQuery } from '@/services/db';
 import { questionsTable } from '@/services/study/questions';
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
 import { subjectsTable } from '@/services/study/subjects';
@@ -29,10 +28,9 @@ const data = db
   .prepare<{ flds: string }, []>('SELECT flds FROM notes')
   .all()
   .map((x) => x.flds.split('\u001f'));
-themesTable.create({
+const themeId = themesTable.create({
   title: 'RU-EN',
-});
-const themeId = lastInsertRowIdQuery.get()!.id;
+}).lastInsertRowid as number;
 //const themeId = 4;
 const subjectIds: number[] = [];
 /** CORE 6k
@@ -87,7 +85,7 @@ const subjectIds: number[] = [];
  * 27 - объяснение англ
  * 28 - объяснение англ
  */
-const q1 = DB.prepare<DBRow, [string]>(`SELECT * FROM ${questionsTable.name} WHERE question = ?`);
+//const q1 = DB.prepare<DBRow, [string]>(`SELECT * FROM questions WHERE question = ?`);
 for (let i = 0; i < data.length; i++) {
   const card = data[i];
   console.log(i, card[0]);
@@ -96,12 +94,10 @@ for (let i = 0; i < data.length; i++) {
     console.log('Skip!');
     continue;
   }
-  subjectsTable.create({
-    srsId: 2,
+  const subjectId = subjectsTable.create({
     themeId,
     title: card[0],
-  });
-  const subjectId = lastInsertRowIdQuery.get()!.id;
+  }).lastInsertRowid as number;
   subjectIds.push(subjectId);
   // const existingQuestion = questionsTable.convertFrom(q1.get(card[7]));
   // if (!existingQuestion) throw new Error('Question not found!');

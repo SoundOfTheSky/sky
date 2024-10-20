@@ -18,5 +18,5 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["**/*.d.ts", "**/*.ts"]
+  "include": ["**/*.d.ts", "**/*.ts", "src/sky-shared/plan-event.ts_notused"]
 }

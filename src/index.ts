@@ -2,10 +2,10 @@ import { file, serve } from 'bun';
 
 import '@/preload';
 
-import { DB } from '@/services/db';
+import { DB } from '@/services/db/db';
 import handleHTTP from '@/services/http';
 import { WS, wsCloseHandler, wsMessageHandler, wsOpenHandler } from '@/services/ws';
-import { log } from '@/utils';
+import { log } from '@/sky-utils';
 
 const httpServer = serve({
   fetch: (req) => {
@@ -32,7 +32,9 @@ global.server = serve<WS['data']>({
     close: wsCloseHandler,
     open: wsOpenHandler,
   },
-  maxRequestBodySize: 1024 * 1024, // 1mb
+  maxRequestBodySize: 1024 * 1024 * 10, // 10mb
+  idleTimeout: 30,
+  development: false,
 });
 log('Started on ports', server.port, httpServer.port);
 
@@ -45,7 +47,6 @@ function onExit() {
   DB.close();
   process.exit();
 }
-
 // setTimeout(() => void import('./chiruno/test.js'), 1000);
 // setTimeout(() => void import('./chiruno/clampIds.js'), 1000);
 // setTimeout(() => void import('./chiruno/wanikani.js'), 1000);

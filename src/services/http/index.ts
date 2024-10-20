@@ -1,12 +1,12 @@
-import { Server } from 'bun';
+import { Server, FileSystemRouter } from 'bun';
 import { join, relative } from 'node:path';
 
 import { HTTPHandler, HTTPResponse } from '@/services/http/types';
 import { HTTPError } from '@/services/http/utils';
 import { sessionGuard } from '@/services/session';
-import { ValidationError, formatTime, log } from '@/utils';
+import { ValidationError, formatTime, log } from '@/sky-utils';
 
-const router = new Bun.FileSystemRouter({
+const router = new FileSystemRouter({
   style: 'nextjs',
   dir: join(import.meta.dir, '../../routes'),
   origin: import.meta.dir,
@@ -27,7 +27,7 @@ export default async function handleHTTP(req: Request, server: Server): Promise<
   log(`[HTTP] ${req.method}: ${req.url}`);
   const time = Date.now();
   const res: HTTPResponse = {
-    headers: new Headers(),
+    headers: new Headers() as Headers, // wtf
   };
   res.headers.set('cache-control', 'no-cache, no-store, max-age=0, must-revalidate');
   if (url === '/ws') {
@@ -46,6 +46,7 @@ export default async function handleHTTP(req: Request, server: Server): Promise<
   try {
     await handler(req, res, routerResult);
   } catch (e) {
+    console.error(e);
     if (e instanceof HTTPError) {
       res.status = e.code;
       res.body = e.body;

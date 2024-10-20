@@ -1,0 +1,6 @@
+[submodule "src/sky-utils"]
+	path = src/sky-utils
+	url = https://github.com/SoundOfTheSky/sky-utils
+[submodule "src/sky-shared"]
+	path = src/sky-shared
+	url = https://github.com/SoundOfTheSky/sky-shared
