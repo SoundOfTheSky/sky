@@ -7,7 +7,7 @@ import { cpSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { DB } from '@/services/db/db';
-import { UpdateTableDTO } from '@/services/db/types';
+import { DBRow, UpdateTableDTO } from '@/services/db/types';
 import { questionsTable } from '@/services/study/questions';
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
 import { subjectsTable } from '@/services/study/subjects';
@@ -155,6 +155,7 @@ function cleanupHTML(
     .reverse()
     .reduce((acc, [, index]) => acc.slice(0, index) + acc.slice(acc.indexOf('>', index) + 1), text);
 }
+
 async function downloadWK() {
   const subjects: WKObject<WKAnySubject>[] = [];
   let nextUrl: string | undefined = 'https://api.wanikani.com/v2/subjects';
@@ -200,7 +201,8 @@ async function parseWK() {
     const md5hasher = new CryptoHasher('md5');
     md5hasher.update(await blob.arrayBuffer());
     const name = md5hasher.digest('hex') + '.' + ext;
-    await write(join('assets', 'wanikani', name), blob);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+    await write(join('assets', 'wanikani', name), blob as any);
     filesSink.write(`\n${url} ${name}`);
     fileCache.set(url, name);
     return name;
@@ -439,7 +441,7 @@ Anime sentences:
     switch (subject.object) {
       case 'vocabulary':
         const vocabulary = subject as WKObject<WKVocab>;
-        s.title = `Vocabulary ${vocabulary.data.characters}`;
+        s.title = `Vocabulary:\n${vocabulary.data.characters}`;
         const readings = getSubjectReadings(vocabulary);
         const alternateReadings = sameTitle
           .filter((s) => s.object === 'vocabulary' || s.object === 'kanji')
@@ -468,7 +470,7 @@ Anime sentences:
         break;
       case 'kana_vocabulary':
         const kana = subject as WKObject<WKKana>;
-        s.title = `Kana vocabulary ${kana.data.characters}`;
+        s.title = `Kana vocabulary:\n${kana.data.characters}`;
         qs.push({
           answers: meanings,
           description: await parseSchema('kana', kana),
@@ -482,7 +484,7 @@ Anime sentences:
         break;
       case 'kanji':
         const kanji = subject as WKObject<WKKanji>;
-        s.title = `Kanji ${kanji.data.characters}`;
+        s.title = `Kanji:\n${kanji.data.characters}`;
         const readings2 = getSubjectReadings(kanji);
         const alternateReadings2 = sameTitle
           .filter((s) => s.object === 'vocabulary' || s.object === 'kanji')
@@ -511,9 +513,9 @@ Anime sentences:
         break;
       case 'radical':
         const radical = subject as WKObject<WKRadical>;
-        if (radical.data.characters) s.title = `Radical ${radical.data.characters}`;
+        if (radical.data.characters) s.title = `Radical:\n${radical.data.characters}`;
         else
-          s.title = `Radical <img class="em" src="/static/${await downloadFileAndGetHash(
+          s.title = `Radical:\n<img class="em" src="/static/${await downloadFileAndGetHash(
             radical.data.character_images.find((x) => x.content_type === 'image/svg+xml')!.url,
             'svg',
           )}">`;
@@ -533,21 +535,28 @@ Anime sentences:
     // === DB ===
     let id =
       idReplaces.get(subject.id) ??
-      DB.prepare<{ id: number }, [string]>(`SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`).get(s.title)?.id;
+      DB.prepare<{ id: number }, [string]>(`SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`).get(s.title)
+        ?.id ??
+      DB.prepare<{ id: number }, [string]>(`SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`).get(
+        s.title.replaceAll(':\n', ' '),
+      )?.id;
     if (!id && s.title.includes(' お'))
       id = DB.prepare<{ id: number }, [string]>(`SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`).get(
         s.title.replace(' お', ' '),
       )?.id;
-    // === find subject by description ===
-    // if (!id) {
-    //   const q = questionsTable.convertFrom(
-    //     DB.prepare(`SELECT * FROM questions WHERE answers = ? AND question LIKE ?`).get(
-    //       getSubjectMeanings(subject).join('|'),
-    //       qs[0].question!.slice(0, 5) + '%',
-    //     ),
-    //   )!;
-    //   if (q) id = q.subjectId;
-    // }
+    // === find subject by answers ===
+    if (!id) {
+      const q = questionsTable.convertFrom(
+        DB.prepare<DBRow, [string, string]>(`SELECT * FROM study_questions WHERE answers = ? AND question LIKE ?`).get(
+          getSubjectMeanings(subject).join('|'),
+          `${qs[0].question!.slice(0, 4)}%`,
+        ),
+      )!;
+      if (q) {
+        console.log('FOUND HARD WAY');
+        id = q.subjectId;
+      }
+    }
     if (id) {
       // log(`[UPDATING SUBJECT] ${subject.id} ${s.title}`);
       subjectsTable.update(id, s);
@@ -560,7 +569,7 @@ Anime sentences:
     }
     dbMap.set(subject.id, id);
     const dbqs = subjectsTable.getById(id)!.questionIds;
-    if (dbqs.length > qs.length) throw new Error('DBQS is larger than needed');
+    if (dbqs.length !== qs.length) throw new Error('DBQS is not equal');
     for (let i = 0; i < qs.length; i++) {
       const q = qs[i];
       const dbq = dbqs[i];
@@ -578,7 +587,12 @@ Anime sentences:
   // === Replace subject ids ===
   log('Fixing stuff in descriptions...');
   const questions = questionsTable.convertFromMany(
-    questionsTable.query.clone().where<{ themeId: number }>('s.theme_id = $themeId').toDBQuery().all({ themeId }),
+    questionsTable.query
+      .clone()
+      .join(`${TABLES.STUDY_SUBJECTS} s`, `s.id = ${TABLES.STUDY_QUESTIONS}.subject_id`)
+      .where<{ themeId: number }>('s.theme_id = $themeId')
+      .toDBQuery()
+      .all({ themeId }),
   );
   for (const question of questions) {
     log(question.id);

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import { CryptoHasher, file } from 'bun';
+import { CryptoHasher, file, $ } from 'bun';
 import { readdirSync, statSync, rmSync, renameSync, existsSync } from 'fs';
 import { join } from 'node:path';
 
@@ -101,6 +101,30 @@ function findBrokenReferences() {
     for (const use of extractUsesFromText(text))
       if (!existsSync(join(STATIC_PATH, ...use.split('/')))) log('Broken reference', use);
 }
+
+function image(name: string) {
+  return $`magick "${name}" -resize "4096x4096>" "${name.slice(0, name.lastIndexOf('.'))}.webp"`;
+}
+
+// async function convert() {
+//   const paths = fsArray(STATIC_PATH);
+//   for (let i = 0; i < paths.length; i++) {
+//     const path = paths[i];
+//     if (['.jpg', '.jpeg', '.jpe', '.png', '.gif', '.bmp', '.heic'].some((x) => path.endsWith(x))) {
+//       await image(path);
+//       const uses = findUses(path);
+//     for (const question of uses.questions)
+//       questionsTable.update(question.id, {
+//         question: question.question.replaceAll(path.slice(7), newPath.slice(7)),
+//         description: question.description.replaceAll(path.slice(7), newPath.slice(7)),
+//       });
+//     for (const subject of uses.subjects)
+//       subjectsTable.update(subject.id, {
+//         title: subject.title.replaceAll(path.slice(7), newPath.slice(7)),
+//       });
+//     }
+//   }
+// }
 
 // eslint-disable-next-line @typescript-eslint/require-await
 setTimeout(async () => {

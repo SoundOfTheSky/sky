@@ -29,7 +29,7 @@ export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
       SELECT SUM(locks) locks, id FROM (
         SELECT sd.subject_id IS NOT NULL AND (ssDep.stage IS NULL OR SUM(ssDep.stage>=5)*100/COUNT(*)<sd.percent) locks, s.id
         FROM ${TABLES.STUDY_SUBJECTS} s
-        JOIN ${TABLES.STUDY_USERS_THEMES} ut ON ut.theme_id = s.theme_id
+        JOIN ${TABLES.STUDY_USERS_THEMES} ut ON ut.theme_id = s.theme_id AND ut.user_id = $userId
         LEFT JOIN ${this.name} ss ON ss.subject_id = s.id AND ss.user_id = $userId
         LEFT JOIN ${TABLES.STUDY_SUBJECT_DEPS} sd ON sd.subject_id = s.id
         LEFT JOIN ${this.name} ssDep ON ssDep.subject_id = sd.dependency_id AND ssDep.user_id = $userId

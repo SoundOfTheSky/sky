@@ -8,7 +8,10 @@ export default createRestEndpointHandler(
   new RESTApi<StudyQuestion>(questionsTable, {
     updated: {
       convertTo: (data) => convertToDate(new Date(Number.parseInt(data) * 1000))!,
-      sql: (m, p) => `(${TABLES.STUDY_QUESTIONS}.updated ${m} $${p} AND (uq.updated IS NULL OR uq.updated ${m} $${p}))`,
+      sql: (m, p) =>
+        m === '<'
+          ? `(${TABLES.STUDY_QUESTIONS}.updated ${m} $${p} AND (uq.updated IS NULL OR uq.updated ${m} $${p}))`
+          : `(${TABLES.STUDY_QUESTIONS}.updated ${m} $${p} OR (uq.updated IS NOT NULL AND uq.updated ${m} $${p}))`,
     },
   }),
   StudyQuestionT,

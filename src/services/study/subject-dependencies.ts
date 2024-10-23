@@ -1,9 +1,6 @@
 import { DEFAULT_COLUMNS, Table } from '@/services/db/table';
 import TABLES from '@/services/tables';
 import { TableDefaults } from '@/sky-shared/db';
-import { log } from '@/sky-utils';
-
-log('Loaded', import.meta.path);
 
 export type SubjectDependencies = TableDefaults & {
   percent: number;

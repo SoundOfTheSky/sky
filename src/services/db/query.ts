@@ -62,6 +62,7 @@ export class Query<
 
   /** Multiple calls don't override each other */
   public where<PARAMS extends DBRow | undefined>(condition: string) {
+    if (!condition) throw new Error('Empty condition');
     const self = this as unknown as Query<
       FIELDS,
       RETURN,

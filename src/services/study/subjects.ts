@@ -45,7 +45,7 @@ export class SubjectsTable extends Table<StudySubject, StudySubjectDTO> {
         `${TABLES.STUDY_SUBJECTS}.title`,
         `us.id userSubjectId`,
         `GROUP_CONCAT(q.id) questionIds`,
-        `MAX(${TABLES.STUDY_SUBJECTS}.updated, IIF(us.created, us.created, 0), q.created) updated`,
+        `MAX(${TABLES.STUDY_SUBJECTS}.updated, IIF(us.updated, us.updated, 0), q.updated) updated`,
       ])
         .join(`${TABLES.STUDY_QUESTIONS} q`, `q.subject_id = ${TABLES.STUDY_SUBJECTS}.id`)
         .join(`${TABLES.STUDY_USERS_SUBJECTS} us`, `${TABLES.STUDY_SUBJECTS}.id = us.subject_id`, true)

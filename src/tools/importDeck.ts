@@ -3,7 +3,6 @@ import { Database } from 'bun:sqlite';
 import { cpSync, readFileSync, rmSync } from 'fs';
 import { join } from 'path';
 
-import { furiganaToRuby } from '@/chiruno/utils';
 import { questionsTable } from '@/services/study/questions';
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
 import { subjectsTable } from '@/services/study/subjects';
@@ -60,7 +59,7 @@ const subjectIds: number[] = [];
  * 2 - Русский
  * 3 - Английский
  * 4 - Куча примеров
- * 5 - Звук
+ * 5 - Звук для следующего короткого примера
  * 6 - Короткий пример без перевода
  * 7 - Куча примеров без перевода
  * 8 - Те же примеры с пропуском слова
@@ -85,43 +84,45 @@ const subjectIds: number[] = [];
  * 27 - объяснение англ
  * 28 - объяснение англ
  */
-//const q1 = DB.prepare<DBRow, [string]>(`SELECT * FROM questions WHERE question = ?`);
 for (let i = 0; i < data.length; i++) {
   const card = data[i];
   console.log(i, card[0]);
   // If same question allow the first one
-  if (data.some((card2, i2) => i2 < i && card2[7] === card[7])) {
+  if (data.some((card2, i2) => i2 < i && card2[3] === card[3])) {
     console.log('Skip!');
     continue;
   }
   const subjectId = subjectsTable.create({
     themeId,
-    title: card[0],
+    title: card[3],
   }).lastInsertRowid as number;
   subjectIds.push(subjectId);
   // const existingQuestion = questionsTable.convertFrom(q1.get(card[7]));
   // if (!existingQuestion) throw new Error('Question not found!');
   // const subjectId = existingQuestion.subjectId;
-  const media4 = card[4] && media.has(card[4].slice(7, -1)) && card[4].slice(7, -1);
-  const media12 = card[12] && media.has(card[12].slice(7, -1)) && card[12].slice(7, -1);
+  const media13 = card[13] && media.has(card[13].slice(7, -1)) && card[13].slice(7, -1);
+  const media24 = card[24] && media.has(card[24].slice(10, -2)) && card[24].slice(10, -2);
   questionsTable.create({
     subjectId,
-    description: `<tab title="Description">Word: ${card[0]}
-Type: ${card[5]}
-Reading: ${card[2]}
-Meaning: ${card[3]}${media4 ? `\n<audio s="/static/${media4}">Pronunciation</audio>` : ''}
-
-<example>${furiganaToRuby(card[8]).replaceAll(' ', '')}
-${card[10]}</example>${media12 ? `\n<audio s="/static/${media12}">Sentence</audio>` : ''}</tab>`,
-    answers: ['Correct', 'Wrong'],
-    question: card[7],
+    description: `<tab title="Описание">Слово: ${card[3]}${media13 ? `\n<audio s="/static/${media13}">Чтение: ${card[12]}</audio>` : ''}
+Перевод: ${card[2]}${media24 ? `\n<img src="/static/${media24}">` : ''}
+</tab><tab title="Примеры">${card[4]
+      .replaceAll('<font color="#000000">', '')
+      .replaceAll('<font color="#008000">', '')
+      .replaceAll('</font>', '')
+      .replaceAll(card[3], `<accent>${card[3]}</accent>`)
+      .split('<br>')
+      .map((x) => `<example>${x.replaceAll(' - ', '\n')}</example>`)
+      .join('\n')}</tab>`,
+    answers: card[2].split('; ').map((x) => x.trim()),
+    question: card[3],
     choose: true,
   });
-  if (media4) cpSync(join('assets', 'deck', media.get(media4)!), join('static', 'static', media4));
-  if (media12) cpSync(join('assets', 'deck', media.get(media12)!), join('static', 'static', media12));
+  if (media13) cpSync(join('assets', 'deck', media.get(media13)!), join('static', 'static', media13));
+  if (media24) cpSync(join('assets', 'deck', media.get(media24)!), join('static', 'static', media24));
 }
 // Deps in batches
-const BATCH = 25;
+const BATCH = 50;
 console.log('Generating dependencies');
 for (let i = BATCH; i < subjectIds.length; i++)
   for (let i2 = i - BATCH - (i % BATCH); i2 < i - (i % BATCH); i2++)

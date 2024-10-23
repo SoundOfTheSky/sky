@@ -89,7 +89,7 @@ export class QuestionsTable extends Table<StudyQuestion> {
         `${TABLES.STUDY_QUESTIONS}.alternate_answers`,
         `${TABLES.STUDY_QUESTIONS}.choose`,
         `uq.id userQuestionId`,
-        `MAX(${TABLES.STUDY_QUESTIONS}.updated, IIF(uq.created, uq.created, 0)) updated`,
+        `MAX(${TABLES.STUDY_QUESTIONS}.updated, IIF(uq.updated, uq.updated, 0)) updated`,
       ]).join(`${TABLES.STUDY_USERS_QUESTIONS} uq`, `uq.question_id = ${TABLES.STUDY_QUESTIONS}.id`, true),
     );
     this.createDeleteTrigger();
