@@ -9,3 +9,4 @@ static
 assets
 node_modules
 dist
+tsconfig.tsbuildinfo

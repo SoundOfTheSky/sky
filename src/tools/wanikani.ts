@@ -437,7 +437,10 @@ Anime sentences:
     const qs: UpdateTableDTO<StudyQuestionDTO>[] = [];
     const sameTitle = subjects.filter((s) => s.data.characters === subject.data.characters && s.id !== subject.id);
     const meanings = getSubjectMeanings(subject);
-    const alternateMeanings = sameTitle.flatMap(getSubjectMeanings).filter((a) => !meanings.includes(a));
+    const alternateMeanings = sameTitle
+      .flatMap(getSubjectMeanings)
+      .map((x) => x.toLowerCase())
+      .filter((a) => meanings.every((x) => x.toLowerCase() !== a));
     switch (subject.object) {
       case 'vocabulary':
         const vocabulary = subject as WKObject<WKVocab>;
@@ -446,11 +449,12 @@ Anime sentences:
         const alternateReadings = sameTitle
           .filter((s) => s.object === 'vocabulary' || s.object === 'kanji')
           .flatMap((s) => getSubjectReadings(s as WKObject<WKVocab>))
-          .filter((a) => !meanings.includes(a));
+          .map((x) => x.toLowerCase())
+          .filter((a) => readings.every((x) => x.toLowerCase() !== a));
         qs.push({
           answers: meanings,
           description: await parseSchema('vocabularyMeaning', vocabulary),
-          question: `Vocabulary meaning:\n<accent>${s.title.slice(11)}</accent>`,
+          question: `Vocabulary meaning:\n<accent>${s.title.slice(12)}</accent>`,
           subjectId: -1,
           alternateAnswers:
             alternateMeanings.length === 0
@@ -460,7 +464,7 @@ Anime sentences:
         qs.push({
           answers: readings,
           description: await parseSchema('vocabularyReading', vocabulary),
-          question: `Vocabulary reading:\n<accent>${s.title.slice(11)}</accent>`,
+          question: `Vocabulary reading:\n<accent>${s.title.slice(12)}</accent>`,
           subjectId: -1,
           alternateAnswers:
             alternateReadings.length === 0
@@ -474,7 +478,7 @@ Anime sentences:
         qs.push({
           answers: meanings,
           description: await parseSchema('kana', kana),
-          question: `Kana vocabulary meaning:\n<accent>${s.title.slice(16)}</accent>`,
+          question: `Kana vocabulary meaning:\n<accent>${s.title.slice(17)}</accent>`,
           subjectId: -1,
           alternateAnswers:
             alternateMeanings.length === 0
@@ -489,11 +493,12 @@ Anime sentences:
         const alternateReadings2 = sameTitle
           .filter((s) => s.object === 'vocabulary' || s.object === 'kanji')
           .flatMap((s) => getSubjectReadings(s as WKObject<WKVocab>))
-          .filter((a) => !meanings.includes(a));
+          .map((x) => x.toLowerCase())
+          .filter((a) => readings2.every((x) => x.toLowerCase() !== a));
         qs.push({
           answers: meanings,
           description: await parseSchema('kanjiMeaning', kanji),
-          question: `Kanji meaning:\n<accent>${s.title.slice(6)}</accent>`,
+          question: `Kanji meaning:\n<accent>${s.title.slice(7)}</accent>`,
           subjectId: -1,
           alternateAnswers:
             alternateMeanings.length === 0
@@ -503,7 +508,7 @@ Anime sentences:
         qs.push({
           answers: readings2,
           description: await parseSchema('kanjiReading', kanji),
-          question: `Kanji reading:\n<accent>${s.title.slice(6)}</accent>`,
+          question: `Kanji reading:\n<accent>${s.title.slice(7)}</accent>`,
           subjectId: -1,
           alternateAnswers:
             alternateReadings2.length === 0
@@ -522,7 +527,7 @@ Anime sentences:
         qs.push({
           answers: meanings,
           description: await parseSchema('radical', radical),
-          question: `Radical meaning:\n<accent>${s.title.slice(8)}</accent>`,
+          question: `Radical meaning:\n<accent>${s.title.slice(9)}</accent>`,
           subjectId: -1,
           alternateAnswers:
             alternateMeanings.length === 0

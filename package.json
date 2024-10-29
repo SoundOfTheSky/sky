@@ -13,11 +13,11 @@
   "dependencies": {
     "@sinclair/typebox": "^0.33.17",
     "file-type": "^19.6.0",
-    "jose": "^5.9.4",
+    "jose": "^5.9.6",
     "mime-types": "^2.1.35"
   },
   "devDependencies": {
-    "@types/bun": "^1.1.11",
+    "@types/bun": "^1.1.12",
     "@types/mime-types": "^2.1.4",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
