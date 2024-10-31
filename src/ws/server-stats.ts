@@ -5,7 +5,9 @@ import { log } from '@/sky-utils';
 let online = 0;
 subscribeWSEvent('subscribeServerStats', (ws) => {
   ws.subscribe('serverStats');
-  ws.send(`serverStats ${visitsStats.uniqueVisits}|${visitsStats.visits}|${online}`);
+  ws.send(
+    `serverStats ${visitsStats.uniqueVisits}|${visitsStats.visits}|${online}`,
+  );
 });
 subscribeWSEvent('unsubscribeServerStats', (ws) => {
   ws.unsubscribe('serverStats');
@@ -22,6 +24,9 @@ subscribeWSEvent('open', () => {
 
 function broadcastServerStats() {
   log(`[STATS] ${visitsStats.uniqueVisits}|${visitsStats.visits}|${online}`);
-  server.publish('serverStats', `serverStats ${visitsStats.uniqueVisits}|${visitsStats.visits}|${online}`);
+  server.publish(
+    'serverStats',
+    `serverStats ${visitsStats.uniqueVisits}|${visitsStats.visits}|${online}`,
+  );
 }
 visitEmitter.on('update', broadcastServerStats);

@@ -47,15 +47,22 @@ export class SubjectsTable extends Table<StudySubject, StudySubjectDTO> {
         `GROUP_CONCAT(q.id) questionIds`,
         `MAX(${TABLES.STUDY_SUBJECTS}.updated, IIF(us.updated, us.updated, 0), q.updated) updated`,
       ])
-        .join(`${TABLES.STUDY_QUESTIONS} q`, `q.subject_id = ${TABLES.STUDY_SUBJECTS}.id`)
-        .join(`${TABLES.STUDY_USERS_SUBJECTS} us`, `${TABLES.STUDY_SUBJECTS}.id = us.subject_id`, true)
+        .join(
+          `${TABLES.STUDY_QUESTIONS} q`,
+          `q.subject_id = ${TABLES.STUDY_SUBJECTS}.id`,
+        )
+        .join(
+          `${TABLES.STUDY_USERS_SUBJECTS} us`,
+          `${TABLES.STUDY_SUBJECTS}.id = us.subject_id`,
+          true,
+        )
         .group(`${TABLES.STUDY_SUBJECTS}.id`),
     );
   }
 
   public convertFrom(data?: DBRow | null): StudySubject | undefined {
     if (!data) return;
-    (data as unknown as StudySubject)['questionIds'] = (data['questionIds'] as string)
+    (data as unknown as StudySubject).questionIds = (data.questionIds as string)
       .split(',')
       .map((x) => Number.parseInt(x));
     return super.convertFrom(data);

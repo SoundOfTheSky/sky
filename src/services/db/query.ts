@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/ban-types */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 import { Statement } from 'bun:sqlite';
 
 import { DB } from '@/services/db/db';
@@ -53,7 +52,10 @@ export class Query<
     limit: number;
   };
 
-  protected _query?: Statement<RETURN, PARAMETERS extends undefined ? [] : [PARAMETERS]>;
+  protected _query?: Statement<
+    RETURN,
+    PARAMETERS extends undefined ? [] : [PARAMETERS]
+  >;
 
   public constructor(
     private from: string | Query<{}, FIELDS, PARAMETERS>,
@@ -66,7 +68,11 @@ export class Query<
     const self = this as unknown as Query<
       FIELDS,
       RETURN,
-      PARAMS extends undefined ? PARAMETERS : PARAMETERS extends undefined ? PARAMS : PARAMS & PARAMETERS
+      PARAMS extends undefined
+        ? PARAMETERS
+        : PARAMETERS extends undefined
+          ? PARAMS
+          : PARAMS & PARAMETERS
     >;
     if (!self._conditions) self._conditions = [];
     self._conditions.push(condition);
@@ -75,7 +81,11 @@ export class Query<
   }
 
   /** Multiple calls don't override each other */
-  public join<JOIN_FIELDS extends DBRow>(tableName: string, condition: string, left?: boolean) {
+  public join<JOIN_FIELDS extends DBRow>(
+    tableName: string,
+    condition: string,
+    left?: boolean,
+  ) {
     if (!this._joins) this._joins = [];
     this._joins.push({
       tableName,
@@ -138,15 +148,18 @@ export class Query<
           this.fields?.join(', ') ?? '*'
         } FROM ${this.fromToString()}${this.joinToString()}${this.whereToString()}${this.groupByToString()}${this.sortByToString()}${this.limitToString()};`;
       case QUERY_MODE.DELETE:
-        if (this.from instanceof Query) throw new Error('Can not delete subquery');
+        if (this.from instanceof Query)
+          throw new Error('Can not delete subquery');
         return `DELETE FROM ${this.from}${this.whereToString()};`;
       case QUERY_MODE.UPDATE:
-        if (this.from instanceof Query) throw new Error('Can not update subquery');
-        `UPDATE ${this.from} SET ${Object.entries(this._updateValues!)
+        if (this.from instanceof Query)
+          throw new Error('Can not update subquery');
+        return `UPDATE ${this.from} SET ${Object.entries(this._updateValues!)
           .map(([key, value]) => `${key}=${value}`)
           .join(',')}${this.whereToString()};`;
       case QUERY_MODE.INSERT:
-        if (this.from instanceof Query) throw new Error('Can not insert into subquery');
+        if (this.from instanceof Query)
+          throw new Error('Can not insert into subquery');
         return `INSERT INTO ${this.from} (${Object.keys(this._updateValues!).join(',')}) SET ${Object.values(
           this._updateValues!,
         ).join(',')};`;
@@ -167,10 +180,13 @@ export class Query<
   public clone() {
     const query = new Query<FIELDS, RETURN, PARAMETERS>(this.from, this.fields);
     if (this._joins)
-      for (const { tableName, condition, left } of this._joins) query.join<FIELDS>(tableName, condition, left);
-    if (this._conditions) for (const condition of this._conditions) query.where(condition);
+      for (const { tableName, condition, left } of this._joins)
+        query.join<FIELDS>(tableName, condition, left);
+    if (this._conditions)
+      for (const condition of this._conditions) query.where(condition);
     if (this._group) query.group(this._group);
-    if (this._sort) for (const { field, desc } of this._sort) query.sort(field, desc);
+    if (this._sort)
+      for (const { field, desc } of this._sort) query.sort(field, desc);
     if (this._limit) query.limit(this._limit.limit, this._limit.offset);
     switch (this.mode) {
       case QUERY_MODE.DELETE:
@@ -195,7 +211,12 @@ export class Query<
     if (!this._joins || this._joins.length === 0) return '';
     return (
       ' ' +
-      this._joins.map((join) => `${join.left ? 'LEFT JOIN' : 'JOIN'} ${join.tableName} ON ${join.condition}`).join(' ')
+      this._joins
+        .map(
+          (join) =>
+            `${join.left ? 'LEFT JOIN' : 'JOIN'} ${join.tableName} ON ${join.condition}`,
+        )
+        .join(' ')
     );
   }
 
@@ -210,12 +231,18 @@ export class Query<
 
   protected sortByToString() {
     if (!this._sort) return '';
-    return ' SORT BY ' + this._sort.map(({ field, desc }) => field + (desc ? ' DESC' : '')).join(',');
+    return (
+      ' SORT BY ' +
+      this._sort
+        .map(({ field, desc }) => field + (desc ? ' DESC' : ''))
+        .join(',')
+    );
   }
 
   protected limitToString() {
     if (!this._limit) return '';
-    if (this._limit.offset) return ` LIMIT ${this._limit.limit} OFFSET ${this._limit.offset}`;
+    if (this._limit.offset)
+      return ` LIMIT ${this._limit.limit} OFFSET ${this._limit.offset}`;
     return ` LIMIT ${this._limit.limit}`;
   }
 }

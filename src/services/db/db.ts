@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { file } from 'bun';
 import { Database, constants } from 'bun:sqlite';
 import { rm } from 'node:fs/promises';
@@ -19,7 +18,7 @@ export const DB = await (async () => {
       safeIntegers: false,
       strict: true,
     });
-  } catch (e) {
+  } catch {
     await rm(DBFileName, {
       force: true,
     });
@@ -56,7 +55,10 @@ export async function backupDB() {
     DB.exec('PRAGMA wal_checkpoint(TRUNCATE)');
     DB.exec(`VACUUM INTO '${DBBackupName}'`);
     log('Start upload');
-    await yandexDisk.write(`backups/${Date.now()}.db`, file(DBBackupName).stream());
+    await yandexDisk.write(
+      `backups/${Date.now()}.db`,
+      file(DBBackupName).stream(),
+    );
     log('Backup done!');
   } catch {
     console.error('Error while backing up db');
@@ -68,9 +70,9 @@ export async function loadBackupDB(name?: string, restart?: boolean) {
     const info = await yandexDisk.getInfo('backups');
     const index = info.content
       ?.map((c, i) => [Number.parseInt(c.name.slice(0, -3)), i])
-      .sort((a, b) => b[0] - a[0])[0]?.[1];
+      .sort((a, b) => b[0]! - a[0]!)[0]?.[1];
     if (index === undefined) throw new Error("Can't find backup");
-    name = info.content![index].name.slice(0, -3);
+    name = info.content![index]!.name.slice(0, -3);
   }
   log('Downloading backup', name);
   const response = await yandexDisk.read(`backups/${name}.db`);

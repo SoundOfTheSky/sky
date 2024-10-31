@@ -1,4 +1,9 @@
-import { convertFromArray, convertFromBoolean, convertToArray, convertToBoolean } from '@/services/db/convetrations';
+import {
+  convertFromArray,
+  convertFromBoolean,
+  convertToArray,
+  convertToBoolean,
+} from '@/services/db/convetrations';
 import { DB } from '@/services/db/db';
 import { Query } from '@/services/db/query';
 import { DEFAULT_COLUMNS, Table } from '@/services/db/table';
@@ -54,7 +59,9 @@ export class QuestionsTable extends Table<StudyQuestion> {
           type: 'TEXT',
           from: (from) =>
             typeof from === 'string'
-              ? (Object.fromEntries(from.split('|').map((el) => el.split('='))) as Record<string, string>)
+              ? (Object.fromEntries(
+                  from.split('|').map((el) => el.split('=')),
+                ) as Record<string, string>)
               : undefined,
           to: (from: Record<string, string> | null | undefined) =>
             from
@@ -90,7 +97,11 @@ export class QuestionsTable extends Table<StudyQuestion> {
         `${TABLES.STUDY_QUESTIONS}.choose`,
         `uq.id userQuestionId`,
         `MAX(${TABLES.STUDY_QUESTIONS}.updated, IIF(uq.updated, uq.updated, 0)) updated`,
-      ]).join(`${TABLES.STUDY_USERS_QUESTIONS} uq`, `uq.question_id = ${TABLES.STUDY_QUESTIONS}.id`, true),
+      ]).join(
+        `${TABLES.STUDY_USERS_QUESTIONS} uq`,
+        `uq.question_id = ${TABLES.STUDY_QUESTIONS}.id`,
+        true,
+      ),
     );
     this.createDeleteTrigger();
   }

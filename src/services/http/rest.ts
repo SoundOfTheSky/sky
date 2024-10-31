@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-types */
 import { Statement } from 'bun:sqlite';
 
 import { TSchema } from '@sinclair/typebox';
@@ -23,8 +22,9 @@ const QUERY_MODIFIERS = {
 export class RESTApi<
   OUTPUT extends TableDefaults = TableDefaults,
   INPUT extends object = TableDTO<OUTPUT>,
-  QUERY extends Query<TableDefaults> = Query<TableDefaults, TableDefaults, undefined>,
+  QUERY extends Query<TableDefaults> = Query<TableDefaults, TableDefaults>,
 > {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   protected queryCache = new Map<string, Statement<DBRow, [{}]>>();
 
   public constructor(
@@ -71,14 +71,16 @@ export class RESTApi<
    * - sort+=column - sort ascending WIP
    * - sort-=column - sort descending WIP
    */
-  protected query(query: Record<string, string>): OUTPUT[] {
+  protected query(query?: Record<string, string>): OUTPUT[] {
     const params: DBRow = {};
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     let where = '';
     if (query)
       for (const key in query) {
         let name;
-        let modifier = QUERY_MODIFIERS[key.at(-1) as keyof typeof QUERY_MODIFIERS] as [string, string];
+        let modifier = QUERY_MODIFIERS[
+          key.at(-1) as keyof typeof QUERY_MODIFIERS
+        ] as [string, string] | undefined;
         if (modifier) name = key.slice(0, -1);
         else {
           name = key;
@@ -88,7 +90,7 @@ export class RESTApi<
         if (!field) continue;
         const param = name + modifier[1];
         where += ` AND ${field.sql(modifier[0], param)}`;
-        params[param] = field.convertTo(query[key]);
+        params[param] = field.convertTo(query[key]!);
       }
     let cachedQuery = this.queryCache.get(where);
     if (!cachedQuery) {
@@ -100,9 +102,13 @@ export class RESTApi<
 }
 
 export class RESTApiUser<
-  OUTPUT extends TableDefaults & { userId: number } = TableDefaults & { userId: number },
+  OUTPUT extends TableDefaults & { userId: number } = TableDefaults & {
+    userId: number;
+  },
   INPUT extends object = TableDTO<OUTPUT>,
-  QUERY extends Query<TableDefaults & { user_id: number }> = Query<TableDefaults & { user_id: number }>,
+  QUERY extends Query<TableDefaults & { user_id: number }> = Query<
+    TableDefaults & { user_id: number }
+  >,
 > extends RESTApi<OUTPUT, INPUT, QUERY> {
   public declare table: TableWithUser<OUTPUT, INPUT, QUERY>;
 
@@ -116,12 +122,18 @@ export class RESTApiUser<
 
   public create(data: INPUT): OUTPUT {
     const changes = this.table.create(data);
-    return this.get({ id: changes.lastInsertRowid as number, user_id: (data as { user_id: number }).user_id })!;
+    return this.get({
+      id: changes.lastInsertRowid as number,
+      user_id: (data as { user_id: number }).user_id,
+    })!;
   }
 
   public update(id: number, data: INPUT): OUTPUT {
     const changes = this.table.update(id, data);
-    return this.get({ id: changes.lastInsertRowid as number, user_id: (data as { user_id: number }).user_id })!;
+    return this.get({
+      id: changes.lastInsertRowid as number,
+      user_id: (data as { user_id: number }).user_id,
+    })!;
   }
 }
 
@@ -138,7 +150,7 @@ export function createRestEndpointHandler(
       permissions: [req.method === 'GET' ? viewPermission : editPermission],
       throw401: true,
     });
-    const param = route.params['id'];
+    const param = route.params.id;
     switch (req.method) {
       case 'GET':
         if (param) {
@@ -161,15 +173,25 @@ export function createRestEndpointHandler(
         break;
       case 'POST': {
         const body = (await req.json()) as { user_id: number };
-        if (!T.Check(body)) throw new HTTPError('Validation error', 400, JSON.stringify([...T.Errors(body)]));
-        body['user_id'] = session.user.id;
+        if (!T.Check(body))
+          throw new HTTPError(
+            'Validation error',
+            400,
+            JSON.stringify([...T.Errors(body)]),
+          );
+        body.user_id = session.user.id;
         sendCompressedJSON(res, api.create(body));
         break;
       }
       case 'PUT': {
         const body = (await req.json()) as { user_id: number };
-        if (!T.Check(body)) throw new HTTPError('Validation error', 400, JSON.stringify([...T.Errors(body)]));
-        body['user_id'] = session.user.id;
+        if (!T.Check(body))
+          throw new HTTPError(
+            'Validation error',
+            400,
+            JSON.stringify([...T.Errors(body)]),
+          );
+        body.user_id = session.user.id;
         sendCompressedJSON(res, api.update(parseInt(param), body));
         break;
       }

@@ -10,13 +10,13 @@
     "noEmit": true,
     "composite": true,
     "strict": true,
-    "downlevelIteration": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
+    "noUncheckedIndexedAccess": true,
     "paths": {
       "@/*": ["./*"]
     }
   },
-  "include": ["**/*.d.ts", "**/*.ts", "src/sky-shared/plan-event.ts_notused"]
+  "include": ["**/*.d.ts", "**/*.ts"]
 }

@@ -16,12 +16,15 @@ export const LoginT = TypeCompiler.Compile(
   }),
 );
 
-// eslint-disable-next-line sonarjs/cognitive-complexity
 export default (async function (req, res) {
   if (req.method !== 'POST') return;
-  const [payload, body] = await Promise.all([sessionGuard({ req, res }), getRequestBodyT(req, LoginT)]);
+  const [payload, body] = await Promise.all([
+    sessionGuard({ req, res }),
+    getRequestBodyT(req, LoginT),
+  ]);
   const user = usersTable.convertFrom(usersTable.$getByUsername.get(body));
-  if (!user || !(await Bun.password.verify(body.password, user.password))) throw new HTTPError('Not found', 404);
+  if (!user || !(await Bun.password.verify(body.password, user.password)))
+    throw new HTTPError('Not found', 404);
   setAuth(
     res,
     await signJWT(

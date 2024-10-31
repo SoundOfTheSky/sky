@@ -9,7 +9,8 @@ export default createRestEndpointHandler(
     subjectsTable,
     {
       updated: {
-        convertTo: (data) => convertToDate(new Date(Number.parseInt(data) * 1000))!,
+        convertTo: (data) =>
+          convertToDate(new Date(Number.parseInt(data) * 1000))!,
         sql: (m, p) =>
           m === '<'
             ? `(${TABLES.STUDY_SUBJECTS}.updated ${m} $${p} AND q.updated ${m} $${p} AND (us.updated IS NULL OR us.updated ${m} $${p}))`

@@ -26,7 +26,7 @@ export function sendJSON(res: HTTPResponse, data: unknown) {
 }
 
 export function sendCompressedJSON(res: HTTPResponse, data: unknown) {
-  res.body = zlib.deflateSync(JSON.stringify(data));
+  res.body = zlib.deflateSync(JSON.stringify(data)) as unknown as Uint8Array;
   res.headers.set('Content-Type', 'application/json');
   res.headers.set('Content-Encoding', 'deflate');
 }
@@ -51,7 +51,9 @@ export function setCookie(res: HTTPResponse, name: string, value: string) {
 export function getCookies(req: Request) {
   const cookie = req.headers.get('cookie');
   if (!cookie) return {};
-  return Object.fromEntries(cookie.split('; ').map((cookie) => cookie.split('='))) as Record<string, string>;
+  return Object.fromEntries(
+    cookie.split('; ').map((cookie) => cookie.split('=')),
+  ) as Record<string, string>;
 }
 
 export async function getRequestBodyT<T extends TypeCheck<TSchema>>(
@@ -59,6 +61,11 @@ export async function getRequestBodyT<T extends TypeCheck<TSchema>>(
   T: T,
 ): Promise<GetTypeFromCompiled<T>> {
   const body = await req.json();
-  if (!T.Check(body)) throw new HTTPError('Validation error', 400, JSON.stringify([...T.Errors(body)]));
+  if (!T.Check(body))
+    throw new HTTPError(
+      'Validation error',
+      400,
+      JSON.stringify([...T.Errors(body)]),
+    );
   return body as GetTypeFromCompiled<T>;
 }

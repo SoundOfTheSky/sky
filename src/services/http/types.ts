@@ -19,4 +19,8 @@ export type HTTPResponse = {
   /** @default "OK" */
   statusText?: string;
 };
-export type HTTPHandler = (req: Request, res: HTTPResponse, route: MatchedRoute) => unknown;
+export type HTTPHandler = (
+  req: Request,
+  res: HTTPResponse,
+  route: MatchedRoute,
+) => unknown;

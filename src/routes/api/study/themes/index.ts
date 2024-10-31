@@ -10,5 +10,6 @@ export default (async (req, res) => {
     permissions: ['STUDY'],
     throw401: true,
   });
-  if (req.method === 'GET') sendCompressedJSON(res, usersThemesTable.getThemesData(session.user.id));
+  if (req.method === 'GET')
+    sendCompressedJSON(res, usersThemesTable.getThemesData(session.user.id));
 }) satisfies HTTPHandler;

@@ -1,5 +1,12 @@
 import { spawnSync } from 'bun';
-import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'fs';
+import {
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'fs';
 import { join } from 'path';
 
 const STATIC = 'static';
@@ -35,7 +42,7 @@ function copy(from: string, to: string) {
     if (statSync(f).isDirectory()) {
       mkdirSync(t);
       copy(f, t);
-    } else writeFileSync(t, readFileSync(f));
+    } else writeFileSync(t, readFileSync(f) as unknown as Uint8Array);
   }
 }
 copy(FE_DIST, STATIC);
@@ -45,5 +52,8 @@ spawnSync(['zip', '-r', STATICZIP, '.'], {
 });
 console.log('Uploading...');
 const staticzip = join(STATIC, STATICZIP);
-writeFileSync(join(process.env['DEPLOY_YD']!, STATICZIP), readFileSync(staticzip));
+writeFileSync(
+  join(process.env.DEPLOY_YD!, STATICZIP),
+  readFileSync(staticzip) as unknown as Uint8Array,
+);
 rmSync(staticzip);

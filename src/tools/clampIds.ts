@@ -1,3 +1,4 @@
+/* eslint-disable unused-imports/no-unused-vars */
 import { DB } from '@/services/db/db';
 import TABLES from '@/services/tables';
 import { log } from '@/sky-utils';
@@ -13,15 +14,23 @@ const tables = [
   TABLES.STUDY_USERS_THEMES,
 ];
 
-function orderIds(table: string, ids: number[], changeId?: (from: number, to: number) => unknown) {
+function orderIds(
+  table: string,
+  ids: number[],
+  changeId?: (from: number, to: number) => unknown,
+) {
   const changeIdQuery = DB.prepare(`UPDATE ${table} SET id = ? WHERE id = ?`);
   log('Clamping', table);
-  for (let i = 0; i < ids.length; i++) changeIdQuery.run(i + 1000000001, ids[i]);
+  for (let i = 0; i < ids.length; i++)
+    changeIdQuery.run(i + 1000000001, ids[i]!);
   for (let i = 0; i < ids.length; i++) {
     changeIdQuery.run(i + 1, i + 1000000001);
-    changeId?.(ids[i], i + 1);
+    changeId?.(ids[i]!, i + 1);
   }
-  DB.prepare(`UPDATE sqlite_sequence SET seq = ? WHERE name = ?`).run(ids.length, table);
+  DB.prepare(`UPDATE sqlite_sequence SET seq = ? WHERE name = ?`).run(
+    ids.length,
+    table,
+  );
 }
 
 log('Starting to clamp...');
@@ -53,7 +62,9 @@ log('Starting to clamp...');
 // );
 
 console.log(
-  DB.prepare<{ id: number }, []>(`SELECT * FROM ${TABLES.STUDY_SUBJECTS} ORDER BY theme_id ASC, id ASC`)
+  DB.prepare<{ id: number }, []>(
+    `SELECT * FROM ${TABLES.STUDY_SUBJECTS} ORDER BY theme_id ASC, id ASC`,
+  )
     .all()
     .map((x) => x.id)
     .join('\n'),

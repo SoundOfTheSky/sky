@@ -11,7 +11,10 @@ export type StoreData = {
   b?: Buffer;
 };
 export class StoreTable extends Table<TableDefaults & StoreData> {
-  protected $getByName = this.query.clone().where<{ name: string }>('name = $name').toDBQuery();
+  protected $getByName = this.query
+    .clone()
+    .where<{ name: string }>('name = $name')
+    .toDBQuery();
 
   public constructor() {
     super(TABLES.STORE, {

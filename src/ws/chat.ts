@@ -28,7 +28,8 @@ export class Chat {
 
   protected onMessage(ws: WS, payload?: string) {
     if (!ws.data.chat) return ws.send('error [PublicChat] Not subscribed');
-    if (!payload) return ws.send('error [PublicChat] Max message length is 255 characters');
+    if (!payload)
+      return ws.send('error [PublicChat] Max message length is 255 characters');
     const text = payload.trim().replaceAll('\n', '');
     if (text.length > 255 || text.length === 0)
       return ws.send('error [PublicChat] Max message length is 255 characters');

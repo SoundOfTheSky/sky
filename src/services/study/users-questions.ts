@@ -5,7 +5,10 @@ import TABLES from '@/services/tables';
 import { StudyUserQuestion } from '@/sky-shared/study';
 
 export class UsersQuestionsTable extends TableWithUser<StudyUserQuestion> {
-  public $deleteByUserTheme = DB.prepare<unknown, { themeId: number; userId: number }>(
+  public $deleteByUserTheme = DB.prepare<
+    unknown,
+    { themeId: number; userId: number }
+  >(
     `DELETE FROM ${this.name} WHERE id IN (
       SELECT a.id FROM ${this.name} a
       JOIN ${TABLES.STUDY_QUESTIONS} q ON q.id == a.question_id

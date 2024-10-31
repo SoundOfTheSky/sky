@@ -30,7 +30,7 @@ type SignedToken = {
 const JWT_VERSION = 1;
 const JWT_EXPIRES = 60 * 60 * 24 * 30;
 const JWT_REFRESH = 60 * 60 * 4;
-const JWT_SECRET = new TextEncoder().encode(process.env['JWT_SECRET']);
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 const JWT_ALG = 'HS256';
 const disposedTokens = new Map<string, number>(); // Token/time of disposal
 
@@ -62,30 +62,45 @@ export async function verifyJWT<T = JWTPayload>(token: string) {
   }
 }
 export function setAuth(res: HTTPResponse, token: SignedToken) {
-  setCookie(res, 'session', `${token.token_type} ${token.access_token}; Max-Age=${token.expires_in}`);
+  setCookie(
+    res,
+    'session',
+    `${token.token_type} ${token.access_token}; Max-Age=${token.expires_in}`,
+  );
 }
 
-export async function sessionGuard(options: { req: Request }): Promise<JWTPayload | undefined>;
-export async function sessionGuard(options: { req: Request; res: HTTPResponse }): Promise<JWTPayload>;
+export async function sessionGuard(options: {
+  req: Request;
+}): Promise<JWTPayload | undefined>;
+export async function sessionGuard(options: {
+  req: Request;
+  res: HTTPResponse;
+}): Promise<JWTPayload>;
 export async function sessionGuard(options: {
   req: Request;
   res?: HTTPResponse;
   permissions: string[];
   throw401?: false;
-}): Promise<(Omit<JWTPayload, 'user'> & { user: NonNullable<JWTPayload['user']> }) | undefined>;
+}): Promise<
+  | (Omit<JWTPayload, 'user'> & { user: NonNullable<JWTPayload['user']> })
+  | undefined
+>;
 export async function sessionGuard(options: {
   req: Request;
   res?: HTTPResponse;
   permissions: string[];
   throw401: true;
-}): Promise<Omit<JWTPayload, 'user'> & { user: NonNullable<JWTPayload['user']> }>;
+}): Promise<
+  Omit<JWTPayload, 'user'> & { user: NonNullable<JWTPayload['user']> }
+>;
 export async function sessionGuard(options: {
   req: Request;
   res?: HTTPResponse;
   permissions?: string[];
   throw401?: boolean;
 }): Promise<JWTPayload | undefined> {
-  const token = getCookies(options.req)['session'] ?? options.req.headers.get('authorization');
+  const token =
+    getCookies(options.req).session ?? options.req.headers.get('authorization');
   const payload = token ? await verifyJWT(token.slice(7)) : undefined;
   // If no token
   if (!payload) {
@@ -93,7 +108,8 @@ export async function sessionGuard(options: {
       registerVisit(true);
       const newSession = await signJWT({});
       setAuth(options.res, newSession);
-      if (options.permissions && options.throw401) throw new HTTPError('Not allowed', 401);
+      if (options.permissions && options.throw401)
+        throw new HTTPError('Not allowed', 401);
       return verifyJWT(newSession.access_token);
     }
     return;
@@ -116,7 +132,9 @@ export async function sessionGuard(options: {
     (options.permissions &&
       (!payload.user ||
         (!payload.user.permissions.includes('ADMIN') &&
-          options.permissions.some((perm) => !payload.user!.permissions.includes(perm)))))
+          options.permissions.some(
+            (perm) => !payload.user!.permissions.includes(perm),
+          ))))
   ) {
     if (options.throw401) throw new HTTPError('Not allowed', 401);
     return;
@@ -129,7 +147,8 @@ export async function sessionGuard(options: {
  */
 setInterval(() => {
   const now = Date.now();
-  for (const [sub, time] of disposedTokens.entries()) if (now - time > JWT_EXPIRES) disposedTokens.delete(sub);
+  for (const [sub, time] of disposedTokens.entries())
+    if (now - time > JWT_EXPIRES) disposedTokens.delete(sub);
 }, JWT_EXPIRES * 1000);
 
 // === Visits ===

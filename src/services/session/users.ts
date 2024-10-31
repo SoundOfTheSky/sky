@@ -11,7 +11,10 @@ export type User = TableDefaults & {
   avatar?: string;
 };
 export class UsersTable extends Table<User> {
-  public $getByUsername = this.query.clone().where<{ username: string }>('username = $username').toDBQuery();
+  public $getByUsername = this.query
+    .clone()
+    .where<{ username: string }>('username = $username')
+    .toDBQuery();
 
   public constructor() {
     super(TABLES.USERS, {

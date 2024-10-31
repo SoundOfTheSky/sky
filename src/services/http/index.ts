@@ -17,19 +17,32 @@ const handlers = new Map(
   await Promise.all(
     Object.entries(router.routes).map(
       async ([key, val]) =>
-        [key, ((await import(relative(import.meta.dir, val))) as { default: HTTPHandler }).default] as const,
+        [
+          key,
+          (
+            (await import(relative(import.meta.dir, val))) as {
+              default: HTTPHandler;
+            }
+          ).default,
+        ] as const,
     ),
   ),
 );
 log('[Loading] Handlers ok!');
-export default async function handleHTTP(req: Request, server: Server): Promise<Response | undefined> {
+export default async function handleHTTP(
+  req: Request,
+  server: Server,
+): Promise<Response | undefined> {
   const url = req.url.slice(req.url.indexOf('/', 8));
   log(`[HTTP] ${req.method}: ${req.url}`);
   const time = Date.now();
   const res: HTTPResponse = {
     headers: new Headers() as Headers, // wtf
   };
-  res.headers.set('cache-control', 'no-cache, no-store, max-age=0, must-revalidate');
+  res.headers.set(
+    'cache-control',
+    'no-cache, no-store, max-age=0, must-revalidate',
+  );
   if (url === '/ws') {
     const payload = await sessionGuard({ req, res });
     if (

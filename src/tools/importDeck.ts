@@ -14,9 +14,12 @@ spawnSync({
   cwd: join('assets'),
 });
 const media = new Map(
-  Object.entries(JSON.parse(readFileSync(join('assets', 'deck', 'media'), 'utf8')) as Record<string, string>).map(
-    ([k, v]) => [v, k],
-  ),
+  Object.entries(
+    JSON.parse(readFileSync(join('assets', 'deck', 'media'), 'utf8')) as Record<
+      string,
+      string
+    >,
+  ).map(([k, v]) => [v, k]),
 );
 const db = new Database(join('assets', 'deck', 'collection.anki21'), {
   create: false,
@@ -85,41 +88,51 @@ const subjectIds: number[] = [];
  * 28 - объяснение англ
  */
 for (let i = 0; i < data.length; i++) {
-  const card = data[i];
-  console.log(i, card[0]);
+  const card = data[i]!;
+  console.log(i, card[0]!);
   // If same question allow the first one
-  if (data.some((card2, i2) => i2 < i && card2[3] === card[3])) {
+  if (data.some((card2, i2) => i2 < i && card2[3] === card[3]!)) {
     console.log('Skip!');
     continue;
   }
   const subjectId = subjectsTable.create({
     themeId,
-    title: card[3],
+    title: card[3]!,
   }).lastInsertRowid as number;
   subjectIds.push(subjectId);
-  // const existingQuestion = questionsTable.convertFrom(q1.get(card[7]));
+  // const existingQuestion = questionsTable.convertFrom(q1.get(card[7]!));
   // if (!existingQuestion) throw new Error('Question not found!');
   // const subjectId = existingQuestion.subjectId;
-  const media13 = card[13] && media.has(card[13].slice(7, -1)) && card[13].slice(7, -1);
-  const media24 = card[24] && media.has(card[24].slice(10, -2)) && card[24].slice(10, -2);
+  const media13 =
+    card[13]! && media.has(card[13].slice(7, -1)) && card[13].slice(7, -1);
+  const media24 =
+    card[24]! && media.has(card[24].slice(10, -2)) && card[24].slice(10, -2);
   questionsTable.create({
     subjectId,
-    description: `<tab title="Описание">Слово: ${card[3]}${media13 ? `\n<audio s="/static/${media13}">Чтение: ${card[12]}</audio>` : ''}
-Перевод: ${card[2]}${media24 ? `\n<img src="/static/${media24}">` : ''}
-</tab><tab title="Примеры">${card[4]
+    description: `<tab title="Описание">Слово: ${card[3]!}${media13 ? `\n<audio s="/static/${media13}">Чтение: ${card[12]!}</audio>` : ''}
+Перевод: ${card[2]!}${media24 ? `\n<img src="/static/${media24}">` : ''}
+</tab><tab title="Примеры">${card[4]!
       .replaceAll('<font color="#000000">', '')
       .replaceAll('<font color="#008000">', '')
       .replaceAll('</font>', '')
-      .replaceAll(card[3], `<accent>${card[3]}</accent>`)
+      .replaceAll(card[3]!, `<accent>${card[3]!}</accent>`)
       .split('<br>')
       .map((x) => `<example>${x.replaceAll(' - ', '\n')}</example>`)
       .join('\n')}</tab>`,
-    answers: card[2].split('; ').map((x) => x.trim()),
-    question: card[3],
+    answers: card[2]!.split('; ').map((x) => x.trim()),
+    question: card[3]!,
     choose: true,
   });
-  if (media13) cpSync(join('assets', 'deck', media.get(media13)!), join('static', 'static', media13));
-  if (media24) cpSync(join('assets', 'deck', media.get(media24)!), join('static', 'static', media24));
+  if (media13)
+    cpSync(
+      join('assets', 'deck', media.get(media13)!),
+      join('static', 'static', media13),
+    );
+  if (media24)
+    cpSync(
+      join('assets', 'deck', media.get(media24)!),
+      join('static', 'static', media24),
+    );
 }
 // Deps in batches
 const BATCH = 50;
@@ -128,8 +141,8 @@ for (let i = BATCH; i < subjectIds.length; i++)
   for (let i2 = i - BATCH - (i % BATCH); i2 < i - (i % BATCH); i2++)
     subjectDependenciesTable.create({
       percent: 90,
-      subjectId: subjectIds[i],
-      dependencyId: subjectIds[i2],
+      subjectId: subjectIds[i]!,
+      dependencyId: subjectIds[i2]!,
     });
 rmSync(join('assets', 'deck'), {
   recursive: true,

@@ -1,4 +1,9 @@
-import { convertFromArray, convertFromBoolean, convertToArray, convertToBoolean } from '@/services/db/convetrations';
+import {
+  convertFromArray,
+  convertFromBoolean,
+  convertToArray,
+  convertToBoolean,
+} from '@/services/db/convetrations';
 import { DB } from '@/services/db/db';
 import { Query } from '@/services/db/query';
 import { DEFAULT_COLUMNS, TableWithUser } from '@/services/db/table';
@@ -81,13 +86,19 @@ export class AnswersTable extends TableWithUser<StudyAnswer, StudyAnswerDTO> {
         `${TABLES.STUDY_ANSWERS}.took`,
         `s.theme_id`,
         `${TABLES.STUDY_ANSWERS}.user_id`,
-      ]).join(`${TABLES.STUDY_SUBJECTS} s`, `s.id = ${TABLES.STUDY_ANSWERS}.subject_id`),
+      ]).join(
+        `${TABLES.STUDY_SUBJECTS} s`,
+        `s.id = ${TABLES.STUDY_ANSWERS}.subject_id`,
+      ),
     );
   }
 
   public create(data: StudyAnswerDTO): Changes {
-    data.answers = data.answers?.filter((x) => !['wrong', 'correct'].includes(x.toLowerCase()));
+    data.answers = data.answers?.filter(
+      (x) => !['wrong', 'correct'].includes(x.toLowerCase()),
+    );
     let changes: Changes;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     DB.transaction(() => {
       changes = super.create(data);
       changes.changes += usersSubjectsTable.answer(data).changes;

@@ -3,7 +3,11 @@ import { RequestOptions, request as httpsRequest } from 'node:https';
 import { URL } from 'node:url';
 // import { BrotliDecompress, Deflate, Gunzip, createGunzip, createBrotliDecompress, createDeflate } from 'node:zlib';
 
-export type HTTPSRequestOptions = RequestOptions & { followRedirects?: boolean; body?: unknown; raw?: boolean };
+export type HTTPSRequestOptions = RequestOptions & {
+  followRedirects?: boolean;
+  body?: unknown;
+  raw?: boolean;
+};
 
 export const parseCookies = (cookies: string) =>
   Object.fromEntries(
@@ -17,9 +21,15 @@ export const stringifyCookies = (cookies: Record<string, string>) =>
     .map(([k, v]) => `${k}=${v}`)
     .join('; ');
 
-export function decodeReponse(res: IncomingMessage, raw?: false): Promise<Buffer>;
+export function decodeReponse(
+  res: IncomingMessage,
+  raw?: false,
+): Promise<Buffer>;
 export function decodeReponse(res: IncomingMessage, raw: true): IncomingMessage;
-export function decodeReponse(res: IncomingMessage, raw?: boolean): Promise<Buffer> | IncomingMessage {
+export function decodeReponse(
+  res: IncomingMessage,
+  raw?: boolean,
+): Promise<Buffer> | IncomingMessage {
   if (raw) return res;
   const data: Buffer[] = [];
   return new Promise((resolve, reject) => {
@@ -28,12 +38,15 @@ export function decodeReponse(res: IncomingMessage, raw?: boolean): Promise<Buff
     });
     res.on('error', reject);
     res.on('end', () => {
-      resolve(Buffer.concat(data));
+      resolve(Buffer.concat(data as unknown as Uint8Array[]));
     });
   });
 }
 
-export function HTTPSRequest(url: string, options: HTTPSRequestOptions = {}): Promise<IncomingMessage> {
+export function HTTPSRequest(
+  url: string,
+  options: HTTPSRequestOptions = {},
+): Promise<IncomingMessage> {
   const s = new URL(url);
   return new Promise((resolve, reject) => {
     const req = httpsRequest(
@@ -63,9 +76,18 @@ export class HTTPSClient {
     defaultHeaders['accept-language'] ??= 'en-US,en;q=0.9';
   }
 
-  public async request(url: string, options?: HTTPSRequestOptions & { raw?: false }): Promise<Buffer>;
-  public async request(url: string, options: HTTPSRequestOptions & { raw: true }): Promise<IncomingMessage>;
-  public async request(url: string, options: HTTPSRequestOptions = {}): Promise<Buffer | IncomingMessage> {
+  public async request(
+    url: string,
+    options?: HTTPSRequestOptions & { raw?: false },
+  ): Promise<Buffer>;
+  public async request(
+    url: string,
+    options: HTTPSRequestOptions & { raw: true },
+  ): Promise<IncomingMessage>;
+  public async request(
+    url: string,
+    options: HTTPSRequestOptions = {},
+  ): Promise<Buffer | IncomingMessage> {
     options.followRedirects ??= true;
     options.headers ??= {};
     options.headers = { ...this.defaultHeaders, ...options.headers };
@@ -75,21 +97,31 @@ export class HTTPSClient {
       options.headers.cookie = stringifyCookies({
         ...this.cookies,
         ...parseCookies(
-          Array.isArray(options.headers.cookie) ? options.headers.cookie.join('; ') : options.headers.cookie.toString(),
+          Array.isArray(options.headers.cookie)
+            ? options.headers.cookie.join('; ')
+            : options.headers.cookie.toString(),
         ),
       });
     else options.headers.cookie = stringifyCookies(this.cookies);
     if (options.headers.cookie.length === 0) delete options.headers.cookie;
-    const res = await HTTPSRequest(url.startsWith('http') ? url : this.host + url, options);
+    const res = await HTTPSRequest(
+      url.startsWith('http') ? url : this.host + url,
+      options,
+    );
 
     // === Getting cookies ===
     for (const cookie of res.headers['set-cookie'] ?? []) {
-      const [key, value] = cookie.split('=');
+      const [key, value] = cookie.split('=') as [string, string];
       this.cookies[key.trim()] = value.trim();
     }
 
     // === Follow redirects ===
-    if (res.headers.location && res.statusCode && res.statusCode >= 300 && res.statusCode < 400)
+    if (
+      res.headers.location &&
+      res.statusCode &&
+      res.statusCode >= 300 &&
+      res.statusCode < 400
+    )
       return this.request(res.headers.location, options as never);
 
     // === Decode data ===

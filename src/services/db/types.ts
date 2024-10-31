@@ -7,7 +7,10 @@ export type DBDataType = string | number | Uint8Array | null;
 
 export type DBRow = Record<string, DBDataType>;
 
-export type TableDTO<T extends TableDefaults> = Optional<T, keyof TableDefaults>;
+export type TableDTO<T extends TableDefaults> = Optional<
+  T,
+  keyof TableDefaults
+>;
 
 export type TableColumn = {
   type: keyof ColumnTypeMap;

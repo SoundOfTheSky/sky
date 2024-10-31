@@ -25,19 +25,23 @@ function exec(cmd: string) {
 }
 
 function getTableSchema(name: string) {
-  return DB.query<{ sql: string }, [string]>(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`).get(
-    name,
-  )?.sql;
+  return DB.query<{ sql: string }, [string]>(
+    `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`,
+  ).get(name)?.sql;
 }
 
 function getTableTriggers(name: string) {
-  return DB.query<{ sql: string }, [string]>(`SELECT sql FROM sqlite_master WHERE type = 'trigger' AND tbl_name = ?`)
+  return DB.query<{ sql: string }, [string]>(
+    `SELECT sql FROM sqlite_master WHERE type = 'trigger' AND tbl_name = ?`,
+  )
     .all(name)
     .map((trigger) => trigger.sql);
 }
 
 function dropAllTriggers() {
-  for (const { name } of DB.query<{ name: string }, []>(`SELECT name FROM sqlite_master WHERE type = 'trigger'`).all())
+  for (const { name } of DB.query<{ name: string }, []>(
+    `SELECT name FROM sqlite_master WHERE type = 'trigger'`,
+  ).all())
     exec(`DROP TRIGGER ${name}`);
 }
 
@@ -61,7 +65,12 @@ function dropColumn(table: string, column: string) {
   exec(`ALTER TABLE ${table} DROP ${column}`);
 }
 
-function changeColumn(table: string, column: string, name: string, definition: string) {
+function changeColumn(
+  table: string,
+  column: string,
+  name: string,
+  definition: string,
+) {
   const tmp = column + '_tmp';
   renameColumn(table, column, tmp);
   addColumn(table, name, definition);
@@ -69,7 +78,11 @@ function changeColumn(table: string, column: string, name: string, definition: s
   dropColumn(table, tmp);
 }
 
-function editTableSchema(table: string, edit: (schema: string) => string, insertCols: Record<string, string> = {}) {
+function editTableSchema(
+  table: string,
+  edit: (schema: string) => string,
+  insertCols: Record<string, string> = {},
+) {
   const tmp = table + '_tmp';
   exec('PRAGMA foreign_keys = OFF');
   const schema = getTableSchema(table);
@@ -98,7 +111,11 @@ function migration1() {
   exec(`UPDATE users SET permissions = 'ADMIN'`);
   editTableSchema(
     `users`,
-    (schema) => schema.replace(`permissions TEXT NOT NULL,`, 'permissions TEXT NOT NULL, password TEXT NOT NULL,'),
+    (schema) =>
+      schema.replace(
+        `permissions TEXT NOT NULL,`,
+        'permissions TEXT NOT NULL, password TEXT NOT NULL,',
+      ),
     {
       password: "'BRUH'",
     },
@@ -116,11 +133,17 @@ function migration1() {
   );
   editTableSchema('subjects', (schema) =>
     schema
-      .replace('FOREIGN KEY(srs_id) REFERENCES srs(id) ON DELETE CASCADE ON UPDATE CASCADE,', '')
+      .replace(
+        'FOREIGN KEY(srs_id) REFERENCES srs(id) ON DELETE CASCADE ON UPDATE CASCADE,',
+        '',
+      )
       .replace('srs_id INTEGER NOT NULL,', ''),
   );
   editTableSchema('users_themes', (schema) =>
-    schema.replace('need_unlock INTEGER NOT NULL,', 'need_unlock INTEGER DEFAULT 1,'),
+    schema.replace(
+      'need_unlock INTEGER NOT NULL,',
+      'need_unlock INTEGER DEFAULT 1,',
+    ),
   );
   dropTable('srs');
   dropTable('authenticators');

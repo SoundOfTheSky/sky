@@ -34,19 +34,25 @@ export class YandexDisk {
       name: yFile.name,
     };
     if (yFile.size !== undefined && yFile.size > 0) fileInfo.size = yFile.size;
-    if (yFile._embedded?.items) fileInfo.content = yFile._embedded.items.map(this.parseToFileInfo.bind(this));
+    if (yFile._embedded?.items)
+      fileInfo.content = yFile._embedded.items.map(
+        this.parseToFileInfo.bind(this),
+      );
     const mime = TypeLookUp(fileInfo.name);
     if (mime) fileInfo.mime = mime;
     return fileInfo;
   }
 
   public async mkDir(path: string): Promise<void> {
-    await fetch(`https://cloud-api.yandex.net/v1/disk/resources?path=${this.p(path)}`, {
-      method: 'PUT',
-      headers: {
-        Authorization: 'OAuth ' + this.token,
+    await fetch(
+      `https://cloud-api.yandex.net/v1/disk/resources?path=${this.p(path)}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: 'OAuth ' + this.token,
+        },
       },
-    });
+    );
   }
 
   public async getInfo(path: string): Promise<FileInfo> {
@@ -64,12 +70,15 @@ export class YandexDisk {
   }
 
   public async read(path: string) {
-    const { href } = (await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${this.p(path)}`, {
-      method: 'GET',
-      headers: {
-        Authorization: 'OAuth ' + this.token,
+    const { href } = (await fetch(
+      `https://cloud-api.yandex.net/v1/disk/resources/download?path=${this.p(path)}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: 'OAuth ' + this.token,
+        },
       },
-    }).then((res) => res.json())) as { href: string };
+    ).then((res) => res.json())) as { href: string };
     return fetch(href);
   }
 
@@ -130,13 +139,16 @@ export class YandexDisk {
   }
 
   public async emptyBin() {
-    await fetch('https://cloud-api.yandex.net/v1/disk/trash/resources?force_async=false', {
-      method: 'DELETE',
-      headers: {
-        Authorization: 'OAuth ' + this.token,
+    await fetch(
+      'https://cloud-api.yandex.net/v1/disk/trash/resources?force_async=false',
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: 'OAuth ' + this.token,
+        },
       },
-    });
+    );
   }
 }
 
-export default new YandexDisk(process.env['YANDEX_TOKEN']!, '/website/');
+export default new YandexDisk(process.env.YANDEX_TOKEN!, '/website/');

@@ -1,9 +1,13 @@
-/* eslint-disable @typescript-eslint/ban-types */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { convertFromDate, convertToDate } from '@/services/db/convetrations';
 import { DB } from '@/services/db/db';
 import { Query } from '@/services/db/query';
-import { DBDataType, DBRow, TableColumn, TableDTO, UpdateTableDTO } from '@/services/db/types';
+import {
+  DBDataType,
+  DBRow,
+  TableColumn,
+  TableDTO,
+  UpdateTableDTO,
+} from '@/services/db/types';
 import { Changes, TableDefaults } from '@/sky-shared/db';
 import { camelToSnakeCase } from '@/sky-utils';
 
@@ -40,7 +44,11 @@ export class Table<
   protected columnTo = new Map<string, string>();
   protected columnFrom = new Map<string, string>();
 
-  public constructor(name: string, schema: Record<string, TableColumn>, query?: QUERY) {
+  public constructor(
+    name: string,
+    schema: Record<string, TableColumn>,
+    query?: QUERY,
+  ) {
     this.name = name;
     const schemaEntries = Object.entries(schema);
     for (const [k, v] of schemaEntries) {
@@ -51,8 +59,13 @@ export class Table<
     }
     this.initializeTable();
     this.query = query ?? (new Query(this.name) as QUERY);
-    this.$getById = this.query.clone().where<{ id: number | string }>(`${this.name}.id = $id`).toDBQuery();
-    this.$deleteById = DB.prepare<undefined, { id: number | string }>(`DELETE FROM ${this.name} WHERE id = $id`);
+    this.$getById = this.query
+      .clone()
+      .where<{ id: number | string }>(`${this.name}.id = $id`)
+      .toDBQuery();
+    this.$deleteById = DB.prepare<undefined, { id: number | string }>(
+      `DELETE FROM ${this.name} WHERE id = $id`,
+    );
   }
 
   public getById(id: string | number): OUTPUT | undefined {
@@ -73,10 +86,9 @@ export class Table<
   public update(id: number | string, data: UpdateTableDTO<INPUT>): Changes {
     const cols = this.convertTo(data);
     if (cols.length === 0) throw new Error('No fields to update');
-    return DB.query(`UPDATE ${this.name} SET ${cols.map((x) => x[0] + ' = ?').join(', ')} WHERE id = ?`).run(
-      ...cols.map((x) => x[1]),
-      id,
-    );
+    return DB.query(
+      `UPDATE ${this.name} SET ${cols.map((x) => x[0] + ' = ?').join(', ')} WHERE id = ?`,
+    ).run(...cols.map((x) => x[1]), id);
   }
 
   public convertTo(data: UpdateTableDTO<INPUT>) {
@@ -100,7 +112,10 @@ export class Table<
         .filter(([, v]) => v !== null)
         .map(([k, v]) => {
           const column = this.schema.get(k);
-          return [this.columnFrom.get(k) ?? k, column?.from ? column.from(v) : v];
+          return [
+            this.columnFrom.get(k) ?? k,
+            column?.from ? column.from(v) : v,
+          ];
         }),
     ) as OUTPUT;
   }
@@ -119,7 +134,8 @@ export class Table<
             if (options.required) q += ' NOT NULL';
             else if (options.default)
               q += ` DEFAULT ${
-                typeof options.default === 'string' && options.default !== 'current_timestamp'
+                typeof options.default === 'string' &&
+                options.default !== 'current_timestamp'
                   ? `"${options.default}"`
                   : options.default
               }`;
@@ -129,7 +145,9 @@ export class Table<
             if (options.ref)
               append.push(
                 `FOREIGN KEY(${name}) REFERENCES ${options.ref.table}(${options.ref.column})${
-                  options.ref.onDelete ? ' ON DELETE ' + options.ref.onDelete : ''
+                  options.ref.onDelete
+                    ? ' ON DELETE ' + options.ref.onDelete
+                    : ''
                 }${options.ref.onUpdate ? ' ON UPDATE ' + options.ref.onUpdate : ''}`,
               );
             return q;
@@ -155,24 +173,37 @@ export class Table<
 
   protected registerUpdateIndex() {
     if (this.schema.get('updated')?.type !== 'TEXT') return;
-    DB.exec(`CREATE INDEX IF NOT EXISTS idx_${this.name}_updated ON ${this.name} (updated)`);
+    DB.exec(
+      `CREATE INDEX IF NOT EXISTS idx_${this.name}_updated ON ${this.name} (updated)`,
+    );
   }
 }
 export class TableWithUser<
-  OUTPUT extends TableDefaults & { userId: number } = TableDefaults & { userId: number },
+  OUTPUT extends TableDefaults & { userId: number } = TableDefaults & {
+    userId: number;
+  },
   INPUT extends object = TableDTO<OUTPUT>,
-  QUERY extends Query<TableDefaults & { user_id: number }> = Query<TableDefaults & { user_id: number }>,
+  QUERY extends Query<TableDefaults & { user_id: number }> = Query<
+    TableDefaults & { user_id: number }
+  >,
 > extends Table<OUTPUT, INPUT, QUERY> {
   protected $getByIdUser = this.query
     .clone()
-    .where<{ id: string | number; userId: number }>(`${this.name}.id = $id AND ${this.name}.user_id = $userId`)
+    .where<{
+      id: string | number;
+      userId: number;
+    }>(`${this.name}.id = $id AND ${this.name}.user_id = $userId`)
     .toDBQuery();
 
-  protected $deleteByIdUser = DB.prepare<undefined, { id: number | string; userId: number }>(
-    `DELETE FROM ${this.name} WHERE id = $id AND user_id = $userId`,
-  );
+  protected $deleteByIdUser = DB.prepare<
+    undefined,
+    { id: number | string; userId: number }
+  >(`DELETE FROM ${this.name} WHERE id = $id AND user_id = $userId`);
 
-  public updateByUser(id: number | string, data: UpdateTableDTO<INPUT>): Changes {
+  public updateByUser(
+    id: number | string,
+    data: UpdateTableDTO<INPUT>,
+  ): Changes {
     const cols = this.convertTo(data);
     const userId = (data as unknown as { user_id: number }).user_id;
     delete (data as { user_id?: number }).user_id;

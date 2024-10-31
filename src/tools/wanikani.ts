@@ -1,7 +1,5 @@
 /* eslint-disable unused-imports/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable sonarjs/cognitive-complexity */
-/* eslint-disable sonarjs/no-duplicate-string */
+
 import { CryptoHasher, file, write } from 'bun';
 import { cpSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -153,7 +151,11 @@ function cleanupHTML(
     .map((el) => [el[0].slice(1, -1).split(' ')[0], el.index] as const)
     .filter(([t]) => whitelist.every((w) => t !== w && t !== `/${w}`))
     .reverse()
-    .reduce((acc, [, index]) => acc.slice(0, index) + acc.slice(acc.indexOf('>', index) + 1), text);
+    .reduce(
+      (acc, [, index]) =>
+        acc.slice(0, index) + acc.slice(acc.indexOf('>', index) + 1),
+      text,
+    );
 }
 
 async function downloadWK() {
@@ -163,7 +165,7 @@ async function downloadWK() {
     log(nextUrl);
     const json = (await fetch(nextUrl, {
       headers: {
-        Authorization: 'Bearer ' + process.env['WK'],
+        Authorization: 'Bearer ' + process.env.WK,
       },
     }).then((x) => x.json())) as WKResponse<WKAnySubject>;
     nextUrl = json.pages.next_url;
@@ -174,18 +176,29 @@ async function downloadWK() {
 
 async function parseWK() {
   // === Loading and basic caching ===
-  const subjects = (JSON.parse(readFileSync(join('assets', 'WK.json'), 'utf8')) as WKObject<WKAnySubject>[])
+  const subjects = (
+    JSON.parse(
+      readFileSync(join('assets', 'WK.json'), 'utf8'),
+    ) as WKObject<WKAnySubject>[]
+  )
     .filter((x) => !x.data.hidden_at)
-    .toSorted((a, b) => a.data.level * 100 + a.data.lesson_position - (b.data.level * 100 + b.data.lesson_position));
+    .toSorted(
+      (a, b) =>
+        a.data.level * 100 +
+        a.data.lesson_position -
+        (b.data.level * 100 + b.data.lesson_position),
+    );
   const subjectsMap = new Map<number, WKObject<WKAnySubject>>();
   const levelDeps: number[][] = Array(60)
     .fill(0)
     .map(() => []);
   for (const subject of subjects) {
-    levelDeps[subject.data.level - 1].push(subject.id);
+    levelDeps[subject.data.level - 1]!.push(subject.id);
     subjectsMap.set(subject.id, subject);
   }
-  const kanjiWithStrokeOrder = new Set(readdirSync(join('assets', 'stroke_order')).map((el) => +el.slice(0, -4)));
+  const kanjiWithStrokeOrder = new Set(
+    readdirSync(join('assets', 'stroke_order')).map((el) => +el.slice(0, -4)),
+  );
   const pitchAccents = readFileSync(join('assets', 'accents.txt'), 'utf8')
     .split('\n')
     .map((l) => l.split('	') as [string, string, string]);
@@ -210,14 +223,16 @@ async function parseWK() {
 
   // === Generating logic ===
   const subjectTag = async (subject: WKObject<WKAnySubject>, text?: string) =>
-    `<subject uid="${subject.id}" title="${subject.object[0].toUpperCase() + subject.object.slice(1)}: ${
+    `<subject uid="${subject.id}" title="${subject.object[0]!.toUpperCase() + subject.object.slice(1)}: ${
       subject.data.characters ?? subject.data.slug
     }">${
       text ??
       subject.data.characters ??
       ('character_images' in subject.data
         ? `<img class="em" src="/static/${await downloadFileAndGetHash(
-            subject.data.character_images.find((x) => x.content_type === 'image/svg+xml')!.url,
+            subject.data.character_images.find(
+              (x) => x.content_type === 'image/svg+xml',
+            )!.url,
             'svg',
           )}">`
         : subject.data.slug)
@@ -230,7 +245,9 @@ async function parseWK() {
     if (subject.object === 'kanji' || subject.object === 'vocabulary')
       txt += ` [${(
         await Promise.all(
-          (subject as WKObject<WKKanji | WKVocab>).data.component_subject_ids.map((id) =>
+          (
+            subject as WKObject<WKKanji | WKVocab>
+          ).data.component_subject_ids.map((id) =>
             subjectTag(subjectsMap.get(id)!),
           ),
         )
@@ -239,7 +256,9 @@ async function parseWK() {
   }
   const getSubjectMeanings = (s: WKObject<WKAnySubject>) => [
     ...s.data.meanings.filter((x) => x.accepted_answer).map((x) => x.meaning),
-    ...s.data.auxiliary_meanings.filter((x) => x.type === 'whitelist').map((x) => x.meaning),
+    ...s.data.auxiliary_meanings
+      .filter((x) => x.type === 'whitelist')
+      .map((x) => x.meaning),
   ];
   const getSubjectReadings = (s: WKObject<WKKanji | WKVocab>) =>
     s.data.readings.filter((x) => x.accepted_answer).map((x) => x.reading);
@@ -257,7 +276,10 @@ async function parseWK() {
       .replaceAll('</meaning>', '</accent>');
 
   // === Schemas ===
-  const schemas: Record<string, (s: WKObject<WKAnySubject>) => string | Promise<string>> = {
+  const schemas: Record<
+    string,
+    (s: WKObject<WKAnySubject>) => string | Promise<string>
+  > = {
     radical: () => `<tab title="Description">{{level}}
     
 {{meaningDesc}}</tab><tab title="Related">{{sameMeaning}}
@@ -301,17 +323,26 @@ Anime sentences:
 <ik>{{title}}</ik></tab><tab title="Related">{{sameMeaning}}</tab>`,
     meaningDesc: (s) =>
       parseWKDescription(
-        s.data.meaning_mnemonic + ('meaning_hint' in s.data && s.data.meaning_hint ? '\n\n' + s.data.meaning_hint : ''),
+        s.data.meaning_mnemonic +
+          ('meaning_hint' in s.data && s.data.meaning_hint
+            ? '\n\n' + s.data.meaning_hint
+            : ''),
       ),
     readingDesc: (s) =>
       parseWKDescription(
         (s.data as WKKanji).reading_mnemonic +
-          ('reading_hint' in s.data && s.data.reading_hint ? '\n\n' + s.data.reading_hint : ''),
+          ('reading_hint' in s.data && s.data.reading_hint
+            ? '\n\n' + s.data.reading_hint
+            : ''),
       ),
     deps: async (s) =>
       (s.data as WKKanji).component_subject_ids.length > 0
         ? `${s.object === 'kanji' ? 'Radicals' : 'Kanji'}: ${(
-            await Promise.all((s.data as WKKanji).component_subject_ids.map((id) => subjectTag(subjectsMap.get(id)!)))
+            await Promise.all(
+              (s.data as WKKanji).component_subject_ids.map((id) =>
+                subjectTag(subjectsMap.get(id)!),
+              ),
+            )
           ).join('+')}`
         : ``,
     similar: async (s) => {
@@ -321,8 +352,10 @@ Anime sentences:
         (subject) =>
           subject.id !== sub.id &&
           subject.object === sub.object &&
-          (('visually_similar_subject_ids' in sub.data && sub.data.visually_similar_subject_ids.includes(subject.id)) ||
-            ((subject.data as WKKanji).component_subject_ids.length === sub.data.component_subject_ids.length &&
+          (('visually_similar_subject_ids' in sub.data &&
+            sub.data.visually_similar_subject_ids.includes(subject.id)) ||
+            ((subject.data as WKKanji).component_subject_ids.length ===
+              sub.data.component_subject_ids.length &&
               sub.data.component_subject_ids.every((d) =>
                 (subject.data as WKKanji).component_subject_ids.includes(d),
               ))),
@@ -349,7 +382,9 @@ Anime sentences:
         (subject) =>
           subject.id !== s.id &&
           subject.object === s.object &&
-          answers.some((a) => getSubjectReadings(subject as WKObject<WKKanji>).includes(a)),
+          answers.some((a) =>
+            getSubjectReadings(subject as WKObject<WKKanji>).includes(a),
+          ),
       );
       return same.length > 0
         ? `<b>Same reading:</b>\n${(await Promise.all(same.map(generateRelated))).join('\n')}`
@@ -359,13 +394,19 @@ Anime sentences:
       (s.data as WKRadical).amalgamation_subject_ids.length > 0
         ? `<b>Used in:</b>\n${(
             await Promise.all(
-              (s.data as WKRadical).amalgamation_subject_ids.map((id) => subjectsMap.get(id)!).map(generateRelated),
+              (s.data as WKRadical).amalgamation_subject_ids
+                .map((id) => subjectsMap.get(id)!)
+                .map(generateRelated),
             )
           ).join('\n')}`
         : '',
     audio: async (s) => {
-      const audios = (s.data as WKVocab).pronunciation_audios.filter((x) => x.content_type === 'audio/mpeg');
-      const urls = await Promise.all(audios.map((a) => downloadFileAndGetHash(a.url, 'mp3')));
+      const audios = (s.data as WKVocab).pronunciation_audios.filter(
+        (x) => x.content_type === 'audio/mpeg',
+      );
+      const urls = await Promise.all(
+        audios.map((a) => downloadFileAndGetHash(a.url, 'mp3')),
+      );
       return audios
         .map(
           (a, i) =>
@@ -374,39 +415,55 @@ Anime sentences:
         .join('\n');
     },
     examples: (s) =>
-      (s.data as WKVocab).context_sentences.map(({ ja, en }) => `<example>${ja}\n${en}</example>`).join('\n'),
+      (s.data as WKVocab).context_sentences
+        .map(({ ja, en }) => `<example>${ja}\n${en}</example>`)
+        .join('\n'),
     strokeOrder: (s) => {
       if (!s.data.characters) return '';
       const code = s.data.characters.codePointAt(0)!;
-      return kanjiWithStrokeOrder.has(code) ? `<img class="stroke-order" src="/static/stroke_order/${code}.svg">` : '';
+      return kanjiWithStrokeOrder.has(code)
+        ? `<img class="stroke-order" src="/static/stroke_order/${code}.svg">`
+        : '';
     },
-    typeOfWord: (s) => `Type of word: ${(s.data as WKVocab).parts_of_speech.join(', ')}`,
+    typeOfWord: (s) =>
+      `Type of word: ${(s.data as WKVocab).parts_of_speech.join(', ')}`,
     pitchAccent: (s) => {
       const p =
         s.object === 'kana_vocabulary'
-          ? pitchAccents.filter((p) => s.data.characters === p[0] || s.data.characters === p[1])
+          ? pitchAccents.filter(
+              (p) => s.data.characters === p[0] || s.data.characters === p[1],
+            )
           : pitchAccents.filter((p) => {
               const readings = getSubjectReadings(s as WKObject<WKVocab>);
               return (
                 (s.data.characters === p[0] || s.data.characters === p[1]) &&
-                (p[1].length === 0 || readings.includes(p[0]) || readings.includes(p[1]))
+                (p[1].length === 0 ||
+                  readings.includes(p[0]) ||
+                  readings.includes(p[1]))
               );
             });
       return p.length > 0
         ? `Pitch accents: ${p
-            .map((x) => `<jp-pitch-accent h="${x[1]}" p="${x[2]}">${s.data.characters}<\/jp-pitch-accent>`)
+            .map(
+              (x) =>
+                `<jp-pitch-accent h="${x[1]}" p="${x[2]}">${s.data.characters}</jp-pitch-accent>`,
+            )
             .join(', ')}`
         : '';
     },
-    conjugation: (s) => `<jp-conjugation>${s.data.characters ?? ''}</jp-conjugation>`,
+    conjugation: (s) =>
+      `<jp-conjugation>${s.data.characters ?? ''}</jp-conjugation>`,
     title: (s) => s.data.characters ?? '',
     level: (s) => `Level: ` + s.data.level,
   };
-  async function parseSchema(schemaName: string, subject: WKObject<WKAnySubject>): Promise<string> {
-    const schema = schemas[schemaName];
-    if (!schema) throw new Error(`Unknown schema: ${schemaName}`);
+  async function parseSchema(
+    schemaName: string,
+    subject: WKObject<WKAnySubject>,
+  ): Promise<string> {
+    const schema = schemas[schemaName]!;
     let text = await schema(subject);
-    for (const [a, b] of text.matchAll(/{{(.+?)}}/gs)) text = text.replace(a, await parseSchema(b, subject));
+    for (const [a, b] of text.matchAll(/{{(.+?)}}/gs))
+      text = text.replace(a, await parseSchema(b!, subject));
     return text;
   }
   // CHANGE THIS IF YOU ARE NOT CREATING
@@ -415,7 +472,9 @@ Anime sentences:
   // });
   // const themeId = lastInsertRowIdQuery.get()!.id;
   const themeId = 4;
-  const dbsubjects = DB.prepare<TableDefaults, [number]>(`SELECT * FROM ${TABLES.STUDY_SUBJECTS} WHERE theme_id = ?`)
+  const dbsubjects = DB.prepare<TableDefaults, [number]>(
+    `SELECT * FROM ${TABLES.STUDY_SUBJECTS} WHERE theme_id = ?`,
+  )
     .all(themeId)
     .map((x) => x.id);
   // END OF CHANGE BLOCK
@@ -429,20 +488,25 @@ Anime sentences:
   const dbMap = new Map<number, number>();
   const idReplaces = new Map<number, number>([]);
   for (const subject of subjects) {
-    log(`Subject ${subject.id} ${subject.object} ${subject.data.characters ?? subject.data.slug}`);
+    log(
+      `Subject ${subject.id} ${subject.object} ${subject.data.characters ?? subject.data.slug}`,
+    );
     const s: StudySubjectDTO = {
       themeId,
       title: '',
     };
     const qs: UpdateTableDTO<StudyQuestionDTO>[] = [];
-    const sameTitle = subjects.filter((s) => s.data.characters === subject.data.characters && s.id !== subject.id);
+    const sameTitle = subjects.filter(
+      (s) =>
+        s.data.characters === subject.data.characters && s.id !== subject.id,
+    );
     const meanings = getSubjectMeanings(subject);
     const alternateMeanings = sameTitle
       .flatMap(getSubjectMeanings)
       .map((x) => x.toLowerCase())
       .filter((a) => meanings.every((x) => x.toLowerCase() !== a));
     switch (subject.object) {
-      case 'vocabulary':
+      case 'vocabulary': {
         const vocabulary = subject as WKObject<WKVocab>;
         s.title = `Vocabulary:\n${vocabulary.data.characters}`;
         const readings = getSubjectReadings(vocabulary);
@@ -459,7 +523,12 @@ Anime sentences:
           alternateAnswers:
             alternateMeanings.length === 0
               ? null
-              : Object.fromEntries(alternateMeanings.map((a) => [a, `Please type vocabulary meaning`])),
+              : Object.fromEntries(
+                  alternateMeanings.map((a) => [
+                    a,
+                    `Please type vocabulary meaning`,
+                  ]),
+                ),
         });
         qs.push({
           answers: readings,
@@ -469,10 +538,16 @@ Anime sentences:
           alternateAnswers:
             alternateReadings.length === 0
               ? null
-              : Object.fromEntries(alternateReadings.map((a) => [a, `Please type vocabulary reading`])),
+              : Object.fromEntries(
+                  alternateReadings.map((a) => [
+                    a,
+                    `Please type vocabulary reading`,
+                  ]),
+                ),
         });
         break;
-      case 'kana_vocabulary':
+      }
+      case 'kana_vocabulary': {
         const kana = subject as WKObject<WKKana>;
         s.title = `Kana vocabulary:\n${kana.data.characters}`;
         qs.push({
@@ -483,10 +558,16 @@ Anime sentences:
           alternateAnswers:
             alternateMeanings.length === 0
               ? null
-              : Object.fromEntries(alternateMeanings.map((a) => [a, `Please type vocabulary meaning`])),
+              : Object.fromEntries(
+                  alternateMeanings.map((a) => [
+                    a,
+                    `Please type vocabulary meaning`,
+                  ]),
+                ),
         });
         break;
-      case 'kanji':
+      }
+      case 'kanji': {
         const kanji = subject as WKObject<WKKanji>;
         s.title = `Kanji:\n${kanji.data.characters}`;
         const readings2 = getSubjectReadings(kanji);
@@ -503,7 +584,12 @@ Anime sentences:
           alternateAnswers:
             alternateMeanings.length === 0
               ? null
-              : Object.fromEntries(alternateMeanings.map((a) => [a, `Please type kanji meaning`])),
+              : Object.fromEntries(
+                  alternateMeanings.map((a) => [
+                    a,
+                    `Please type kanji meaning`,
+                  ]),
+                ),
         });
         qs.push({
           answers: readings2,
@@ -513,15 +599,24 @@ Anime sentences:
           alternateAnswers:
             alternateReadings2.length === 0
               ? null
-              : Object.fromEntries(alternateReadings2.map((a) => [a, `Please type kanji reading`])),
+              : Object.fromEntries(
+                  alternateReadings2.map((a) => [
+                    a,
+                    `Please type kanji reading`,
+                  ]),
+                ),
         });
         break;
-      case 'radical':
+      }
+      case 'radical': {
         const radical = subject as WKObject<WKRadical>;
-        if (radical.data.characters) s.title = `Radical:\n${radical.data.characters}`;
+        if (radical.data.characters)
+          s.title = `Radical:\n${radical.data.characters}`;
         else
           s.title = `Radical:\n<img class="em" src="/static/${await downloadFileAndGetHash(
-            radical.data.character_images.find((x) => x.content_type === 'image/svg+xml')!.url,
+            radical.data.character_images.find(
+              (x) => x.content_type === 'image/svg+xml',
+            )!.url,
             'svg',
           )}">`;
         qs.push({
@@ -532,31 +627,40 @@ Anime sentences:
           alternateAnswers:
             alternateMeanings.length === 0
               ? null
-              : Object.fromEntries(alternateMeanings.map((a) => [a, `Please type radical meaning`])),
+              : Object.fromEntries(
+                  alternateMeanings.map((a) => [
+                    a,
+                    `Please type radical meaning`,
+                  ]),
+                ),
         });
         break;
+      }
     }
 
     // === DB ===
     let id =
       idReplaces.get(subject.id) ??
-      DB.prepare<{ id: number }, [string]>(`SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`).get(s.title)
-        ?.id ??
-      DB.prepare<{ id: number }, [string]>(`SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`).get(
-        s.title.replaceAll(':\n', ' '),
-      )?.id;
+      DB.prepare<{ id: number }, [string]>(
+        `SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`,
+      ).get(s.title)?.id ??
+      DB.prepare<{ id: number }, [string]>(
+        `SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`,
+      ).get(s.title.replaceAll(':\n', ' '))?.id;
     if (!id && s.title.includes(' お'))
-      id = DB.prepare<{ id: number }, [string]>(`SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`).get(
-        s.title.replace(' お', ' '),
-      )?.id;
+      id = DB.prepare<{ id: number }, [string]>(
+        `SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`,
+      ).get(s.title.replace(' お', ' '))?.id;
     // === find subject by answers ===
     if (!id) {
       const q = questionsTable.convertFrom(
-        DB.prepare<DBRow, [string, string]>(`SELECT * FROM study_questions WHERE answers = ? AND question LIKE ?`).get(
+        DB.prepare<DBRow, [string, string]>(
+          `SELECT * FROM study_questions WHERE answers = ? AND question LIKE ?`,
+        ).get(
           getSubjectMeanings(subject).join('|'),
-          `${qs[0].question!.slice(0, 4)}%`,
+          `${qs[0]!.question!.slice(0, 4)}%`,
         ),
-      )!;
+      );
       if (q) {
         console.log('FOUND HARD WAY');
         id = q.subjectId;
@@ -576,7 +680,7 @@ Anime sentences:
     const dbqs = subjectsTable.getById(id)!.questionIds;
     if (dbqs.length !== qs.length) throw new Error('DBQS is not equal');
     for (let i = 0; i < qs.length; i++) {
-      const q = qs[i];
+      const q = qs[i]!;
       const dbq = dbqs[i];
       q.subjectId = id;
       if (dbq) {
@@ -594,7 +698,10 @@ Anime sentences:
   const questions = questionsTable.convertFromMany(
     questionsTable.query
       .clone()
-      .join(`${TABLES.STUDY_SUBJECTS} s`, `s.id = ${TABLES.STUDY_QUESTIONS}.subject_id`)
+      .join(
+        `${TABLES.STUDY_SUBJECTS} s`,
+        `s.id = ${TABLES.STUDY_QUESTIONS}.subject_id`,
+      )
       .where<{ themeId: number }>('s.theme_id = $themeId')
       .toDBQuery()
       .all({ themeId }),
@@ -606,7 +713,10 @@ Anime sentences:
       description: cleanupHTML(
         question.description
           // Subject ids only known after all updates so we fix them now
-          .replaceAll(/<subject uid="(\d+?)"/g, (_, id) => `<subject uid="${dbMap.get(parseInt(id as string))}"`),
+          .replaceAll(
+            /<subject uid="(\d+?)"/g,
+            (_, id) => `<subject uid="${dbMap.get(parseInt(id as string))}"`,
+          ),
       ),
     });
   }
@@ -616,23 +726,34 @@ Anime sentences:
   for (const subject of subjects) {
     const id = dbMap.get(subject.id)!;
     if (subject.data.level > 1)
-      for (const dep of levelDeps[subject.data.level - 2])
-        subjectDependenciesTable.create({ dependencyId: dbMap.get(dep)!, percent: 90, subjectId: id });
+      for (const dep of levelDeps[subject.data.level - 2]!)
+        subjectDependenciesTable.create({
+          dependencyId: dbMap.get(dep)!,
+          percent: 90,
+          subjectId: id,
+        });
     if ('component_subject_ids' in subject.data)
       for (const dep of subject.data.component_subject_ids)
-        subjectDependenciesTable.create({ dependencyId: dbMap.get(dep)!, percent: 100, subjectId: id });
+        subjectDependenciesTable.create({
+          dependencyId: dbMap.get(dep)!,
+          percent: 100,
+          subjectId: id,
+        });
   }
   log(`Unused subjects: ${dbsubjects.length} ${dbsubjects.join(', ')}`);
   await filesSink.end();
   cpSync(join('assets', 'wanikani'), join('static', 'static'), {
     recursive: true,
   });
-  cpSync(join('assets', 'stroke_order'), join('static', 'static', 'stroke_order'), {
-    recursive: true,
-  });
+  cpSync(
+    join('assets', 'stroke_order'),
+    join('static', 'static', 'stroke_order'),
+    {
+      recursive: true,
+    },
+  );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/require-await
 setTimeout(async () => {
   log('Generating...');
   // await write(join('assets', 'WK.json'), JSON.stringify(await downloadWK(), undefined, 2));

@@ -9,14 +9,20 @@ import { ObjectCamelToSnakeCase, ValidationError } from '@/sky-utils';
 export type StudyUserSubjectTable = ObjectCamelToSnakeCase<StudyUserSubject>;
 
 export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
-  public $deleteByUserTheme = DB.prepare<unknown, { themeId: number; userId: number }>(
+  public $deleteByUserTheme = DB.prepare<
+    unknown,
+    { themeId: number; userId: number }
+  >(
     `DELETE FROM ${this.name} WHERE id IN (
       SELECT a.id FROM ${this.name} a
       JOIN ${TABLES.STUDY_SUBJECTS} s ON s.id == a.subject_id
       WHERE s.theme_id = $themeId AND a.user_id = $userId)`,
   );
 
-  protected $getUserReviews = DB.prepare<{ next_review: number; theme_id: number; ids: string }, { userId: number }>(
+  protected $getUserReviews = DB.prepare<
+    { next_review: number; theme_id: number; ids: string },
+    { userId: number }
+  >(
     `SELECT s.theme_id, us.next_review, GROUP_CONCAT(us.subject_id) ids
   FROM ${this.name} us
   JOIN ${TABLES.STUDY_SUBJECTS} s ON s.id = us.subject_id 
@@ -42,7 +48,9 @@ export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
   protected $getSubjectData = DB.prepare<
     { next_review?: number; stage: number },
     { subjectId: number; userId: number }
-  >(`SELECT next_review, stage FROM ${this.name} WHERE subject_id = $subjectId AND user_id = $userId`);
+  >(
+    `SELECT next_review, stage FROM ${this.name} WHERE subject_id = $subjectId AND user_id = $userId`,
+  );
 
   protected $updateStage = DB.prepare<
     undefined,
@@ -52,7 +60,9 @@ export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
       subjectId: number;
       userId: number;
     }
-  >(`UPDATE ${this.name} SET next_review=$nextReview, stage=$stage WHERE subject_id=$subjectId AND user_id=$userId`);
+  >(
+    `UPDATE ${this.name} SET next_review=$nextReview, stage=$stage WHERE subject_id=$subjectId AND user_id=$userId`,
+  );
 
   public constructor() {
     super(TABLES.STUDY_USERS_SUBJECTS, {
@@ -103,7 +113,10 @@ export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
    * Get all available reviews for user
    */
   public getUserReviewsAndLessons(userId: number) {
-    const data = new Map<number, { reviews: Record<number, number[]>; lessons: number[] }>();
+    const data = new Map<
+      number,
+      { reviews: Record<number, number[]>; lessons: number[] }
+    >();
     const userReviews = this.$getUserReviews.all({ userId });
     for (const el of userReviews) {
       let theme = data.get(el.theme_id);
@@ -125,15 +138,21 @@ export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
     const time = ~~(new Date(data.created).getTime() / 3_600_000);
     if (subject.next_review && subject.next_review > time)
       throw new ValidationError('Subject is not available for review');
-    const stage = Math.max(1, Math.min(srs.length + 1, (subject.stage ?? 0) + (data.correct ? 1 : -2)));
+    const stage = Math.max(
+      1,
+      Math.min(srs.length + 1, subject.stage + (data.correct ? 1 : -2)),
+    );
     const changes = this.$updateStage.run({
-      nextReview: stage >= srs.length ? null : time + srs[stage - 1],
+      nextReview: stage >= srs.length ? null : time + srs[stage - 1]!,
       stage,
       subjectId: data.subjectId,
       userId: data.userId,
     });
     if (data.correct && stage === 5)
-      changes.changes += usersThemesTable.$setNeedUnlock.run({ needUnlock: 1, userId: data.userId }).changes;
+      changes.changes += usersThemesTable.$setNeedUnlock.run({
+        needUnlock: 1,
+        userId: data.userId,
+      }).changes;
     return changes;
   }
 }

@@ -17,7 +17,10 @@ export async function getStaticFile(path: string, brotli?: boolean) {
   }
 }
 
-export async function getStaticFileWithIndexFallback(path: string, brotli?: boolean) {
+export async function getStaticFileWithIndexFallback(
+  path: string,
+  brotli?: boolean,
+) {
   const p = join(STATIC_PATH, ...path.split(sep));
 
   return (
