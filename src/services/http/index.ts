@@ -1,10 +1,10 @@
-import { Server, FileSystemRouter } from 'bun';
+import { FileSystemRouter, Server } from 'bun';
 import { join, relative } from 'node:path';
 
 import { HTTPHandler, HTTPResponse } from '@/services/http/types';
 import { HTTPError } from '@/services/http/utils';
 import { sessionGuard } from '@/services/session';
-import { ValidationError, formatTime, log } from '@/sky-utils';
+import { ValidationError, formatTime, log } from 'sky-utils';
 
 const router = new FileSystemRouter({
   style: 'nextjs',
@@ -37,7 +37,7 @@ export default async function handleHTTP(
   log(`[HTTP] ${req.method}: ${req.url}`);
   const time = Date.now();
   const res: HTTPResponse = {
-    headers: new Headers() as Headers, // wtf
+    headers: new Headers(), // wtf
   };
   res.headers.set(
     'cache-control',
@@ -69,5 +69,5 @@ export default async function handleHTTP(
     } else throw e;
   }
   log(`[HTTP END] ${req.method}: ${req.url} ${formatTime(Date.now() - time)}`);
-  return new Response(res.body, res);
+  return new Response(res.body as BodyInit, res);
 }

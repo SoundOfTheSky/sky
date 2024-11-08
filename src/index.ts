@@ -10,7 +10,7 @@ import {
   wsMessageHandler,
   wsOpenHandler,
 } from '@/services/ws';
-import { log } from '@/sky-utils';
+import { log } from 'sky-utils';
 
 const httpServer = serve({
   fetch: (req) => {

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { TableDefaults } from '@/sky-shared/db';
-import { Optional } from '@/sky-utils';
+import { Optional } from 'sky-utils';
 
 export type DBDataType = string | number | Uint8Array | null;
 

@@ -10,7 +10,7 @@ import { DEFAULT_COLUMNS, Table } from '@/services/db/table';
 import TABLES from '@/services/tables';
 import { TableDefaults } from '@/sky-shared/db';
 import { StudyQuestion } from '@/sky-shared/study';
-import { ObjectCamelToSnakeCase } from '@/sky-utils';
+import { ObjectCamelToSnakeCase } from 'sky-utils';
 
 export type StudyQuestionTable = ObjectCamelToSnakeCase<
   TableDefaults & {

@@ -60,7 +60,7 @@ export async function getRequestBodyT<T extends TypeCheck<TSchema>>(
   req: Request,
   T: T,
 ): Promise<GetTypeFromCompiled<T>> {
-  const body = await req.json();
+  const body = (await req.json()) as unknown;
   if (!T.Check(body))
     throw new HTTPError(
       'Validation error',

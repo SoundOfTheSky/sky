@@ -1,7 +1,7 @@
 /* eslint-disable unused-imports/no-unused-vars */
 import { DB } from '@/services/db/db';
 import TABLES from '@/services/tables';
-import { log } from '@/sky-utils';
+import { log } from 'sky-utils';
 
 const tables = [
   TABLES.USERS,

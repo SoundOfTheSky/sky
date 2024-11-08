@@ -12,7 +12,7 @@ import { subjectsTable } from '@/services/study/subjects';
 import TABLES from '@/services/tables';
 import { TableDefaults } from '@/sky-shared/db';
 import { StudyQuestionDTO, StudySubjectDTO } from '@/sky-shared/study';
-import { log } from '@/sky-utils';
+import { log } from 'sky-utils';
 
 type WKResponse<T> = {
   object: string;

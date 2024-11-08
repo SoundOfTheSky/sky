@@ -1,6 +1,6 @@
 import { visitEmitter, visitsStats } from '@/services/session';
 import { subscribeWSEvent } from '@/services/ws';
-import { log } from '@/sky-utils';
+import { log } from 'sky-utils';
 
 let online = 0;
 subscribeWSEvent('subscribeServerStats', (ws) => {

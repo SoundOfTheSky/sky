@@ -15,18 +15,12 @@
     "eslint-plugin-unused-imports": "^4.1.4",
     "file-type": "^19.6.0",
     "jose": "^5.9.6",
-    "mime-types": "^2.1.35"
+    "mime-types": "^2.1.35",
+    "sky-utils": "file:../sky-utils"
   },
   "devDependencies": {
-    "@eslint/js": "^9.14.0",
     "@types/bun": "^1.1.12",
-    "@types/eslint__js": "^8.42.3",
     "@types/mime-types": "^2.1.4",
-    "eslint": "^9.14.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-prettier": "^5.2.1",
-    "prettier": "^3.3.3",
-    "typescript": "^5.6.3",
-    "typescript-eslint": "^8.12.2"
+    "sky-lint": "file:../sky-lint"
   }
 }

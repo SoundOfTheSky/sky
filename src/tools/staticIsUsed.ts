@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 import { questionsTable } from '@/services/study/questions';
 import { subjectsTable } from '@/services/study/subjects';
-import { log } from '@/sky-utils';
+import { log } from 'sky-utils';
 
 const STATIC_PATH = join('static', 'static');
 function fsArray(path: string): string[] {

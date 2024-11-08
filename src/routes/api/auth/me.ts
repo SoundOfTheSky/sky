@@ -2,7 +2,7 @@ import { HTTPHandler } from '@/services/http/types';
 import { HTTPError, sendCompressedJSON } from '@/services/http/utils';
 import { sessionGuard } from '@/services/session';
 import { User, usersTable } from '@/services/session/users';
-import { Optional, ValidationError } from '@/sky-utils';
+import { Optional, ValidationError } from 'sky-utils';
 
 export default (async function (req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') return;

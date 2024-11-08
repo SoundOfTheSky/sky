@@ -1,7 +1,7 @@
 import { HTTPHandler } from '@/services/http/types';
 import { sessionGuard } from '@/services/session';
 import { usersThemesTable } from '@/services/study/users-themes';
-import { parseInt } from '@/sky-utils';
+import { parseInt } from 'sky-utils';
 
 export default (async function (req, res, route) {
   const payload = await sessionGuard({

@@ -10,7 +10,7 @@ import { HTTPHandler } from '@/services/http/types';
 import { HTTPError, sendCompressedJSON } from '@/services/http/utils';
 import { sessionGuard } from '@/services/session';
 import { TableDefaults } from '@/sky-shared/db';
-import { parseInt } from '@/sky-utils';
+import { parseInt } from 'sky-utils';
 
 const QUERY_MODIFIERS = {
   '<': ['<', 'l'],

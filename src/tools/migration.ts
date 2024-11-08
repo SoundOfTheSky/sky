@@ -1,7 +1,7 @@
 /* eslint-disable unused-imports/no-unused-vars */
 import { Database, constants } from 'bun:sqlite';
 
-import { log } from '@/sky-utils';
+import { log } from 'sky-utils';
 
 const DB = new Database('database.db', {
   create: false,

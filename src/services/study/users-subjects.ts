@@ -4,7 +4,7 @@ import { usersThemesTable } from '@/services/study/users-themes';
 import TABLES from '@/services/tables';
 import { Changes } from '@/sky-shared/db';
 import { srs, StudyAnswerDTO, StudyUserSubject } from '@/sky-shared/study';
-import { ObjectCamelToSnakeCase, ValidationError } from '@/sky-utils';
+import { ObjectCamelToSnakeCase, ValidationError } from 'sky-utils';
 
 export type StudyUserSubjectTable = ObjectCamelToSnakeCase<StudyUserSubject>;
 

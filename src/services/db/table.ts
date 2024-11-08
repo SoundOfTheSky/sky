@@ -9,7 +9,7 @@ import {
   UpdateTableDTO,
 } from '@/services/db/types';
 import { Changes, TableDefaults } from '@/sky-shared/db';
-import { camelToSnakeCase } from '@/sky-utils';
+import { camelToSnakeCase } from 'sky-utils';
 
 export const DEFAULT_COLUMNS = {
   id: {

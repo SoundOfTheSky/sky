@@ -10,7 +10,7 @@ import { usersSubjectsTable } from '@/services/study/users-subjects';
 import TABLES from '@/services/tables';
 import { Changes, TableDefaults } from '@/sky-shared/db';
 import { StudyTheme } from '@/sky-shared/study';
-import { Optional, ValidationError } from '@/sky-utils';
+import { Optional, ValidationError } from 'sky-utils';
 
 export type UserTheme = TableDefaults & {
   userId: number;

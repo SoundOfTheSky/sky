@@ -3,7 +3,7 @@ import { HTTPHandler } from '@/services/http/types';
 import { getRequestBodyT } from '@/services/http/utils';
 import { sessionGuard, setAuth, signJWT } from '@/services/session';
 import { usersTable } from '@/services/session/users';
-import { ValidationError } from '@/sky-utils';
+import { ValidationError } from 'sky-utils';
 
 export default (async function (req, res) {
   if (req.method !== 'POST') return;

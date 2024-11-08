@@ -3,7 +3,7 @@ import { Database, constants } from 'bun:sqlite';
 import { rm } from 'node:fs/promises';
 
 import yandexDisk from '@/services/yandex-disk';
-import { ProgressLoggerTransform, log } from '@/sky-utils';
+import { ProgressLoggerTransform, log } from 'sky-utils';
 
 // === DB initialization ===
 log('[Loading] DB...');
