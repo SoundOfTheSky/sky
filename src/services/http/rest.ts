@@ -9,8 +9,7 @@ import { DBDataType, DBRow, TableDTO } from '@/services/db/types'
 import { HTTPHandler } from '@/services/http/types'
 import { HTTPError, sendCompressedJSON } from '@/services/http/utils'
 import { sessionGuard } from '@/services/session'
-
-import { TableDefaults } from 'sky-shared/database'
+import { TableDefaults } from '@/sky-shared/database'
 
 const QUERY_MODIFIERS = {
   '<': ['<', 'l'],

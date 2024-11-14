@@ -3,10 +3,10 @@ import { ObjectCamelToSnakeCase, ValidationError } from '@softsky/utils'
 import { DEFAULT_COLUMNS, TableWithUser } from '@/services/db/table'
 import { usersThemesTable } from '@/services/study/users-themes'
 import TABLES from '@/services/tables'
+import { Changes } from '@/sky-shared/database'
 import { srs, StudyAnswerDTO, StudyUserSubject } from '@/sky-shared/study'
 
 import { DB } from 'services/db/database'
-import { Changes } from 'sky-shared/database'
 
 export type StudyUserSubjectTable = ObjectCamelToSnakeCase<StudyUserSubject>
 

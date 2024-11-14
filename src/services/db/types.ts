@@ -2,7 +2,7 @@
 
 import { Optional } from '@softsky/utils'
 
-import { TableDefaults } from 'sky-shared/database'
+import { TableDefaults } from '@/sky-shared/database'
 
 export type DBDataType = string | number | Uint8Array | null
 

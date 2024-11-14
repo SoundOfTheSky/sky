@@ -9,10 +9,10 @@ import { answersTable } from '@/services/study/answers'
 import { usersQuestionsTable } from '@/services/study/users-questions'
 import { usersSubjectsTable } from '@/services/study/users-subjects'
 import TABLES from '@/services/tables'
+import { Changes, TableDefaults } from '@/sky-shared/database'
 import { StudyTheme } from '@/sky-shared/study'
 
 import { DB } from 'services/db/database'
-import { Changes, TableDefaults } from 'sky-shared/database'
 
 export type UserTheme = TableDefaults & {
   userId: number

@@ -2,9 +2,8 @@ import { Query } from '@/services/db/query'
 import { DEFAULT_COLUMNS, Table } from '@/services/db/table'
 import { DBRow } from '@/services/db/types'
 import TABLES from '@/services/tables'
+import { TableDefaults } from '@/sky-shared/database'
 import { StudySubject, StudySubjectDTO } from '@/sky-shared/study'
-
-import { TableDefaults } from 'sky-shared/database'
 
 export type StudySubjectTable = TableDefaults & {
   title: string

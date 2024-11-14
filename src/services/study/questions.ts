@@ -9,10 +9,10 @@ import {
 import { Query } from '@/services/db/query'
 import { DEFAULT_COLUMNS, Table } from '@/services/db/table'
 import TABLES from '@/services/tables'
+import { TableDefaults } from '@/sky-shared/database'
 import { StudyQuestion } from '@/sky-shared/study'
 
 import { DB } from 'services/db/database'
-import { TableDefaults } from 'sky-shared/database'
 
 export type StudyQuestionTable = ObjectCamelToSnakeCase<
   TableDefaults & {

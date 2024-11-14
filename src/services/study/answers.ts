@@ -8,10 +8,10 @@ import { Query } from '@/services/db/query'
 import { DEFAULT_COLUMNS, TableWithUser } from '@/services/db/table'
 import { usersSubjectsTable } from '@/services/study/users-subjects'
 import TABLES from '@/services/tables'
+import { Changes, TableDefaults } from '@/sky-shared/database'
 import { StudyAnswer, StudyAnswerDTO } from '@/sky-shared/study'
 
 import { DB } from 'services/db/database'
-import { Changes, TableDefaults } from 'sky-shared/database'
 
 export class AnswersTable extends TableWithUser<StudyAnswer, StudyAnswerDTO> {
   public $deleteByUserTheme = DB.prepare<

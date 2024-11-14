@@ -9,9 +9,9 @@ import {
   TableDTO,
   UpdateTableDTO,
 } from '@/services/db/types'
+import { Changes, TableDefaults } from '@/sky-shared/database'
 
 import { DB } from 'services/db/database'
-import { Changes, TableDefaults } from 'sky-shared/database'
 
 export const DEFAULT_COLUMNS = {
   id: {

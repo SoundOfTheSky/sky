@@ -12,10 +12,10 @@ import { questionsTable } from '@/services/study/questions'
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies'
 import { subjectsTable } from '@/services/study/subjects'
 import TABLES from '@/services/tables'
+import { TableDefaults } from '@/sky-shared/database'
 import { StudyQuestionDTO, StudySubjectDTO } from '@/sky-shared/study'
 
 import { DB } from 'services/db/database'
-import { TableDefaults } from 'sky-shared/database'
 
 type WKResponse<T> = {
   object: string

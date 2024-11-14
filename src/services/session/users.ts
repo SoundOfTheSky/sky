@@ -1,8 +1,7 @@
 import { convertFromArray, convertToArray } from '@/services/db/convetrations'
 import { DEFAULT_COLUMNS, Table } from '@/services/db/table'
 import TABLES from '@/services/tables'
-
-import { TableDefaults } from 'sky-shared/database'
+import { TableDefaults } from '@/sky-shared/database'
 
 export type User = TableDefaults & {
   username: string

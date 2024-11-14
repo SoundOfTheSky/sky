@@ -1,8 +1,7 @@
 import { DEFAULT_COLUMNS, Table } from '@/services/db/table'
 import { UpdateTableDTO } from '@/services/db/types'
 import TABLES from '@/services/tables'
-
-import { TableDefaults } from 'sky-shared/database'
+import { TableDefaults } from '@/sky-shared/database'
 
 export type StoreData = {
   name: string
