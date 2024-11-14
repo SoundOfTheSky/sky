@@ -1,7 +1,10 @@
 /* eslint-disable unused-imports/no-unused-vars */
-import { DB } from '@/services/db/db';
-import TABLES from '@/services/tables';
-import { log } from 'sky-utils';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { log } from '@softsky/utils'
+
+import TABLES from '@/services/tables'
+
+import { DB } from 'services/db/database'
 
 const tables = [
   TABLES.USERS,
@@ -12,28 +15,28 @@ const tables = [
   TABLES.STUDY_USERS_QUESTIONS,
   TABLES.STUDY_USERS_SUBJECTS,
   TABLES.STUDY_USERS_THEMES,
-];
+]
 
 function orderIds(
   table: string,
   ids: number[],
   changeId?: (from: number, to: number) => unknown,
 ) {
-  const changeIdQuery = DB.prepare(`UPDATE ${table} SET id = ? WHERE id = ?`);
-  log('Clamping', table);
-  for (let i = 0; i < ids.length; i++)
-    changeIdQuery.run(i + 1000000001, ids[i]!);
-  for (let i = 0; i < ids.length; i++) {
-    changeIdQuery.run(i + 1, i + 1000000001);
-    changeId?.(ids[i]!, i + 1);
+  const changeIdQuery = DB.prepare(`UPDATE ${table} SET id = ? WHERE id = ?`)
+  log('Clamping', table)
+  for (let index = 0; index < ids.length; index++)
+    changeIdQuery.run(index + 1_000_000_001, ids[index]!)
+  for (let index = 0; index < ids.length; index++) {
+    changeIdQuery.run(index + 1, index + 1_000_000_001)
+    changeId?.(ids[index]!, index + 1)
   }
   DB.prepare(`UPDATE sqlite_sequence SET seq = ? WHERE name = ?`).run(
     ids.length,
     table,
-  );
+  )
 }
 
-log('Starting to clamp...');
+log('Starting to clamp...')
 // for (const table of tables)
 //   orderIds(
 //     table,
@@ -66,8 +69,9 @@ console.log(
     `SELECT * FROM ${TABLES.STUDY_SUBJECTS} ORDER BY theme_id ASC, id ASC`,
   )
     .all()
-    .map((x) => x.id)
+    .map(x => x.id)
     .join('\n'),
-);
-console.log('Done');
-process.exit();
+)
+console.log('Done')
+// eslint-disable-next-line unicorn/no-process-exit
+process.exit()

@@ -1,2 +1,2 @@
-import '@/ws';
-import '@/routes';
+import '@/ws'
+import '@/routes'

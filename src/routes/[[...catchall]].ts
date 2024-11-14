@@ -1,3 +1,1 @@
-import handler from './';
-
-export default handler;
+export { default } from './'

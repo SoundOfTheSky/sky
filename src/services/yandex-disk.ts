@@ -1,23 +1,23 @@
-import { lookup as TypeLookUp } from 'mime-types';
+import { lookup as TypeLookUp } from 'mime-types'
 
 type YandexFile = {
-  type: 'file' | 'dir';
-  name: string;
-  path: string;
-  file?: string;
-  size?: number;
+  type: 'file' | 'dir'
+  name: string
+  path: string
+  file?: string
+  size?: number
   _embedded?: {
-    items: YandexFile[];
-  };
-};
+    items: YandexFile[]
+  }
+}
 export type FileInfo = {
-  path: string;
-  name: string;
-  isDir: boolean;
-  content?: FileInfo[];
-  size?: number;
-  mime?: string;
-};
+  path: string
+  name: string
+  isDir: boolean
+  content?: FileInfo[]
+  size?: number
+  mime?: string
+}
 
 export class YandexDisk {
   public constructor(
@@ -25,22 +25,22 @@ export class YandexDisk {
     protected rootPath: string,
   ) {}
 
-  protected p = (path: string) => this.rootPath + path;
+  protected p = (path: string) => this.rootPath + path
 
   protected parseToFileInfo(yFile: YandexFile): FileInfo {
     const fileInfo: FileInfo = {
       path: yFile.path.replace(`disk:${this.rootPath}`, ''),
       isDir: yFile.type === 'dir',
       name: yFile.name,
-    };
-    if (yFile.size !== undefined && yFile.size > 0) fileInfo.size = yFile.size;
+    }
+    if (yFile.size !== undefined && yFile.size > 0) fileInfo.size = yFile.size
     if (yFile._embedded?.items)
       fileInfo.content = yFile._embedded.items.map(
         this.parseToFileInfo.bind(this),
-      );
-    const mime = TypeLookUp(fileInfo.name);
-    if (mime) fileInfo.mime = mime;
-    return fileInfo;
+      )
+    const mime = TypeLookUp(fileInfo.name)
+    if (mime) fileInfo.mime = mime
+    return fileInfo
   }
 
   public async mkDir(path: string): Promise<void> {
@@ -52,7 +52,7 @@ export class YandexDisk {
           Authorization: 'OAuth ' + this.token,
         },
       },
-    );
+    )
   }
 
   public async getInfo(path: string): Promise<FileInfo> {
@@ -65,8 +65,8 @@ export class YandexDisk {
             Authorization: 'OAuth ' + this.token,
           },
         },
-      ).then((res) => res.json())) as YandexFile,
-    );
+      ).then(response => response.json())) as YandexFile,
+    )
   }
 
   public async read(path: string) {
@@ -78,8 +78,8 @@ export class YandexDisk {
           Authorization: 'OAuth ' + this.token,
         },
       },
-    ).then((res) => res.json())) as { href: string };
-    return fetch(href);
+    ).then(response => response.json())) as { href: string }
+    return fetch(href)
   }
 
   public async write(path: string, stream: ReadableStream<Uint8Array>) {
@@ -91,11 +91,11 @@ export class YandexDisk {
           Authorization: 'OAuth ' + this.token,
         },
       },
-    ).then((res) => res.json())) as { href: string; method: string };
+    ).then(response => response.json())) as { href: string, method: string }
     await fetch(href, {
       method,
       body: stream,
-    });
+    })
   }
 
   public async delete(path: string): Promise<void> {
@@ -107,7 +107,7 @@ export class YandexDisk {
           Authorization: 'OAuth ' + this.token,
         },
       },
-    );
+    )
   }
 
   public async copy(from: string, path: string): Promise<void> {
@@ -121,7 +121,7 @@ export class YandexDisk {
           Authorization: 'OAuth ' + this.token,
         },
       },
-    );
+    )
   }
 
   public async move(from: string, path: string): Promise<void> {
@@ -135,7 +135,7 @@ export class YandexDisk {
           Authorization: 'OAuth ' + this.token,
         },
       },
-    );
+    )
   }
 
   public async emptyBin() {
@@ -147,8 +147,8 @@ export class YandexDisk {
           Authorization: 'OAuth ' + this.token,
         },
       },
-    );
+    )
   }
 }
 
-export default new YandexDisk(process.env.YANDEX_TOKEN!, '/website/');
+export default new YandexDisk(process.env.YANDEX_TOKEN!, '/website/')

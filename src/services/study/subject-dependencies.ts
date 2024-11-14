@@ -1,12 +1,13 @@
-import { DEFAULT_COLUMNS, Table } from '@/services/db/table';
-import TABLES from '@/services/tables';
-import { TableDefaults } from '@/sky-shared/db';
+import { DEFAULT_COLUMNS, Table } from '@/services/db/table'
+import TABLES from '@/services/tables'
+
+import { TableDefaults } from 'sky-shared/database'
 
 export type SubjectDependencies = TableDefaults & {
-  percent: number;
-  subjectId: number;
-  dependencyId: number;
-};
+  percent: number
+  subjectId: number
+  dependencyId: number
+}
 export class SubjectDependenciesTable extends Table<SubjectDependencies> {
   public constructor() {
     super(TABLES.STUDY_SUBJECT_DEPS, {
@@ -35,7 +36,7 @@ export class SubjectDependenciesTable extends Table<SubjectDependencies> {
           onUpdate: 'CASCADE',
         },
       },
-    });
+    })
   }
 }
-export const subjectDependenciesTable = new SubjectDependenciesTable();
+export const subjectDependenciesTable = new SubjectDependenciesTable()

@@ -1,18 +1,19 @@
-import { HTTPHandler } from '@/services/http/types';
-import { sessionGuard } from '@/services/session';
-import { usersThemesTable } from '@/services/study/users-themes';
-import { parseInt } from 'sky-utils';
+import { parseInt } from '@softsky/utils'
 
-export default (async function (req, res, route) {
+import { HTTPHandler } from '@/services/http/types'
+import { sessionGuard } from '@/services/session'
+import { usersThemesTable } from '@/services/study/users-themes'
+
+export default (async function (request, response, route) {
   const payload = await sessionGuard({
-    req,
-    res,
+    request,
+    response,
     permissions: ['STUDY'],
     throw401: true,
-  });
-  const id = parseInt(route.params.id);
-  if (req.method === 'POST')
-    usersThemesTable.create({ userId: payload.user.id, themeId: id });
-  else if (req.method === 'DELETE')
-    usersThemesTable.deleteByIdUser(id, payload.user.id);
-} satisfies HTTPHandler);
+  })
+  const id = parseInt(route.params.id)
+  if (request.method === 'POST')
+    usersThemesTable.create({ userId: payload.user.id, themeId: id })
+  else if (request.method === 'DELETE')
+    usersThemesTable.deleteByIdUser(id, payload.user.id)
+} satisfies HTTPHandler)

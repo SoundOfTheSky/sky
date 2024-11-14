@@ -1,3 +1,3 @@
-import './chat';
-import './server-stats';
-import './clicker';
+import './chat'
+import './server-stats'
+import './clicker'

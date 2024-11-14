@@ -1,15 +1,15 @@
-import { convertToDate } from '@/services/db/convetrations';
-import { createRestEndpointHandler, RESTApi } from '@/services/http/rest';
-import { subjectsTable } from '@/services/study/subjects';
-import TABLES from '@/services/tables';
-import { StudySubjectT } from '@/sky-shared/study';
+import { convertToDate } from '@/services/db/convetrations'
+import { createRestEndpointHandler, RESTApi } from '@/services/http/rest'
+import { subjectsTable } from '@/services/study/subjects'
+import TABLES from '@/services/tables'
+import { StudySubjectT } from '@/sky-shared/study'
 
 export default createRestEndpointHandler(
   new RESTApi(
     subjectsTable,
     {
       updated: {
-        convertTo: (data) =>
+        convertTo: data =>
           convertToDate(new Date(Number.parseInt(data) * 1000))!,
         sql: (m, p) =>
           m === '<'
@@ -24,4 +24,4 @@ export default createRestEndpointHandler(
   StudySubjectT,
   'STUDY',
   'ADMIN',
-);
+)

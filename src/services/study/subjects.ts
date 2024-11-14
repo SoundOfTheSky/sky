@@ -1,14 +1,15 @@
-import { Query } from '@/services/db/query';
-import { Table, DEFAULT_COLUMNS } from '@/services/db/table';
-import { DBRow } from '@/services/db/types';
-import TABLES from '@/services/tables';
-import { TableDefaults } from '@/sky-shared/db';
-import { StudySubject, StudySubjectDTO } from '@/sky-shared/study';
+import { Query } from '@/services/db/query'
+import { DEFAULT_COLUMNS, Table } from '@/services/db/table'
+import { DBRow } from '@/services/db/types'
+import TABLES from '@/services/tables'
+import { StudySubject, StudySubjectDTO } from '@/sky-shared/study'
+
+import { TableDefaults } from 'sky-shared/database'
 
 export type StudySubjectTable = TableDefaults & {
-  title: string;
-  theme_id: number;
-};
+  title: string
+  theme_id: number
+}
 
 export class SubjectsTable extends Table<StudySubject, StudySubjectDTO> {
   public constructor() {
@@ -33,10 +34,10 @@ export class SubjectsTable extends Table<StudySubject, StudySubjectDTO> {
       },
       new Query<
         TableDefaults & {
-          theme_id: number;
-          title: number;
-          questionsIds: number;
-          userSubjectId?: number;
+          theme_id: number
+          title: number
+          questionsIds: number
+          userSubjectId?: number
         }
       >(TABLES.STUDY_SUBJECTS, [
         `${TABLES.STUDY_SUBJECTS}.id`,
@@ -57,15 +58,15 @@ export class SubjectsTable extends Table<StudySubject, StudySubjectDTO> {
           true,
         )
         .group(`${TABLES.STUDY_SUBJECTS}.id`),
-    );
+    )
   }
 
   public convertFrom(data?: DBRow | null): StudySubject | undefined {
     if (!data) return;
     (data as unknown as StudySubject).questionIds = (data.questionIds as string)
       .split(',')
-      .map((x) => Number.parseInt(x));
-    return super.convertFrom(data);
+      .map(x => Number.parseInt(x))
+    return super.convertFrom(data)
   }
 }
-export const subjectsTable = new SubjectsTable();
+export const subjectsTable = new SubjectsTable()

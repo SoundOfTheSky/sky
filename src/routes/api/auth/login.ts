@@ -1,10 +1,10 @@
-import { Type } from '@sinclair/typebox';
-import { TypeCompiler } from '@sinclair/typebox/compiler';
+import { Type } from '@sinclair/typebox'
+import { TypeCompiler } from '@sinclair/typebox/compiler'
 
-import { HTTPHandler } from '@/services/http/types';
-import { getRequestBodyT, HTTPError } from '@/services/http/utils';
-import { sessionGuard, setAuth, signJWT } from '@/services/session';
-import { usersTable } from '@/services/session/users';
+import { HTTPHandler } from '@/services/http/types'
+import { getRequestBodyT, HTTPError } from '@/services/http/utils'
+import { sessionGuard, setAuth, signJWT } from '@/services/session'
+import { usersTable } from '@/services/session/users'
 
 export const LoginT = TypeCompiler.Compile(
   Type.Object({
@@ -14,19 +14,19 @@ export const LoginT = TypeCompiler.Compile(
       maxLength: 32,
     }),
   }),
-);
+)
 
-export default (async function (req, res) {
-  if (req.method !== 'POST') return;
+export default (async function (request, response) {
+  if (request.method !== 'POST') return
   const [payload, body] = await Promise.all([
-    sessionGuard({ req, res }),
-    getRequestBodyT(req, LoginT),
-  ]);
-  const user = usersTable.convertFrom(usersTable.$getByUsername.get(body));
+    sessionGuard({ request, response }),
+    getRequestBodyT(request, LoginT),
+  ])
+  const user = usersTable.convertFrom(usersTable.$getByUsername.get(body))
   if (!user || !(await Bun.password.verify(body.password, user.password)))
-    throw new HTTPError('Not found', 404);
+    throw new HTTPError('Not found', 404)
   setAuth(
-    res,
+    response,
     await signJWT(
       {
         ...payload,
@@ -40,5 +40,5 @@ export default (async function (req, res) {
         expiresIn: ~~(payload.exp - Date.now() / 1000),
       },
     ),
-  );
-} satisfies HTTPHandler);
+  )
+} satisfies HTTPHandler)

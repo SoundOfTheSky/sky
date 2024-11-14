@@ -1,27 +1,29 @@
+import { ObjectCamelToSnakeCase } from '@softsky/utils'
+
 import {
   convertFromArray,
   convertFromBoolean,
   convertToArray,
   convertToBoolean,
-} from '@/services/db/convetrations';
-import { DB } from '@/services/db/db';
-import { Query } from '@/services/db/query';
-import { DEFAULT_COLUMNS, Table } from '@/services/db/table';
-import TABLES from '@/services/tables';
-import { TableDefaults } from '@/sky-shared/db';
-import { StudyQuestion } from '@/sky-shared/study';
-import { ObjectCamelToSnakeCase } from 'sky-utils';
+} from '@/services/db/convetrations'
+import { Query } from '@/services/db/query'
+import { DEFAULT_COLUMNS, Table } from '@/services/db/table'
+import TABLES from '@/services/tables'
+import { StudyQuestion } from '@/sky-shared/study'
+
+import { DB } from 'services/db/database'
+import { TableDefaults } from 'sky-shared/database'
 
 export type StudyQuestionTable = ObjectCamelToSnakeCase<
   TableDefaults & {
-    answers: string;
-    question: string;
-    description: string;
-    subjectId: string;
-    alternateAnswers: string;
-    choose: number;
+    answers: string
+    question: string
+    description: string
+    subjectId: string
+    alternateAnswers: string
+    choose: number
   }
->;
+>
 
 export class QuestionsTable extends Table<StudyQuestion> {
   public constructor() {
@@ -57,17 +59,17 @@ export class QuestionsTable extends Table<StudyQuestion> {
         },
         alternateAnswers: {
           type: 'TEXT',
-          from: (from) =>
+          from: from =>
             typeof from === 'string'
               ? (Object.fromEntries(
-                  from.split('|').map((el) => el.split('=')),
+                  from.split('|').map(element => element.split('=')),
                 ) as Record<string, string>)
               : undefined,
           to: (from: Record<string, string> | null | undefined) =>
             from
               ? Object.entries(from)
-                  .map((el) => el.join('='))
-                  .join('|')
+                .map(element => element.join('='))
+                .join('|')
               : from,
         },
         choose: {
@@ -78,13 +80,13 @@ export class QuestionsTable extends Table<StudyQuestion> {
       },
       new Query<
         TableDefaults & {
-          subject_id: number;
-          answers: string;
-          question: string;
-          description: string;
-          alternate_answers: string;
-          choose: number;
-          userQuestionId?: number;
+          subject_id: number
+          answers: string
+          question: string
+          description: string
+          alternate_answers: string
+          choose: number
+          userQuestionId?: number
         }
       >(TABLES.STUDY_QUESTIONS, [
         `${TABLES.STUDY_QUESTIONS}.id`,
@@ -102,8 +104,8 @@ export class QuestionsTable extends Table<StudyQuestion> {
         `uq.question_id = ${TABLES.STUDY_QUESTIONS}.id`,
         true,
       ),
-    );
-    this.createDeleteTrigger();
+    )
+    this.createDeleteTrigger()
   }
 
   protected createDeleteTrigger() {
@@ -114,7 +116,7 @@ export class QuestionsTable extends Table<StudyQuestion> {
         UPDATE ${TABLES.STUDY_SUBJECTS} SET updated = current_timestamp
         WHERE id = old.subject_id;
       END
-      `);
+      `)
   }
 }
-export const questionsTable = new QuestionsTable();
+export const questionsTable = new QuestionsTable()

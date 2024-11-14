@@ -3,28 +3,29 @@ import {
   convertFromBoolean,
   convertToArray,
   convertToBoolean,
-} from '@/services/db/convetrations';
-import { DB } from '@/services/db/db';
-import { Query } from '@/services/db/query';
-import { DEFAULT_COLUMNS, TableWithUser } from '@/services/db/table';
-import { usersSubjectsTable } from '@/services/study/users-subjects';
-import TABLES from '@/services/tables';
-import { Changes, TableDefaults } from '@/sky-shared/db';
-import { StudyAnswer, StudyAnswerDTO } from '@/sky-shared/study';
+} from '@/services/db/convetrations'
+import { Query } from '@/services/db/query'
+import { DEFAULT_COLUMNS, TableWithUser } from '@/services/db/table'
+import { usersSubjectsTable } from '@/services/study/users-subjects'
+import TABLES from '@/services/tables'
+import { StudyAnswer, StudyAnswerDTO } from '@/sky-shared/study'
+
+import { DB } from 'services/db/database'
+import { Changes, TableDefaults } from 'sky-shared/database'
 
 export class AnswersTable extends TableWithUser<StudyAnswer, StudyAnswerDTO> {
   public $deleteByUserTheme = DB.prepare<
     unknown,
     {
-      themeId: number;
-      userId: number;
+      themeId: number
+      userId: number
     }
   >(
     `DELETE FROM ${this.name} WHERE id IN (
       SELECT a.id FROM ${this.name} a
       JOIN ${TABLES.STUDY_SUBJECTS} s ON s.id == a.subject_id
       WHERE s.theme_id = $themeId AND a.user_id = $userId)`,
-  );
+  )
 
   public constructor() {
     super(
@@ -69,12 +70,12 @@ export class AnswersTable extends TableWithUser<StudyAnswer, StudyAnswerDTO> {
       },
       new Query<
         TableDefaults & {
-          user_id: number;
-          subject_id: number;
-          correct: number;
-          answers: string;
-          took: number;
-          theme_id: number;
+          user_id: number
+          subject_id: number
+          correct: number
+          answers: string
+          took: number
+          theme_id: number
         }
       >(TABLES.STUDY_ANSWERS, [
         `${TABLES.STUDY_ANSWERS}.id`,
@@ -90,20 +91,20 @@ export class AnswersTable extends TableWithUser<StudyAnswer, StudyAnswerDTO> {
         `${TABLES.STUDY_SUBJECTS} s`,
         `s.id = ${TABLES.STUDY_ANSWERS}.subject_id`,
       ),
-    );
+    )
   }
 
   public create(data: StudyAnswerDTO): Changes {
     data.answers = data.answers?.filter(
-      (x) => !['wrong', 'correct'].includes(x.toLowerCase()),
-    );
-    let changes: Changes;
+      x => !['wrong', 'correct'].includes(x.toLowerCase()),
+    )
+    let changes: Changes
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     DB.transaction(() => {
-      changes = super.create(data);
-      changes.changes += usersSubjectsTable.answer(data).changes;
-    })();
-    return changes!;
+      changes = super.create(data)
+      changes.changes += usersSubjectsTable.answer(data).changes
+    })()
+    return changes!
   }
 }
-export const answersTable = new AnswersTable();
+export const answersTable = new AnswersTable()

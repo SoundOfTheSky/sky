@@ -1,6 +1,6 @@
-import { DEFAULT_COLUMNS, Table } from '@/services/db/table';
-import TABLES from '@/services/tables';
-import { StudyTheme } from '@/sky-shared/study';
+import { DEFAULT_COLUMNS, Table } from '@/services/db/table'
+import TABLES from '@/services/tables'
+import { StudyTheme } from '@/sky-shared/study'
 
 export class ThemesTable extends Table<StudyTheme> {
   public constructor() {
@@ -10,7 +10,7 @@ export class ThemesTable extends Table<StudyTheme> {
         type: 'TEXT',
         required: true,
       },
-    });
+    })
   }
 }
-export const themesTable = new ThemesTable();
+export const themesTable = new ThemesTable()

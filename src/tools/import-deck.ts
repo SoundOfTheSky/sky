@@ -1,40 +1,41 @@
-import { spawnSync } from 'bun';
-import { Database } from 'bun:sqlite';
-import { cpSync, readFileSync, rmSync } from 'fs';
-import { join } from 'path';
+import { cpSync, readFileSync, rmSync } from 'node:fs'
+import Path from 'node:path'
 
-import { questionsTable } from '@/services/study/questions';
-import { subjectDependenciesTable } from '@/services/study/subject-dependencies';
-import { subjectsTable } from '@/services/study/subjects';
-import { themesTable } from '@/services/study/themes';
+import { spawnSync } from 'bun'
+import { Database } from 'bun:sqlite'
 
-console.log('Unzipping...');
+import { questionsTable } from '@/services/study/questions'
+import { subjectDependenciesTable } from '@/services/study/subject-dependencies'
+import { subjectsTable } from '@/services/study/subjects'
+import { themesTable } from '@/services/study/themes'
+
+console.log('Unzipping...')
 spawnSync({
   cmd: ['unzip', 'ru_en.apkg', '-d', 'deck'],
-  cwd: join('assets'),
-});
+  cwd: Path.join('assets'),
+})
 const media = new Map(
   Object.entries(
-    JSON.parse(readFileSync(join('assets', 'deck', 'media'), 'utf8')) as Record<
+    JSON.parse(readFileSync(Path.join('assets', 'deck', 'media'), 'utf8')) as Record<
       string,
       string
     >,
   ).map(([k, v]) => [v, k]),
-);
-const db = new Database(join('assets', 'deck', 'collection.anki21'), {
+)
+const database = new Database(Path.join('assets', 'deck', 'collection.anki21'), {
   create: false,
   readonly: true,
-});
-console.log('Loading data...');
-const data = db
+})
+console.log('Loading data...')
+const data = database
   .prepare<{ flds: string }, []>('SELECT flds FROM notes')
   .all()
-  .map((x) => x.flds.split('\u001f'));
+  .map(x => x.flds.split('\u001F'))
 const themeId = themesTable.create({
   title: 'RU-EN',
-}).lastInsertRowid as number;
-//const themeId = 4;
-const subjectIds: number[] = [];
+}).lastInsertRowid as number
+// const themeId = 4;
+const subjectIds: number[] = []
 /** CORE 6k
  * 0 - kanji
  * 1 - furigana
@@ -87,64 +88,64 @@ const subjectIds: number[] = [];
  * 27 - объяснение англ
  * 28 - объяснение англ
  */
-for (let i = 0; i < data.length; i++) {
-  const card = data[i]!;
-  console.log(i, card[0]!);
+for (let index = 0; index < data.length; index++) {
+  const card = data[index]!
+  console.log(index, card[0]!)
   // If same question allow the first one
-  if (data.some((card2, i2) => i2 < i && card2[3] === card[3]!)) {
-    console.log('Skip!');
-    continue;
+  if (data.some((card2, index2) => index2 < index && card2[3] === card[3]!)) {
+    console.log('Skip!')
+    continue
   }
   const subjectId = subjectsTable.create({
     themeId,
     title: card[3]!,
-  }).lastInsertRowid as number;
-  subjectIds.push(subjectId);
+  }).lastInsertRowid as number
+  subjectIds.push(subjectId)
   // const existingQuestion = questionsTable.convertFrom(q1.get(card[7]!));
   // if (!existingQuestion) throw new Error('Question not found!');
   // const subjectId = existingQuestion.subjectId;
-  const media13 =
-    card[13]! && media.has(card[13].slice(7, -1)) && card[13].slice(7, -1);
-  const media24 =
-    card[24]! && media.has(card[24].slice(10, -2)) && card[24].slice(10, -2);
+  const media13
+    = card[13]! && media.has(card[13].slice(7, -1)) && card[13].slice(7, -1)
+  const media24
+    = card[24]! && media.has(card[24].slice(10, -2)) && card[24].slice(10, -2)
   questionsTable.create({
     subjectId,
     description: `<tab title="Описание">Слово: ${card[3]!}${media13 ? `\n<audio s="/static/${media13}">Чтение: ${card[12]!}</audio>` : ''}
 Перевод: ${card[2]!}${media24 ? `\n<img src="/static/${media24}">` : ''}
 </tab><tab title="Примеры">${card[4]!
-      .replaceAll('<font color="#000000">', '')
-      .replaceAll('<font color="#008000">', '')
-      .replaceAll('</font>', '')
-      .replaceAll(card[3]!, `<accent>${card[3]!}</accent>`)
-      .split('<br>')
-      .map((x) => `<example>${x.replaceAll(' - ', '\n')}</example>`)
-      .join('\n')}</tab>`,
-    answers: card[2]!.split('; ').map((x) => x.trim()),
+  .replaceAll('<font color="#000000">', '')
+  .replaceAll('<font color="#008000">', '')
+  .replaceAll('</font>', '')
+  .replaceAll(card[3]!, `<accent>${card[3]!}</accent>`)
+  .split('<br>')
+  .map(x => `<example>${x.replaceAll(' - ', '\n')}</example>`)
+  .join('\n')}</tab>`,
+    answers: card[2]!.split('; ').map(x => x.trim()),
     question: card[3]!,
     choose: true,
-  });
+  })
   if (media13)
     cpSync(
-      join('assets', 'deck', media.get(media13)!),
-      join('static', 'static', media13),
-    );
+      Path.join('assets', 'deck', media.get(media13)!),
+      Path.join('static', 'static', media13),
+    )
   if (media24)
     cpSync(
-      join('assets', 'deck', media.get(media24)!),
-      join('static', 'static', media24),
-    );
+      Path.join('assets', 'deck', media.get(media24)!),
+      Path.join('static', 'static', media24),
+    )
 }
 // Deps in batches
-const BATCH = 50;
-console.log('Generating dependencies');
-for (let i = BATCH; i < subjectIds.length; i++)
-  for (let i2 = i - BATCH - (i % BATCH); i2 < i - (i % BATCH); i2++)
+const BATCH = 50
+console.log('Generating dependencies')
+for (let index = BATCH; index < subjectIds.length; index++)
+  for (let index2 = index - BATCH - (index % BATCH); index2 < index - (index % BATCH); index2++)
     subjectDependenciesTable.create({
       percent: 90,
-      subjectId: subjectIds[i]!,
-      dependencyId: subjectIds[i2]!,
-    });
-rmSync(join('assets', 'deck'), {
+      subjectId: subjectIds[index]!,
+      dependencyId: subjectIds[index2]!,
+    })
+rmSync(Path.join('assets', 'deck'), {
   recursive: true,
-});
-console.log('Done');
+})
+console.log('Done')

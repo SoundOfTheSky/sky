@@ -1,27 +1,27 @@
-import { file, serve } from 'bun';
+import { log } from '@softsky/utils'
+import { file, serve } from 'bun'
 
-import '@/preload';
+import '@/preload'
 
-import { DB } from '@/services/db/db';
-import handleHTTP from '@/services/http';
+import { DB } from '@/services/db/database'
+import handleHTTP from '@/services/http'
 import {
   WS,
   wsCloseHandler,
   wsMessageHandler,
   wsOpenHandler,
-} from '@/services/ws';
-import { log } from 'sky-utils';
+} from '@/services/ws'
 
 const httpServer = serve({
-  fetch: (req) => {
-    let url = process.env.HTTP_ORIGIN!;
-    const i = req.url.indexOf('/', 8);
-    if (i !== -1) url += req.url.slice(i);
-    return Response.redirect(url, 301);
+  fetch: (request) => {
+    let url = process.env.HTTP_ORIGIN!
+    const index = request.url.indexOf('/', 8)
+    if (index !== -1) url += request.url.slice(index)
+    return Response.redirect(url, 301)
   },
   port: process.env.HTTP_PORT ?? 80,
-});
-global.server = serve<WS['data']>({
+})
+globalThis.server = serve<WS['data']>({
   port: process.env.PORT ?? 443,
   key: process.env.KEY ? file(process.env.KEY) : undefined,
   cert: process.env.CERT ? file(process.env.CERT) : undefined,
@@ -40,19 +40,20 @@ global.server = serve<WS['data']>({
   maxRequestBodySize: 1024 * 1024 * 10, // 10mb
   idleTimeout: 30,
   development: false,
-});
-log('Started on ports', server.port, httpServer.port);
+})
+log('Started on ports', server.port, httpServer.port)
 
-process.on('SIGHUP', onExit);
-process.on('SIGINT', onExit);
-process.on('SIGTERM', onExit);
-process.on('uncaughtException', (e) => {
-  log(e);
-});
+process.on('SIGHUP', onExit)
+process.on('SIGINT', onExit)
+process.on('SIGTERM', onExit)
+process.on('uncaughtException', (error) => {
+  log(error)
+})
 function onExit() {
-  log('Closing');
-  DB.close();
-  process.exit();
+  log('Closing')
+  DB.close()
+  // eslint-disable-next-line unicorn/no-process-exit
+  process.exit()
 }
 // setTimeout(() => void import('./chiruno/test.js'), 1000);
 // setTimeout(() => void import('./chiruno/clampIds.js'), 1000);

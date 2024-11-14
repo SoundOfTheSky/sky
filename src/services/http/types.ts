@@ -1,4 +1,4 @@
-import { MatchedRoute } from 'bun';
+import { MatchedRoute } from 'bun'
 
 export type BodyInit =
   | ArrayBuffer
@@ -9,18 +9,18 @@ export type BodyInit =
   | NodeJS.ArrayBufferView
   | URLSearchParams
   | null
-  | string;
+  | string
 
 export type HTTPResponse = {
-  headers: Headers;
-  body?: BodyInit | null | undefined;
+  headers: Headers
+  body?: BodyInit | null | undefined
   /** @default 200 */
-  status?: number;
+  status?: number
   /** @default "OK" */
-  statusText?: string;
-};
+  statusText?: string
+}
 export type HTTPHandler = (
-  req: Request,
-  res: HTTPResponse,
+  request: Request,
+  response: HTTPResponse,
   route: MatchedRoute,
-) => unknown;
+) => unknown

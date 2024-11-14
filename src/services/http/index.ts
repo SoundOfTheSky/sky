@@ -1,73 +1,77 @@
-import { FileSystemRouter, Server } from 'bun';
-import { join, relative } from 'node:path';
+import Path from 'node:path'
 
-import { HTTPHandler, HTTPResponse } from '@/services/http/types';
-import { HTTPError } from '@/services/http/utils';
-import { sessionGuard } from '@/services/session';
-import { ValidationError, formatTime, log } from 'sky-utils';
+import { ValidationError, formatTime, log } from '@softsky/utils'
+import { FileSystemRouter, Server } from 'bun'
+
+import { HTTPHandler, HTTPResponse } from '@/services/http/types'
+import { HTTPError } from '@/services/http/utils'
+import { sessionGuard } from '@/services/session'
 
 const router = new FileSystemRouter({
   style: 'nextjs',
-  dir: join(import.meta.dir, '../../routes'),
+  dir: Path.join(import.meta.dir, '../../routes'),
   origin: import.meta.dir,
-});
+})
 
-log('[Loading] Handlers...');
+log('[Loading] Handlers...')
 const handlers = new Map(
   await Promise.all(
     Object.entries(router.routes).map(
-      async ([key, val]) =>
+      async ([key, value]) =>
         [
           key,
           (
-            (await import(relative(import.meta.dir, val))) as {
-              default: HTTPHandler;
+            (await import(Path.relative(import.meta.dir, value))) as {
+              default: HTTPHandler
             }
           ).default,
         ] as const,
     ),
   ),
-);
-log('[Loading] Handlers ok!');
+)
+log('[Loading] Handlers ok!')
 export default async function handleHTTP(
-  req: Request,
+  request: Request,
   server: Server,
 ): Promise<Response | undefined> {
-  const url = req.url.slice(req.url.indexOf('/', 8));
-  log(`[HTTP] ${req.method}: ${req.url}`);
-  const time = Date.now();
-  const res: HTTPResponse = {
+  const url = request.url.slice(request.url.indexOf('/', 8))
+  log(`[HTTP] ${request.method}: ${request.url}`)
+  const time = Date.now()
+  const response: HTTPResponse = {
     headers: new Headers(), // wtf
-  };
-  res.headers.set(
+  }
+  response.headers.set(
     'cache-control',
     'no-cache, no-store, max-age=0, must-revalidate',
-  );
+  )
   if (url === '/ws') {
-    const payload = await sessionGuard({ req, res });
+    const payload = await sessionGuard({ request, response })
     if (
-      server.upgrade(req, {
-        headers: res.headers,
+      server.upgrade(request, {
+        headers: response.headers,
         data: { jwt: payload },
       })
     )
-      return;
-    return new Response('Upgrading to WebSocket failed', { status: 500 });
+      return
+    return new Response('Upgrading to WebSocket failed', { status: 500 })
   }
-  const routerResult = router.match(url)!;
-  const handler = handlers.get(routerResult.name)!;
+  const routerResult = router.match(url)!
+  const handler = handlers.get(routerResult.name)!
   try {
-    await handler(req, res, routerResult);
-  } catch (e) {
-    console.error(e);
-    if (e instanceof HTTPError) {
-      res.status = e.code;
-      res.body = e.body;
-    } else if (e instanceof ValidationError) {
-      res.status = 400;
-      res.body = e.message;
-    } else throw e;
+    await handler(request, response, routerResult)
   }
-  log(`[HTTP END] ${req.method}: ${req.url} ${formatTime(Date.now() - time)}`);
-  return new Response(res.body as BodyInit, res);
+  catch (error) {
+    console.error(error)
+    if (error instanceof HTTPError) {
+      response.status = error.code
+      response.body = error.body
+    }
+    else if (error instanceof ValidationError) {
+      response.status = 400
+      response.body = error.message
+    }
+    else throw error
+  }
+  log(`[HTTP END] ${request.method}: ${request.url} ${formatTime(Date.now() - time)}`)
+  return new Response(response.body as globalThis.BodyInit, response)
 }

@@ -1,4 +1,3 @@
-import { spawnSync } from 'bun';
 import {
   mkdirSync,
   readFileSync,
@@ -6,54 +5,57 @@ import {
   rmSync,
   statSync,
   writeFileSync,
-} from 'fs';
-import { join } from 'path';
+} from 'node:fs'
+import Path from 'node:path'
 
-const STATIC = 'static';
-const FE = '../sky-fe';
-const FE_DIST = '../sky-fe/dist';
-const STATICZIP = 'static.zip';
+import { spawnSync } from 'bun'
 
-console.log('Deleting...');
+const STATIC = 'static'
+const FE = '../sky-fe'
+const FE_DIST = '../sky-fe/dist'
+const STATICZIP = 'static.zip'
+
+console.log('Deleting...')
 for (const name of readdirSync(STATIC)) {
-  if (name === 'static') continue;
-  rmSync(join(STATIC, name), {
+  if (name === 'static') continue
+  rmSync(Path.join(STATIC, name), {
     recursive: true,
-  });
+  })
 }
 
-rmSync(join(FE_DIST), {
+rmSync(Path.join(FE_DIST), {
   recursive: true,
-});
+})
 
-console.log('Building...');
+console.log('Building...')
 spawnSync(['npm', 'run', 'build'], {
   cwd: FE,
   stdout: 'inherit',
-});
+})
 
-console.log('Copying...');
+console.log('Copying...')
 function copy(from: string, to: string) {
   for (const name of readdirSync(from, {
     encoding: null,
   })) {
-    const f = join(from, name);
-    const t = join(to, name);
+    const f = Path.join(from, name)
+    const t = Path.join(to, name)
     if (statSync(f).isDirectory()) {
-      mkdirSync(t);
-      copy(f, t);
-    } else writeFileSync(t, readFileSync(f) as unknown as Uint8Array);
+      mkdirSync(t)
+      copy(f, t)
+    }
+    else writeFileSync(t, readFileSync(f) as unknown as Uint8Array)
   }
 }
-copy(FE_DIST, STATIC);
-console.log('Compressing...');
+copy(FE_DIST, STATIC)
+console.log('Compressing...')
 spawnSync(['zip', '-r', STATICZIP, '.'], {
   cwd: STATIC,
-});
-console.log('Uploading...');
-const staticzip = join(STATIC, STATICZIP);
+})
+console.log('Uploading...')
+const staticzip = Path.join(STATIC, STATICZIP)
 writeFileSync(
-  join(process.env.DEPLOY_YD!, STATICZIP),
+  Path.join(process.env.DEPLOY_YD!, STATICZIP),
   readFileSync(staticzip) as unknown as Uint8Array,
-);
-rmSync(staticzip);
+)
+rmSync(staticzip)

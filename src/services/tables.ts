@@ -10,4 +10,4 @@ enum TABLES {
   STUDY_USERS_SUBJECTS = 'study_users_subjects',
   STUDY_USERS_THEMES = 'study_users_themes',
 }
-export default TABLES;
+export default TABLES

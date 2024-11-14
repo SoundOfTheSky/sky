@@ -1,20 +1,21 @@
-import { convertFromArray, convertToArray } from '@/services/db/convetrations';
-import { DB } from '@/services/db/db';
-import { DEFAULT_COLUMNS, TableWithUser } from '@/services/db/table';
-import TABLES from '@/services/tables';
-import { StudyUserQuestion } from '@/sky-shared/study';
+import { convertFromArray, convertToArray } from '@/services/db/convetrations'
+import { DEFAULT_COLUMNS, TableWithUser } from '@/services/db/table'
+import TABLES from '@/services/tables'
+import { StudyUserQuestion } from '@/sky-shared/study'
+
+import { DB } from 'services/db/database'
 
 export class UsersQuestionsTable extends TableWithUser<StudyUserQuestion> {
   public $deleteByUserTheme = DB.prepare<
     unknown,
-    { themeId: number; userId: number }
+    { themeId: number, userId: number }
   >(
     `DELETE FROM ${this.name} WHERE id IN (
       SELECT a.id FROM ${this.name} a
       JOIN ${TABLES.STUDY_QUESTIONS} q ON q.id == a.question_id
       JOIN ${TABLES.STUDY_SUBJECTS} s ON s.id == q.subject_id
       WHERE s.theme_id = $themeId AND a.user_id = $userId)`,
-  );
+  )
 
   public constructor() {
     super(TABLES.STUDY_USERS_QUESTIONS, {
@@ -47,7 +48,7 @@ export class UsersQuestionsTable extends TableWithUser<StudyUserQuestion> {
           onUpdate: 'CASCADE',
         },
       },
-    });
+    })
   }
 }
-export const usersQuestionsTable = new UsersQuestionsTable();
+export const usersQuestionsTable = new UsersQuestionsTable()
