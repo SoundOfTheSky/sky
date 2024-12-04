@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 import { Statement } from 'bun:sqlite'
 
+import { database } from '@/services/db/database'
 import { DBRow } from '@/services/db/types'
-
-import { DB } from 'services/db/database'
 
 type Join = {
   tableName: string
@@ -175,7 +174,7 @@ export class Query<
   public toDBQuery() {
     if (this._query) return this._query
     try {
-      this._query = DB.prepare(this.toString())
+      this._query = database.prepare(this.toString())
       return this._query
     }
     catch (error) {

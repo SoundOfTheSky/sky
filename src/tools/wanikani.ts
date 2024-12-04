@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable unicorn/consistent-function-scoping */
 /* eslint-disable unused-imports/no-unused-vars */
 
@@ -7,6 +8,7 @@ import Path from 'node:path'
 import { log } from '@softsky/utils'
 import { CryptoHasher, file, write } from 'bun'
 
+import { database } from '@/services/db/database'
 import { DBRow, UpdateTableDTO } from '@/services/db/types'
 import { questionsTable } from '@/services/study/questions'
 import { subjectDependenciesTable } from '@/services/study/subject-dependencies'
@@ -14,8 +16,6 @@ import { subjectsTable } from '@/services/study/subjects'
 import TABLES from '@/services/tables'
 import { TableDefaults } from '@/sky-shared/database'
 import { StudyQuestionDTO, StudySubjectDTO } from '@/sky-shared/study'
-
-import { DB } from 'services/db/database'
 
 type WKResponse<T> = {
   object: string
@@ -161,7 +161,6 @@ function cleanupHTML(
     )
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function downloadWK() {
   const subjects: WKObject<WKAnySubject>[] = []
   let nextUrl: string | undefined = 'https://api.wanikani.com/v2/subjects'
@@ -477,14 +476,14 @@ Anime sentences:
   // });
   // const themeId = lastInsertRowIdQuery.get()!.id;
   const themeId = 4
-  const dbsubjects = DB.prepare<TableDefaults, [number]>(
+  const dbsubjects = database.prepare<TableDefaults, [number]>(
     `SELECT * FROM ${TABLES.STUDY_SUBJECTS} WHERE theme_id = ?`,
   )
     .all(themeId)
     .map(x => x.id)
   // END OF CHANGE BLOCK
   log('Deleting dependencies')
-  DB.prepare(
+  database.prepare(
     `DELETE FROM ${TABLES.STUDY_SUBJECT_DEPS}
     WHERE subject_id IN (
       SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE theme_id = ?
@@ -492,6 +491,7 @@ Anime sentences:
   ).run(themeId)
   const databaseMap = new Map<number, number>()
   const idReplaces = new Map<number, number>([])
+  const subjectIdToCreate = new Set([9259, 9329, 9260, 9330, 9331, 9332, 9333, 9328])
   for (const subject of subjects) {
     log(
       `Subject ${subject.id} ${subject.object} ${subject.data.characters ?? subject.data.slug}`,
@@ -643,20 +643,20 @@ Anime sentences:
     // === DB ===
     let id
       = idReplaces.get(subject.id)
-      ?? DB.prepare<{ id: number }, [string]>(
+      ?? database.prepare<{ id: number }, [string]>(
         `SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`,
       ).get(s.title)?.id
-      ?? DB.prepare<{ id: number }, [string]>(
+      ?? database.prepare<{ id: number }, [string]>(
         `SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`,
-      ).get(s.title.replaceAll(':\n', ' '))?.id
+      ).get(s.title.replace('\n', '\n〜'))?.id
     if (!id && s.title.includes(' お'))
-      id = DB.prepare<{ id: number }, [string]>(
+      id = database.prepare<{ id: number }, [string]>(
         `SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`,
       ).get(s.title.replace(' お', ' '))?.id
     // === find subject by answers ===
     if (!id) {
       const q = questionsTable.convertFrom(
-        DB.prepare<DBRow, [string, string]>(
+        database.prepare<DBRow, [string, string]>(
           `SELECT * FROM study_questions WHERE answers = ? AND question LIKE ?`,
         ).get(
           getSubjectMeanings(subject).join('|'),
@@ -674,14 +674,14 @@ Anime sentences:
       dbsubjects.splice(dbsubjects.indexOf(id), 1)
     }
     else {
-      throw new Error('It must exist')
-      // log(`[CREATING SUBJECT] ${subject.id} ${s.title}`);
-      // subjectsTable.create(s);
-      // id = lastInsertRowIdQuery.get()!.id;
+      if (!subjectIdToCreate.has(subject.id))
+        throw new Error('It must exist')
+      log(`[CREATING SUBJECT] ${subject.id} ${s.title}`)
+      id = subjectsTable.create(s).lastInsertRowid as number
     }
     databaseMap.set(subject.id, id)
-    const dbqs = subjectsTable.getById(id)!.questionIds
-    if (dbqs.length !== qs.length) throw new Error('DBQS is not equal')
+    const dbqs = subjectsTable.getById(id)?.questionIds ?? []
+    if (dbqs.length !== qs.length && !subjectIdToCreate.has(subject.id)) throw new Error('DBQS is not equal')
     for (let index = 0; index < qs.length; index++) {
       const q = qs[index]!
       const dbq = dbqs[index]
@@ -691,9 +691,10 @@ Anime sentences:
         questionsTable.update(dbq, q)
       }
       else {
-        throw new Error('It must exist')
-        // log(`[CREATING QUESTION] ${i ? 'Meaning' : 'Reading'}`);
-        // questionsTable.create(q as QuestionDTO);
+        if (!subjectIdToCreate.has(subject.id))
+          throw new Error('It must exist')
+        log(`[CREATING QUESTION] ${index ? 'Meaning' : 'Reading'}`)
+        questionsTable.create(q as StudyQuestionDTO)
       }
     }
   }
@@ -760,7 +761,7 @@ Anime sentences:
 
 setTimeout(async () => {
   log('Generating...')
-  // await write(join('assets', 'WK.json'), JSON.stringify(await downloadWK(), undefined, 2));
+  // await write(Path.join('assets', 'WK.json'), JSON.stringify(await downloadWK(), undefined, 2))
   await parseWK()
   log('Done...')
   // eslint-disable-next-line unicorn/no-process-exit

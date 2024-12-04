@@ -3,13 +3,13 @@
 import { log } from '@softsky/utils'
 import { Database, constants } from 'bun:sqlite'
 
-const DB = new Database('database.db', {
+const database = new Database('database.db', {
   create: false,
   readwrite: true,
   safeIntegers: false,
   strict: true,
 })
-DB.fileControl(constants.SQLITE_FCNTL_PERSIST_WAL, 0)
+database.fileControl(constants.SQLITE_FCNTL_PERSIST_WAL, 0)
 exec('PRAGMA journal_mode = DELETE')
 exec('PRAGMA foreign_keys = ON')
 exec('PRAGMA auto_vacuum = INCREMENTAL')
@@ -17,7 +17,7 @@ exec('PRAGMA auto_vacuum = INCREMENTAL')
 function exec(cmd: string) {
   try {
     log(cmd)
-    DB.exec(cmd)
+    database.exec(cmd)
   }
   catch (error) {
     console.error('Error while executing query:', cmd)
@@ -26,13 +26,13 @@ function exec(cmd: string) {
 }
 
 function getTableSchema(name: string) {
-  return DB.query<{ sql: string }, [string]>(
+  return database.query<{ sql: string }, [string]>(
     `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`,
   ).get(name)?.sql
 }
 
 function getTableTriggers(name: string) {
-  return DB.query<{ sql: string }, [string]>(
+  return database.query<{ sql: string }, [string]>(
     `SELECT sql FROM sqlite_master WHERE type = 'trigger' AND tbl_name = ?`,
   )
     .all(name)
@@ -40,7 +40,7 @@ function getTableTriggers(name: string) {
 }
 
 function dropAllTriggers() {
-  for (const { name } of DB.query<{ name: string }, []>(
+  for (const { name } of database.query<{ name: string }, []>(
     `SELECT name FROM sqlite_master WHERE type = 'trigger'`,
   ).all())
     exec(`DROP TRIGGER ${name}`)
@@ -90,7 +90,7 @@ function editTableSchema(
   if (!schema) throw new Error('No such table')
   const triggers = getTableTriggers(table)
   exec(edit(schema.replace(table, temporary)))
-  for (const col of DB.query<
+  for (const col of database.query<
     {
       name: string
     },

@@ -32,7 +32,7 @@ const data = database
   .all()
   .map(x => x.flds.split('\u001F'))
 const themeId = themesTable.create({
-  title: 'RU-EN',
+  title: 'Английский',
 }).lastInsertRowid as number
 // const themeId = 4;
 const subjectIds: number[] = []
@@ -106,13 +106,10 @@ for (let index = 0; index < data.length; index++) {
   // const subjectId = existingQuestion.subjectId;
   const media13
     = card[13]! && media.has(card[13].slice(7, -1)) && card[13].slice(7, -1)
-  const media24
-    = card[24]! && media.has(card[24].slice(10, -2)) && card[24].slice(10, -2)
   questionsTable.create({
     subjectId,
     description: `<tab title="Описание">Слово: ${card[3]!}${media13 ? `\n<audio s="/static/${media13}">Чтение: ${card[12]!}</audio>` : ''}
-Перевод: ${card[2]!}${media24 ? `\n<img src="/static/${media24}">` : ''}
-</tab><tab title="Примеры">${card[4]!
+Перевод: ${card[2]!}</tab><tab title="Примеры">${card[4]!
   .replaceAll('<font color="#000000">', '')
   .replaceAll('<font color="#008000">', '')
   .replaceAll('</font>', '')
@@ -128,11 +125,6 @@ for (let index = 0; index < data.length; index++) {
     cpSync(
       Path.join('assets', 'deck', media.get(media13)!),
       Path.join('static', 'static', media13),
-    )
-  if (media24)
-    cpSync(
-      Path.join('assets', 'deck', media.get(media24)!),
-      Path.join('static', 'static', media24),
     )
 }
 // Deps in batches

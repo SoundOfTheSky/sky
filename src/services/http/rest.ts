@@ -1,6 +1,6 @@
 import { TSchema } from '@sinclair/typebox'
 import { TypeCheck } from '@sinclair/typebox/compiler'
-import { parseInt } from '@softsky/utils'
+import { objectMap, parseInt } from '@softsky/utils'
 import { Statement } from 'bun:sqlite'
 
 import { Query } from '@/services/db/query'
@@ -135,7 +135,16 @@ export class RESTApiUser<
     })!
   }
 }
-
+async function getRestBody(request: Request, T: TypeCheck<TSchema>): Promise<{ user_id: number }> {
+  const body = (await request.json()) as { user_id: number }
+  if (!T.Check(body))
+    throw new HTTPError(
+      'Validation error',
+      400,
+      JSON.stringify([...T.Errors(body)]),
+    )
+  return objectMap(body, (key, value) => [key, value === undefined ? null : value]) as { user_id: number }
+}
 export function createRestEndpointHandler(
   api: RESTApi,
   T: TypeCheck<TSchema>,
@@ -174,25 +183,13 @@ export function createRestEndpointHandler(
         break
       }
       case 'POST': {
-        const body = (await request.json()) as { user_id: number }
-        if (!T.Check(body))
-          throw new HTTPError(
-            'Validation error',
-            400,
-            JSON.stringify([...T.Errors(body)]),
-          )
+        const body = await getRestBody(request, T)
         body.user_id = session.user.id
         sendCompressedJSON(response, api.create(body))
         break
       }
       case 'PUT': {
-        const body = (await request.json()) as { user_id: number }
-        if (!T.Check(body))
-          throw new HTTPError(
-            'Validation error',
-            400,
-            JSON.stringify([...T.Errors(body)]),
-          )
+        const body = await getRestBody(request, T)
         body.user_id = session.user.id
         sendCompressedJSON(response, api.update(parseInt(parameter), body))
         break

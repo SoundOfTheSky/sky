@@ -4,6 +4,7 @@ import {
   convertFromBoolean,
   convertToBoolean,
 } from '@/services/db/convetrations'
+import { database } from '@/services/db/database'
 import { DEFAULT_COLUMNS, TableWithUser } from '@/services/db/table'
 import { answersTable } from '@/services/study/answers'
 import { usersQuestionsTable } from '@/services/study/users-questions'
@@ -11,8 +12,6 @@ import { usersSubjectsTable } from '@/services/study/users-subjects'
 import TABLES from '@/services/tables'
 import { Changes, TableDefaults } from '@/sky-shared/database'
 import { StudyTheme } from '@/sky-shared/study'
-
-import { DB } from 'services/db/database'
 
 export type UserTheme = TableDefaults & {
   userId: number
@@ -26,14 +25,14 @@ type UserThemesDTO = Optional<
   'needUnlock' | keyof TableDefaults
 >
 export class UsersThemesTable extends TableWithUser<UserTheme, UserThemesDTO> {
-  public $setNeedUnlock = DB.prepare<
+  public $setNeedUnlock = database.prepare<
     undefined,
     { needUnlock: 0 | 1, userId: number }
   >(
     `UPDATE ${this.name} SET need_unlock = $needUnlock WHERE user_id = $userId`,
   )
 
-  protected $getThemeAndThemeData = DB.prepare<
+  protected $getThemeAndThemeData = database.prepare<
     {
       id: number
       title: string
@@ -54,14 +53,14 @@ export class UsersThemesTable extends TableWithUser<UserTheme, UserThemesDTO> {
     LEFT JOIN ${this.name} ut ON t.id = ut.theme_id AND ut.user_id = ?`,
   )
 
-  protected $countByUserAndTheme = DB.prepare<
+  protected $countByUserAndTheme = database.prepare<
     { a: number },
     { userId: number, themeId: number }
   >(
     `SELECT COUNT(*) a FROM ${this.name} WHERE user_id = $userId AND theme_id = $themeId`,
   )
 
-  protected $deleteByUserTheme = DB.prepare<
+  protected $deleteByUserTheme = database.prepare<
     undefined,
     { themeId: number, userId: number }
   >(`DELETE FROM ${this.name} WHERE theme_id = $themeId AND user_id = $userId`)

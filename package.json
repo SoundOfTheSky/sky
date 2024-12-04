@@ -11,16 +11,16 @@
     "migrate": "bun src/tools/migration.ts"
   },
   "dependencies": {
-    "@sinclair/typebox": "^0.34.0",
-    "@softsky/utils": "^1.0.0",
+    "@sinclair/typebox": "^0.34.9",
+    "@softsky/utils": "^1.0.4",
     "eslint-plugin-unused-imports": "^4.1.4",
     "file-type": "^19.6.0",
     "jose": "^5.9.6",
     "mime-types": "^2.1.35"
   },
   "devDependencies": {
-    "@softsky/configs": "^1.0.6",
-    "@types/bun": "^1.1.13",
+    "@softsky/configs": "^1.0.8",
+    "@types/bun": "^1.1.14",
     "@types/mime-types": "^2.1.4"
   }
 }

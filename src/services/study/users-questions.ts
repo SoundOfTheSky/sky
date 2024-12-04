@@ -1,12 +1,11 @@
 import { convertFromArray, convertToArray } from '@/services/db/convetrations'
+import { database } from '@/services/db/database'
 import { DEFAULT_COLUMNS, TableWithUser } from '@/services/db/table'
 import TABLES from '@/services/tables'
 import { StudyUserQuestion } from '@/sky-shared/study'
 
-import { DB } from 'services/db/database'
-
 export class UsersQuestionsTable extends TableWithUser<StudyUserQuestion> {
-  public $deleteByUserTheme = DB.prepare<
+  public $deleteByUserTheme = database.prepare<
     unknown,
     { themeId: number, userId: number }
   >(

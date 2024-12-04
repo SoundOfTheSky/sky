@@ -1,17 +1,16 @@
 import { ObjectCamelToSnakeCase, ValidationError } from '@softsky/utils'
 
+import { database } from '@/services/db/database'
 import { DEFAULT_COLUMNS, TableWithUser } from '@/services/db/table'
 import { usersThemesTable } from '@/services/study/users-themes'
 import TABLES from '@/services/tables'
 import { Changes } from '@/sky-shared/database'
 import { srs, StudyAnswerDTO, StudyUserSubject } from '@/sky-shared/study'
 
-import { DB } from 'services/db/database'
-
 export type StudyUserSubjectTable = ObjectCamelToSnakeCase<StudyUserSubject>
 
 export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
-  public $deleteByUserTheme = DB.prepare<
+  public $deleteByUserTheme = database.prepare<
     unknown,
     { themeId: number, userId: number }
   >(
@@ -21,7 +20,7 @@ export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
       WHERE s.theme_id = $themeId AND a.user_id = $userId)`,
   )
 
-  protected $getUserReviews = DB.prepare<
+  protected $getUserReviews = database.prepare<
     { next_review: number, theme_id: number, ids: string },
     { userId: number }
   >(
@@ -32,7 +31,7 @@ export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
   GROUP BY theme_id, next_review ORDER BY next_review ASC`,
   )
 
-  protected $getUnlockables = DB.prepare<{ id: number }, { userId: number }>(
+  protected $getUnlockables = database.prepare<{ id: number }, { userId: number }>(
     `SELECT id FROM (
       SELECT SUM(locks) locks, id FROM (
         SELECT sd.subject_id IS NOT NULL AND (ssDep.stage IS NULL OR SUM(ssDep.stage>=5)*100/COUNT(*)<sd.percent) locks, s.id
@@ -47,14 +46,14 @@ export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
     WHERE locks = 0`,
   )
 
-  protected $getSubjectData = DB.prepare<
+  protected $getSubjectData = database.prepare<
     { next_review?: number, stage: number },
     { subjectId: number, userId: number }
   >(
     `SELECT next_review, stage FROM ${this.name} WHERE subject_id = $subjectId AND user_id = $userId`,
   )
 
-  protected $updateStage = DB.prepare<
+  protected $updateStage = database.prepare<
     undefined,
     {
       nextReview: number | null

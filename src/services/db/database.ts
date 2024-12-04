@@ -10,7 +10,7 @@ import yandexDisk from '@/services/yandex-disk'
 log('[Loading] DB...')
 const DBFileName = 'database.db'
 const DBBackupName = 'backup.db'
-export const DB = await (async () => {
+export const database = await (async () => {
   let database
   try {
     database = new Database(DBFileName, {
@@ -40,22 +40,22 @@ export const DB = await (async () => {
   }
   return database
 })()
-DB.fileControl(constants.SQLITE_FCNTL_PERSIST_WAL, 0)
+database.fileControl(constants.SQLITE_FCNTL_PERSIST_WAL, 0)
 // DB.exec('PRAGMA journal_mode = WAL');
 // DB.exec('PRAGMA synchronous = NORMAL');
 // DB.exec('PRAGMA wal_autocheckpoint = 1000');
 // DB.exec('PRAGMA cache_size = 2000');
 // DB.exec('PRAGMA busy_timeout = 5000');
 // DB.exec('PRAGMA locking_mode = NORMAL');
-DB.exec('PRAGMA journal_mode = DELETE')
-DB.exec('PRAGMA foreign_keys = ON')
-DB.exec('PRAGMA auto_vacuum = INCREMENTAL')
+database.exec('PRAGMA journal_mode = DELETE')
+database.exec('PRAGMA foreign_keys = ON')
+database.exec('PRAGMA auto_vacuum = INCREMENTAL')
 
 export async function backupDB() {
   try {
     log('Started DB backup')
-    DB.exec('PRAGMA wal_checkpoint(TRUNCATE)')
-    DB.exec(`VACUUM INTO '${DBBackupName}'`)
+    database.exec('PRAGMA wal_checkpoint(TRUNCATE)')
+    database.exec(`VACUUM INTO '${DBBackupName}'`)
     log('Start upload')
     await yandexDisk.write(
       `backups/${Date.now()}.db`,

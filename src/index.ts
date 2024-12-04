@@ -1,9 +1,9 @@
 import { log } from '@softsky/utils'
 import { file, serve } from 'bun'
 
-import '@/preload'
+import '@/preload.ts'
 
-import { DB } from '@/services/db/database'
+import { database } from '@/services/db/database'
 import handleHTTP from '@/services/http'
 import {
   WS,
@@ -51,7 +51,7 @@ process.on('uncaughtException', (error) => {
 })
 function onExit() {
   log('Closing')
-  DB.close()
+  database.close()
   // eslint-disable-next-line unicorn/no-process-exit
   process.exit()
 }

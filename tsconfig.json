@@ -1,3 +1,24 @@
 {
-  "extends": "@softsky/configs/tsconfig.json"
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": "${configDir}/src",
+    "composite": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "preserve",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "module": "esnext",
+    "moduleDetection": "force",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "noUncheckedIndexedAccess": true,
+    "paths": {
+      "@/*": ["${configDir}/src/*"]
+    },
+    "rootDir": "${configDir}/src",
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "esnext"
+  },
+  "include": ["${configDir}/src"]
 }

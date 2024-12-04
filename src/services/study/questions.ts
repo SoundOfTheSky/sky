@@ -6,13 +6,12 @@ import {
   convertToArray,
   convertToBoolean,
 } from '@/services/db/convetrations'
+import { database } from '@/services/db/database'
 import { Query } from '@/services/db/query'
 import { DEFAULT_COLUMNS, Table } from '@/services/db/table'
 import TABLES from '@/services/tables'
 import { TableDefaults } from '@/sky-shared/database'
 import { StudyQuestion } from '@/sky-shared/study'
-
-import { DB } from 'services/db/database'
 
 export type StudyQuestionTable = ObjectCamelToSnakeCase<
   TableDefaults & {
@@ -106,10 +105,13 @@ export class QuestionsTable extends Table<StudyQuestion> {
       ),
     )
     this.createDeleteTrigger()
+    database.exec(
+      `CREATE INDEX IF NOT EXISTS idx_${this.name}_description ON ${this.name} (description)`,
+    )
   }
 
   protected createDeleteTrigger() {
-    DB.exec(`CREATE TRIGGER IF NOT EXISTS tg_${this.name}_delete
+    database.exec(`CREATE TRIGGER IF NOT EXISTS tg_${this.name}_delete
       AFTER DELETE ON ${this.name}
       FOR EACH ROW
       BEGIN

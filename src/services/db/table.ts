@@ -1,6 +1,7 @@
 import { camelToSnakeCase } from '@softsky/utils'
 
 import { convertFromDate, convertToDate } from '@/services/db/convetrations'
+import { database } from '@/services/db/database'
 import { Query } from '@/services/db/query'
 import {
   DBDataType,
@@ -10,8 +11,6 @@ import {
   UpdateTableDTO,
 } from '@/services/db/types'
 import { Changes, TableDefaults } from '@/sky-shared/database'
-
-import { DB } from 'services/db/database'
 
 export const DEFAULT_COLUMNS = {
   id: {
@@ -65,7 +64,7 @@ export class Table<
       .clone()
       .where<{ id: number | string }>(`${this.name}.id = $id`)
       .toDBQuery()
-    this.$deleteById = DB.prepare<undefined, { id: number | string }>(
+    this.$deleteById = database.prepare<undefined, { id: number | string }>(
       `DELETE FROM ${this.name} WHERE id = $id`,
     )
   }
@@ -80,7 +79,7 @@ export class Table<
 
   public create(data: INPUT): Changes {
     const cols = this.convertTo(data)
-    return DB.query(
+    return database.query(
       `INSERT INTO ${this.name} (${cols.map(x => x[0]).join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
     ).run(...cols.map(x => x[1]))
   }
@@ -88,7 +87,7 @@ export class Table<
   public update(id: number | string, data: UpdateTableDTO<INPUT>): Changes {
     const cols = this.convertTo(data)
     if (cols.length === 0) throw new Error('No fields to update')
-    return DB.query(
+    return database.query(
       `UPDATE ${this.name} SET ${cols.map(x => x[0] + ' = ?').join(', ')} WHERE id = ?`,
     ).run(...cols.map(x => x[1]), id)
   }
@@ -128,7 +127,7 @@ export class Table<
 
   protected initializeTable() {
     const append: string[] = []
-    DB.exec(
+    database.exec(
       `CREATE TABLE IF NOT EXISTS ${this.name} (
         ${[
           [...this.schema.entries()].map(([name, options]) => {
@@ -163,7 +162,7 @@ export class Table<
 
   protected registerUpdateTrigger() {
     if (this.schema.get('updated')?.type !== 'TEXT') return
-    DB.exec(
+    database.exec(
       `CREATE TRIGGER IF NOT EXISTS tg_${this.name}_update
       AFTER UPDATE ON ${this.name} FOR EACH ROW
       BEGIN
@@ -175,7 +174,7 @@ export class Table<
 
   protected registerUpdateIndex() {
     if (this.schema.get('updated')?.type !== 'TEXT') return
-    DB.exec(
+    database.exec(
       `CREATE INDEX IF NOT EXISTS idx_${this.name}_updated ON ${this.name} (updated)`,
     )
   }
@@ -197,7 +196,7 @@ export class TableWithUser<
   }>(`${this.name}.id = $id AND ${this.name}.user_id = $userId`)
     .toDBQuery()
 
-  protected $deleteByIdUser = DB.prepare<
+  protected $deleteByIdUser = database.prepare<
     undefined,
     { id: number | string, userId: number }
   >(`DELETE FROM ${this.name} WHERE id = $id AND user_id = $userId`)
@@ -210,7 +209,7 @@ export class TableWithUser<
     const userId = (data as unknown as { user_id: number }).user_id
     delete (data as { user_id?: number }).user_id
     if (cols.length === 0) throw new Error('No fields to update')
-    return DB.query(
+    return database.query(
       `UPDATE ${this.name} SET ${cols.map(x => x[0] + ' = ?').join(', ')} WHERE id = ? AND user_id = ?`,
     ).run(...cols.map(x => x[1]), id, userId)
   }

@@ -4,6 +4,7 @@ import {
   convertToArray,
   convertToBoolean,
 } from '@/services/db/convetrations'
+import { database } from '@/services/db/database'
 import { Query } from '@/services/db/query'
 import { DEFAULT_COLUMNS, TableWithUser } from '@/services/db/table'
 import { usersSubjectsTable } from '@/services/study/users-subjects'
@@ -11,10 +12,8 @@ import TABLES from '@/services/tables'
 import { Changes, TableDefaults } from '@/sky-shared/database'
 import { StudyAnswer, StudyAnswerDTO } from '@/sky-shared/study'
 
-import { DB } from 'services/db/database'
-
 export class AnswersTable extends TableWithUser<StudyAnswer, StudyAnswerDTO> {
-  public $deleteByUserTheme = DB.prepare<
+  public $deleteByUserTheme = database.prepare<
     unknown,
     {
       themeId: number
@@ -100,7 +99,7 @@ export class AnswersTable extends TableWithUser<StudyAnswer, StudyAnswerDTO> {
     )
     let changes: Changes
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    DB.transaction(() => {
+    database.transaction(() => {
       changes = super.create(data)
       changes.changes += usersSubjectsTable.answer(data).changes
     })()
