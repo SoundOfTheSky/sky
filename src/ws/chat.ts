@@ -36,7 +36,7 @@ export class Chat {
     if (this.history.length === this.historyLength) this.history.shift()
     const message = { ...ws.data.chat, text, time: Date.now() } as ChatMessage
     this.history.push(message)
-    server.publish(this.name, `${this.name} ${JSON.stringify([message])}`)
+    server!.publish(this.name, `${this.name} ${JSON.stringify([message])}`)
   }
 
   protected onSubscribe(ws: WS) {

@@ -41,7 +41,7 @@ globalThis.server = serve<WS['data']>({
   idleTimeout: 30,
   development: false,
 })
-log('Started on ports', server.port, httpServer.port)
+log('Started on ports', server!.port, httpServer.port)
 
 process.on('SIGHUP', onExit)
 process.on('SIGINT', onExit)

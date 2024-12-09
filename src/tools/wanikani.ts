@@ -254,7 +254,7 @@ async function parseWK() {
           ).data.component_subject_ids.map(id =>
             subjectTag(subjectsMap.get(id)!),
           ),
-        ).then(x => x.join('\n'),
+        ).then(x => x.join('+'),
         ))}]`
     return txt
   }
@@ -346,7 +346,7 @@ Anime sentences:
             (s.data as WKKanji).component_subject_ids.map(id =>
               subjectTag(subjectsMap.get(id)!),
             ),
-          ).then(x => x.join('\n'),
+          ).then(x => x.join('+'),
           ))}`
         : ``,
     similar: async (s) => {
@@ -490,8 +490,8 @@ Anime sentences:
     )`,
   ).run(themeId)
   const databaseMap = new Map<number, number>()
-  const idReplaces = new Map<number, number>([])
-  const subjectIdToCreate = new Set([9259, 9329, 9260, 9330, 9331, 9332, 9333, 9328])
+  const idReplaces = new Map<number, number>()
+  const subjectIdToCreate = new Set<number>()
   for (const subject of subjects) {
     log(
       `Subject ${subject.id} ${subject.object} ${subject.data.characters ?? subject.data.slug}`,

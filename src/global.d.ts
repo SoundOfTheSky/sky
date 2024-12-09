@@ -3,7 +3,7 @@
 import type { Server } from 'bun'
 
 export declare global {
-  var server: Server
+  var server: Server | undefined
   var someProperty: number
 }
-export {}
+export { }

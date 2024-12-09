@@ -25,7 +25,7 @@ subscribeWSEvent('open', () => {
 
 function broadcastServerStats() {
   log(`[STATS] ${visitsStats.uniqueVisits}|${visitsStats.visits}|${online}`)
-  server.publish(
+  server?.publish(
     'serverStats',
     `serverStats ${visitsStats.uniqueVisits}|${visitsStats.visits}|${online}`,
   )

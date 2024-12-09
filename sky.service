@@ -1,0 +1,14 @@
+// put this in /lib/systemd/system and delete this line
+[Unit]
+Description=Sky
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/sky
+ExecStart=/root/.bun/bin/bun run ./src/index.ts
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
