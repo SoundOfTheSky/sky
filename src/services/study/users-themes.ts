@@ -27,10 +27,8 @@ type UserThemesDTO = Optional<
 export class UsersThemesTable extends TableWithUser<UserTheme, UserThemesDTO> {
   public $setNeedUnlock = database.prepare<
     undefined,
-    { needUnlock: 0 | 1, userId: number }
-  >(
-    `UPDATE ${this.name} SET need_unlock = $needUnlock WHERE user_id = $userId`,
-  )
+    { needUnlock: 0 | 1; userId: number }
+  >(`UPDATE ${this.name} SET need_unlock = $needUnlock WHERE user_id = $userId`)
 
   protected $getThemeAndThemeData = database.prepare<
     {
@@ -55,14 +53,14 @@ export class UsersThemesTable extends TableWithUser<UserTheme, UserThemesDTO> {
 
   protected $countByUserAndTheme = database.prepare<
     { a: number },
-    { userId: number, themeId: number }
+    { userId: number; themeId: number }
   >(
     `SELECT COUNT(*) a FROM ${this.name} WHERE user_id = $userId AND theme_id = $themeId`,
   )
 
   protected $deleteByUserTheme = database.prepare<
     undefined,
-    { themeId: number, userId: number }
+    { themeId: number; userId: number }
   >(`DELETE FROM ${this.name} WHERE theme_id = $themeId AND user_id = $userId`)
 
   public constructor() {
@@ -112,19 +110,19 @@ export class UsersThemesTable extends TableWithUser<UserTheme, UserThemesDTO> {
   public getThemesData(userId: number) {
     const themes = this.$getThemeAndThemeData
       .all(userId)
-      .map(element => this.convertFrom(element)) as unknown as {
+      .map((element) => this.convertFrom(element)) as unknown as {
       id: number
       title: string
       needUnlock?: boolean
       created: Date
       updated: Date
     }[]
-    if (themes.some(t => t.needUnlock)) {
+    if (themes.some((t) => t.needUnlock)) {
       usersSubjectsTable.unlock(userId)
       this.$setNeedUnlock.run({ needUnlock: 0, userId })
     }
-    const reviewsAndLessons
-      = usersSubjectsTable.getUserReviewsAndLessons(userId)
+    const reviewsAndLessons =
+      usersSubjectsTable.getUserReviewsAndLessons(userId)
     for (let index = 0; index < themes.length; index++) {
       const theme = themes[index]!
       const data = reviewsAndLessons.get(theme.id)
@@ -144,10 +142,10 @@ export class UsersThemesTable extends TableWithUser<UserTheme, UserThemesDTO> {
     const options = { themeId, userId }
     const changes = this.$deleteByUserTheme.run(options)
     changes.changes += answersTable.$deleteByUserTheme.run(options).changes
-    changes.changes
-      += usersSubjectsTable.$deleteByUserTheme.run(options).changes
-    changes.changes
-      += usersQuestionsTable.$deleteByUserTheme.run(options).changes
+    changes.changes +=
+      usersSubjectsTable.$deleteByUserTheme.run(options).changes
+    changes.changes +=
+      usersQuestionsTable.$deleteByUserTheme.run(options).changes
     return changes
   }
 }

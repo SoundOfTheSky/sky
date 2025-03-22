@@ -20,7 +20,9 @@ function orderIds(
   ids: number[],
   changeId?: (from: number, to: number) => unknown,
 ) {
-  const changeIdQuery = database.prepare(`UPDATE ${table} SET id = ? WHERE id = ?`)
+  const changeIdQuery = database.prepare(
+    `UPDATE ${table} SET id = ? WHERE id = ?`,
+  )
   log('Clamping', table)
   for (let index = 0; index < ids.length; index++) {
     console.log(table, 1, index)
@@ -31,26 +33,29 @@ function orderIds(
     changeIdQuery.run(index + 1, index + 1_000_000_001)
     changeId?.(ids[index]!, index + 1)
   }
-  database.prepare(`UPDATE sqlite_sequence SET seq = ? WHERE name = ?`).run(
-    ids.length,
-    table,
-  )
+  database
+    .prepare(`UPDATE sqlite_sequence SET seq = ? WHERE name = ?`)
+    .run(ids.length, table)
 }
 
 log('Starting to clamp...')
 for (const table of tables)
   orderIds(
     table,
-    database.prepare<{ id: number }, []>(`SELECT * FROM ${table} ORDER BY id ASC`)
+    database
+      .prepare<{ id: number }, []>(`SELECT * FROM ${table} ORDER BY id ASC`)
       .all()
-      .map(x => x.id),
+      .map((x) => x.id),
   )
 
 orderIds(
   TABLES.STUDY_SUBJECTS,
-  database.prepare<{ id: number }, []>(`SELECT * FROM ${TABLES.STUDY_SUBJECTS} ORDER BY theme_id ASC, id ASC`)
+  database
+    .prepare<{ id: number }, []>(
+      `SELECT * FROM ${TABLES.STUDY_SUBJECTS} ORDER BY theme_id ASC, id ASC`,
+    )
     .all()
-    .map(x => x.id),
+    .map((x) => x.id),
   (from, to) => {
     console.log(to)
     for (const question of questionsTable.convertFromMany(
@@ -61,7 +66,10 @@ orderIds(
         .all({ description: `%<subject uid="${from}"%` }),
     ))
       questionsTable.update(question.id, {
-        description: question.description.replaceAll(`<subject uid="${from}"`, `<subject uid="${to}"`),
+        description: question.description.replaceAll(
+          `<subject uid="${from}"`,
+          `<subject uid="${to}"`,
+        ),
       })
   },
 )

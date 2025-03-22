@@ -1,6 +1,6 @@
 import { ServerWebSocket } from 'bun'
 
-import { JWTPayload } from '@/services/session'
+import { JWTPayload } from '@/services/session/session'
 
 export type WS = ServerWebSocket<{
   jwt: JWTPayload

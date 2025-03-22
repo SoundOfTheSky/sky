@@ -1,6 +1,6 @@
 import { HTTPHandler } from '@/services/http/types'
 import { HTTPError } from '@/services/http/utils'
-import { sessionGuard, setAuth, signJWT } from '@/services/session'
+import { sessionGuard, setAuth, signJWT } from '@/services/session/session'
 
 export default (async function (request, response) {
   const payload = await sessionGuard({ request, response })

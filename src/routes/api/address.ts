@@ -9,5 +9,5 @@ export default (async function (request, response) {
   data.address = '193.93.237.23'
   response.body = await fetch(
     `http://ip-api.com/json/${data.address}?fields=131289`,
-  ).then(x => x.text())
+  ).then((x) => x.text())
 } satisfies HTTPHandler)

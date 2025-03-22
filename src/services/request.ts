@@ -13,8 +13,8 @@ export const parseCookies = (cookies: string) =>
   Object.fromEntries(
     cookies
       .split(';')
-      .map(x => x.split('=').map(x => x.trim()))
-      .filter(x => x.length === 2) as [string, string][],
+      .map((x) => x.split('=').map((x) => x.trim()))
+      .filter((x) => x.length === 2) as [string, string][],
   )
 export const stringifyCookies = (cookies: Record<string, string>) =>
   Object.entries(cookies)
@@ -25,7 +25,10 @@ export function decodeReponse(
   response: IncomingMessage,
   raw?: false,
 ): Promise<Buffer>
-export function decodeReponse(response: IncomingMessage, raw: true): IncomingMessage
+export function decodeReponse(
+  response: IncomingMessage,
+  raw: true,
+): IncomingMessage
 export function decodeReponse(
   response: IncomingMessage,
   raw?: boolean,
@@ -70,8 +73,8 @@ export class HTTPSClient {
     public host: string,
     public defaultHeaders: HTTPSRequestOptions['headers'] = {},
   ) {
-    defaultHeaders['user-agent']
-      ??= 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36'
+    defaultHeaders['user-agent'] ??=
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36'
     defaultHeaders['accept-encoding'] ??= 'gzip, deflate, br'
     defaultHeaders['accept-language'] ??= 'en-US,en;q=0.9'
   }
@@ -95,13 +98,13 @@ export class HTTPSClient {
     // === Setting Cookies ===
     options.headers.cookie = options.headers.cookie
       ? stringifyCookies({
-        ...this.cookies,
-        ...parseCookies(
-          Array.isArray(options.headers.cookie)
-            ? options.headers.cookie.join('; ')
-            : options.headers.cookie.toString(),
-        ),
-      })
+          ...this.cookies,
+          ...parseCookies(
+            Array.isArray(options.headers.cookie)
+              ? options.headers.cookie.join('; ')
+              : options.headers.cookie.toString(),
+          ),
+        })
       : stringifyCookies(this.cookies)
     if (options.headers.cookie.length === 0) delete options.headers.cookie
     const response = await HTTPSRequest(
@@ -117,10 +120,10 @@ export class HTTPSClient {
 
     // === Follow redirects ===
     if (
-      response.headers.location
-      && response.statusCode
-      && response.statusCode >= 300
-      && response.statusCode < 400
+      response.headers.location &&
+      response.statusCode &&
+      response.statusCode >= 300 &&
+      response.statusCode < 400
     )
       return this.request(response.headers.location, options as never)
 

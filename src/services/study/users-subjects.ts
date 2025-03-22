@@ -12,7 +12,7 @@ export type StudyUserSubjectTable = ObjectCamelToSnakeCase<StudyUserSubject>
 export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
   public $deleteByUserTheme = database.prepare<
     unknown,
-    { themeId: number, userId: number }
+    { themeId: number; userId: number }
   >(
     `DELETE FROM ${this.name} WHERE id IN (
       SELECT a.id FROM ${this.name} a
@@ -21,7 +21,7 @@ export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
   )
 
   protected $getUserReviews = database.prepare<
-    { next_review: number, theme_id: number, ids: string },
+    { next_review: number; theme_id: number; ids: string },
     { userId: number }
   >(
     `SELECT s.theme_id, us.next_review, GROUP_CONCAT(us.subject_id) ids
@@ -31,7 +31,10 @@ export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
   GROUP BY theme_id, next_review ORDER BY next_review ASC`,
   )
 
-  protected $getUnlockables = database.prepare<{ id: number }, { userId: number }>(
+  protected $getUnlockables = database.prepare<
+    { id: number },
+    { userId: number }
+  >(
     `SELECT id FROM (
       SELECT SUM(locks) locks, id FROM (
         SELECT sd.subject_id IS NOT NULL AND (ssDep.stage IS NULL OR SUM(ssDep.stage>=5)*100/COUNT(*)<sd.percent) locks, s.id
@@ -47,8 +50,8 @@ export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
   )
 
   protected $getSubjectData = database.prepare<
-    { next_review?: number, stage: number },
-    { subjectId: number, userId: number }
+    { next_review?: number; stage: number },
+    { subjectId: number; userId: number }
   >(
     `SELECT next_review, stage FROM ${this.name} WHERE subject_id = $subjectId AND user_id = $userId`,
   )
@@ -116,7 +119,7 @@ export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
   public getUserReviewsAndLessons(userId: number) {
     const data = new Map<
       number,
-      { reviews: Record<number, number[]>, lessons: number[] }
+      { reviews: Record<number, number[]>; lessons: number[] }
     >()
     const userReviews = this.$getUserReviews.all({ userId })
     for (const element of userReviews) {
@@ -125,7 +128,7 @@ export class UserSubjectsTable extends TableWithUser<StudyUserSubject> {
         theme = { reviews: {}, lessons: [] }
         data.set(element.theme_id, theme)
       }
-      const ids = element.ids.split(',').map(x => +x)
+      const ids = element.ids.split(',').map((x) => +x)
       if (element.next_review) theme.reviews[element.next_review] = ids
       else theme.lessons = ids
     }

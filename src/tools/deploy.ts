@@ -43,8 +43,7 @@ function copy(from: string, to: string) {
     if (statSync(f).isDirectory()) {
       mkdirSync(t)
       copy(f, t)
-    }
-    else writeFileSync(t, readFileSync(f) as unknown as Uint8Array)
+    } else writeFileSync(t, readFileSync(f) as unknown as Uint8Array)
   }
 }
 copy(FE_DIST, STATIC)

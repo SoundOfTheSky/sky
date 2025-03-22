@@ -58,17 +58,17 @@ export class QuestionsTable extends Table<StudyQuestion> {
         },
         alternateAnswers: {
           type: 'TEXT',
-          from: from =>
+          from: (from) =>
             typeof from === 'string'
               ? (Object.fromEntries(
-                  from.split('|').map(element => element.split('=')),
+                  from.split('|').map((element) => element.split('=')),
                 ) as Record<string, string>)
               : undefined,
           to: (from: Record<string, string> | null | undefined) =>
             from
               ? Object.entries(from)
-                .map(element => element.join('='))
-                .join('|')
+                  .map((element) => element.join('='))
+                  .join('|')
               : from,
         },
         choose: {

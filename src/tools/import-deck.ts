@@ -16,21 +16,23 @@ spawnSync({
 })
 const media = new Map(
   Object.entries(
-    JSON.parse(readFileSync(Path.join('assets', 'deck', 'media'), 'utf8')) as Record<
-      string,
-      string
-    >,
+    JSON.parse(
+      readFileSync(Path.join('assets', 'deck', 'media'), 'utf8'),
+    ) as Record<string, string>,
   ).map(([k, v]) => [v, k]),
 )
-const database = new Database(Path.join('assets', 'deck', 'collection.anki21'), {
-  create: false,
-  readonly: true,
-})
+const database = new Database(
+  Path.join('assets', 'deck', 'collection.anki21'),
+  {
+    create: false,
+    readonly: true,
+  },
+)
 console.log('Loading data...')
 const data = database
   .prepare<{ flds: string }, []>('SELECT flds FROM notes')
   .all()
-  .map(x => x.flds.split('\u001F'))
+  .map((x) => x.flds.split('\u001F'))
 const themeId = themesTable.create({
   title: 'Английский',
 }).lastInsertRowid as number
@@ -104,20 +106,20 @@ for (let index = 0; index < data.length; index++) {
   // const existingQuestion = questionsTable.convertFrom(q1.get(card[7]!));
   // if (!existingQuestion) throw new Error('Question not found!');
   // const subjectId = existingQuestion.subjectId;
-  const media13
-    = card[13]! && media.has(card[13].slice(7, -1)) && card[13].slice(7, -1)
+  const media13 =
+    card[13]! && media.has(card[13].slice(7, -1)) && card[13].slice(7, -1)
   questionsTable.create({
     subjectId,
     description: `<tab title="Описание">Слово: ${card[3]!}${media13 ? `\n<audio s="/static/${media13}">Чтение: ${card[12]!}</audio>` : ''}
 Перевод: ${card[2]!}</tab><tab title="Примеры">${card[4]!
-  .replaceAll('<font color="#000000">', '')
-  .replaceAll('<font color="#008000">', '')
-  .replaceAll('</font>', '')
-  .replaceAll(card[3]!, `<accent>${card[3]!}</accent>`)
-  .split('<br>')
-  .map(x => `<example>${x.replaceAll(' - ', '\n')}</example>`)
-  .join('\n')}</tab>`,
-    answers: card[2]!.split('; ').map(x => x.trim()),
+      .replaceAll('<font color="#000000">', '')
+      .replaceAll('<font color="#008000">', '')
+      .replaceAll('</font>', '')
+      .replaceAll(card[3]!, `<accent>${card[3]!}</accent>`)
+      .split('<br>')
+      .map((x) => `<example>${x.replaceAll(' - ', '\n')}</example>`)
+      .join('\n')}</tab>`,
+    answers: card[2]!.split('; ').map((x) => x.trim()),
     question: card[3]!,
     choose: true,
   })
@@ -131,7 +133,11 @@ for (let index = 0; index < data.length; index++) {
 const BATCH = 50
 console.log('Generating dependencies')
 for (let index = BATCH; index < subjectIds.length; index++)
-  for (let index2 = index - BATCH - (index % BATCH); index2 < index - (index % BATCH); index2++)
+  for (
+    let index2 = index - BATCH - (index % BATCH);
+    index2 < index - (index % BATCH);
+    index2++
+  )
     subjectDependenciesTable.create({
       percent: 90,
       subjectId: subjectIds[index]!,

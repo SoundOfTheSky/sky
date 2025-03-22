@@ -1,5 +1,5 @@
 import { HTTPHandler } from '@/services/http/types'
-import { sessionGuard } from '@/services/session'
+import { sessionGuard } from '@/services/session/session'
 import { reloadStatic } from '@/services/static'
 
 export default (async function (request) {

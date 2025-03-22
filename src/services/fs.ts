@@ -1,3 +1,8 @@
+import { cp, mkdir, readdir, rename, rm, stat } from 'node:fs/promises'
+import Path from 'node:path'
+
+import { ValidationError } from '@softsky/utils'
+import { file } from 'bun'
 import { lookup as TypeLookUp } from 'mime-types'
 
 type YandexFile = {
@@ -13,24 +18,106 @@ type YandexFile = {
 export type FileInfo = {
   path: string
   name: string
-  isDir: boolean
+  isDirectory: boolean
   content?: FileInfo[]
   size?: number
   mime?: string
 }
 
-export class YandexDisk {
+export class FS {
+  protected p(path: string) {
+    const globalPath = Path.join(this.rootPath, path)
+    if (!globalPath.startsWith(this.rootPath))
+      throw new ValidationError('Outside the scope of FS')
+    return globalPath
+  }
+
+  public constructor(protected rootPath: string) {}
+
+  public async mkDir(path: string): Promise<void> {
+    await mkdir(this.p(path), {
+      recursive: true,
+    })
+    return
+  }
+
+  public async getInfo(path: string, readDirectory = true): Promise<FileInfo> {
+    try {
+      const p = this.p(path)
+      const stats = await stat(p)
+      const isDirectory = stats.isDirectory()
+      const name = Path.basename(p)
+      return {
+        isDirectory,
+        name,
+        path,
+        content:
+          readDirectory && isDirectory
+            ? await readdir(p).then((paths) =>
+                Promise.all(
+                  paths.map((path) =>
+                    this.getInfo(path.slice(this.rootPath.length + 1), false),
+                  ),
+                ),
+              )
+            : undefined,
+        size: stats.size,
+        mime: isDirectory ? undefined : TypeLookUp(name) || undefined,
+      }
+    } catch (error) {
+      throw this.errorHandler(error)
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/require-await
+  public async read(path: string) {
+    return file(this.p(path)).stream()
+  }
+
+  public async write(path: string, stream: ReadableStream<Uint8Array>) {
+    await file(this.p(path)).write(new Response(stream))
+  }
+
+  public async delete(path: string): Promise<void> {
+    await rm(this.p(path), {
+      force: true,
+      recursive: true,
+    })
+  }
+
+  public async copy(from: string, to: string): Promise<void> {
+    await cp(this.p(from), this.p(to), {
+      recursive: true,
+    })
+  }
+
+  public async rename(from: string, to: string): Promise<void> {
+    await rename(this.p(from), this.p(to))
+  }
+
+  protected errorHandler(error: unknown) {
+    if (error instanceof Error && (error as ErrnoException).code === 'ENOENT')
+      return new Error('NO_FILE')
+    return error
+  }
+}
+
+export class YandexDisk extends FS {
   public constructor(
     protected token: string,
-    protected rootPath: string,
-  ) {}
+    rootPath: string,
+  ) {
+    super(rootPath)
+  }
 
   protected p = (path: string) => this.rootPath + path
 
   protected parseToFileInfo(yFile: YandexFile): FileInfo {
+    if ((yFile as unknown as { error: string }).error === 'DiskNotFoundError')
+      throw new Error('NO_FILE')
     const fileInfo: FileInfo = {
       path: yFile.path.replace(`disk:${this.rootPath}`, ''),
-      isDir: yFile.type === 'dir',
+      isDirectory: yFile.type === 'dir',
       name: yFile.name,
     }
     if (yFile.size !== undefined && yFile.size > 0) fileInfo.size = yFile.size
@@ -65,7 +152,7 @@ export class YandexDisk {
             Authorization: 'OAuth ' + this.token,
           },
         },
-      ).then(response => response.json())) as YandexFile,
+      ).then((response) => response.json())) as YandexFile,
     )
   }
 
@@ -78,8 +165,9 @@ export class YandexDisk {
           Authorization: 'OAuth ' + this.token,
         },
       },
-    ).then(response => response.json())) as { href: string }
-    return fetch(href)
+    ).then((response) => response.json())) as { href: string }
+    const response = await fetch(href)
+    return response.body!
   }
 
   public async write(path: string, stream: ReadableStream<Uint8Array>) {
@@ -91,7 +179,7 @@ export class YandexDisk {
           Authorization: 'OAuth ' + this.token,
         },
       },
-    ).then(response => response.json())) as { href: string, method: string }
+    ).then((response) => response.json())) as { href: string; method: string }
     await fetch(href, {
       method,
       body: stream,
@@ -110,11 +198,11 @@ export class YandexDisk {
     )
   }
 
-  public async copy(from: string, path: string): Promise<void> {
+  public async copy(from: string, to: string): Promise<void> {
     await fetch(
       `https://cloud-api.yandex.net/v1/disk/resources/copy?force_async=false&overwrite=true&from=${this.p(
         from,
-      )}&path=${this.p(path)}`,
+      )}&path=${this.p(to)}`,
       {
         method: 'POST',
         headers: {
@@ -124,11 +212,11 @@ export class YandexDisk {
     )
   }
 
-  public async move(from: string, path: string): Promise<void> {
+  public async rename(from: string, to: string): Promise<void> {
     await fetch(
       `https://cloud-api.yandex.net/v1/disk/resources/move?force_async=false&overwrite=true&from=${this.p(
         from,
-      )}&path=${this.p(path)}`,
+      )}&path=${this.p(to)}`,
       {
         method: 'POST',
         headers: {
@@ -151,4 +239,5 @@ export class YandexDisk {
   }
 }
 
-export default new YandexDisk(process.env.YANDEX_TOKEN!, '/website/')
+export const fileSystem = new FS('files')
+export const yandexDisk = new YandexDisk(process.env.YANDEX_TOKEN!, '/website/')

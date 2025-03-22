@@ -142,7 +142,7 @@ function cleanupHTML(
   text = text
     .replaceAll('<br>', '\n') // br to \n
     .split('\n')
-    .map(element => element.trim()) // trim every line
+    .map((element) => element.trim()) // trim every line
     .join('\n')
     .replaceAll(/\n{3,}/gs, '\n\n') // no more than two new lines
     .replaceAll(/(\s+)<\/tab>/gs, '</tab>') // spaces before tab
@@ -151,12 +151,16 @@ function cleanupHTML(
     .trim() // final trim
 
   return [...text.matchAll(/<.+?>/g)]
-    .map(element => [element[0].slice(1, -1).split(' ')[0], element.index] as const)
-    .filter(([t]) => whitelist.every(w => t !== w && t !== `/${w}`))
+    .map(
+      (element) =>
+        [element[0].slice(1, -1).split(' ')[0], element.index] as const,
+    )
+    .filter(([t]) => whitelist.every((w) => t !== w && t !== `/${w}`))
     .reverse()
     .reduce(
       (accumulator, [, index]) =>
-        accumulator.slice(0, index) + accumulator.slice(accumulator.indexOf('>', index) + 1),
+        accumulator.slice(0, index) +
+        accumulator.slice(accumulator.indexOf('>', index) + 1),
       text,
     )
 }
@@ -170,7 +174,7 @@ async function downloadWK() {
       headers: {
         Authorization: 'Bearer ' + process.env.WK,
       },
-    }).then(x => x.json())) as WKResponse<WKAnySubject>
+    }).then((x) => x.json())) as WKResponse<WKAnySubject>
     nextUrl = json.pages.next_url
     subjects.push(...json.data)
   }
@@ -184,12 +188,12 @@ async function parseWK() {
       readFileSync(Path.join('assets', 'WK.json'), 'utf8'),
     ) as WKObject<WKAnySubject>[]
   )
-    .filter(x => !x.data.hidden_at)
+    .filter((x) => !x.data.hidden_at)
     .toSorted(
       (a, b) =>
-        a.data.level * 100
-        + a.data.lesson_position
-        - (b.data.level * 100 + b.data.lesson_position),
+        a.data.level * 100 +
+        a.data.lesson_position -
+        (b.data.level * 100 + b.data.lesson_position),
     )
   const subjectsMap = new Map<number, WKObject<WKAnySubject>>()
   const levelDeps: number[][] = Array.from({ length: 60 })
@@ -200,25 +204,26 @@ async function parseWK() {
     subjectsMap.set(subject.id, subject)
   }
   const kanjiWithStrokeOrder = new Set(
-    readdirSync(Path.join('assets', 'stroke_order')).map(element => +element.slice(0, -4)),
+    readdirSync(Path.join('assets', 'stroke_order')).map(
+      (element) => +element.slice(0, -4),
+    ),
   )
   const pitchAccents = readFileSync(Path.join('assets', 'accents.txt'), 'utf8')
     .split('\n')
-    // eslint-disable-next-line @stylistic/no-tabs
-    .map(l => l.split('	') as [string, string, string])
+    .map((l) => l.split('	') as [string, string, string])
   const fileCache = new Map<string, string>(
     readFileSync(Path.join('assets', 'WKfiles.txt'), 'utf8')
       .split('\n')
-      .map(l => l.split(' ') as [string, string]),
+      .map((l) => l.split(' ') as [string, string]),
   )
   const filesSink = file(Path.join('assets', 'WKfiles.txt')).writer()
   async function downloadFileAndGetHash(url: string, extension: string) {
     if (fileCache.has(url)) return fileCache.get(url)!
-    const blob = await fetch(url).then(x => x.blob())
+    const blob = await fetch(url).then((x) => x.blob())
     const md5hasher = new CryptoHasher('md5')
     md5hasher.update(await blob.arrayBuffer())
     const name = md5hasher.digest('hex') + '.' + extension
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     await write(Path.join('assets', 'wanikani', name), blob as any)
     filesSink.write(`\n${url} ${name}`)
     fileCache.set(url, name)
@@ -230,15 +235,15 @@ async function parseWK() {
     `<subject uid="${subject.id}" title="${subject.object[0]!.toUpperCase() + subject.object.slice(1)}: ${
       subject.data.characters ?? subject.data.slug
     }">${
-      text
-      ?? subject.data.characters
-      ?? ('character_images' in subject.data
+      text ??
+      subject.data.characters ??
+      ('character_images' in subject.data
         ? `<img class="em" src="/static/${await downloadFileAndGetHash(
-          subject.data.character_images.find(
-            x => x.content_type === 'image/svg+xml',
-          )!.url,
-          'svg',
-        )}">`
+            subject.data.character_images.find(
+              (x) => x.content_type === 'image/svg+xml',
+            )!.url,
+            'svg',
+          )}">`
         : subject.data.slug)
     }</subject>`
   async function generateRelated(subject: WKObject<WKAnySubject>) {
@@ -247,25 +252,21 @@ async function parseWK() {
       txt += ` - ${getSubjectReadings(subject as WKObject<WKKanji | WKVocab>).join(', ')}`
     txt += ` - ${getSubjectMeanings(subject).join(', ')}`
     if (subject.object === 'kanji' || subject.object === 'vocabulary')
-      txt += ` [${(
-        await Promise.all(
-          (
-            subject as WKObject<WKKanji | WKVocab>
-          ).data.component_subject_ids.map(id =>
-            subjectTag(subjectsMap.get(id)!),
-          ),
-        ).then(x => x.join('+'),
-        ))}]`
+      txt += ` [${await Promise.all(
+        (subject as WKObject<WKKanji | WKVocab>).data.component_subject_ids.map(
+          (id) => subjectTag(subjectsMap.get(id)!),
+        ),
+      ).then((x) => x.join('+'))}]`
     return txt
   }
   const getSubjectMeanings = (s: WKObject<WKAnySubject>) => [
-    ...s.data.meanings.filter(x => x.accepted_answer).map(x => x.meaning),
+    ...s.data.meanings.filter((x) => x.accepted_answer).map((x) => x.meaning),
     ...s.data.auxiliary_meanings
-      .filter(x => x.type === 'whitelist')
-      .map(x => x.meaning),
+      .filter((x) => x.type === 'whitelist')
+      .map((x) => x.meaning),
   ]
   const getSubjectReadings = (s: WKObject<WKKanji | WKVocab>) =>
-    s.data.readings.filter(x => x.accepted_answer).map(x => x.reading)
+    s.data.readings.filter((x) => x.accepted_answer).map((x) => x.reading)
   const parseWKDescription = (string_: string) =>
     string_
       .replaceAll('<radical>', '<accent>')
@@ -325,91 +326,87 @@ Anime sentences:
 {{meaningDesc}}</tab><tab title="Examples">{{examples}}
 Anime sentences:
 <ik>{{title}}</ik></tab><tab title="Related">{{sameMeaning}}</tab>`,
-    meaningDesc: s =>
+    meaningDesc: (s) =>
       parseWKDescription(
-        s.data.meaning_mnemonic
-        + ('meaning_hint' in s.data && s.data.meaning_hint
-          ? '\n\n' + s.data.meaning_hint
-          : ''),
+        s.data.meaning_mnemonic +
+          ('meaning_hint' in s.data && s.data.meaning_hint
+            ? '\n\n' + s.data.meaning_hint
+            : ''),
       ),
-    readingDesc: s =>
+    readingDesc: (s) =>
       parseWKDescription(
-        (s.data as WKKanji).reading_mnemonic
-        + ('reading_hint' in s.data && s.data.reading_hint
-          ? '\n\n' + s.data.reading_hint
-          : ''),
+        (s.data as WKKanji).reading_mnemonic +
+          ('reading_hint' in s.data && s.data.reading_hint
+            ? '\n\n' + s.data.reading_hint
+            : ''),
       ),
-    deps: async s =>
+    deps: async (s) =>
       (s.data as WKKanji).component_subject_ids.length > 0
-        ? `${s.object === 'kanji' ? 'Radicals' : 'Kanji'}: ${(
-          await Promise.all(
-            (s.data as WKKanji).component_subject_ids.map(id =>
+        ? `${s.object === 'kanji' ? 'Radicals' : 'Kanji'}: ${await Promise.all(
+            (s.data as WKKanji).component_subject_ids.map((id) =>
               subjectTag(subjectsMap.get(id)!),
             ),
-          ).then(x => x.join('+'),
-          ))}`
+          ).then((x) => x.join('+'))}`
         : ``,
     similar: async (s) => {
       const sub = s as WKObject<WKKanji>
       if (sub.data.component_subject_ids.length === 0) return ''
       const similar = subjects.filter(
-        subject =>
-          subject.id !== sub.id
-          && subject.object === sub.object
-          && (('visually_similar_subject_ids' in sub.data
-            && sub.data.visually_similar_subject_ids.includes(subject.id))
-          || ((subject.data as WKKanji).component_subject_ids.length
-            === sub.data.component_subject_ids.length
-            && sub.data.component_subject_ids.every(d =>
-              (subject.data as WKKanji).component_subject_ids.includes(d),
-            ))),
+        (subject) =>
+          subject.id !== sub.id &&
+          subject.object === sub.object &&
+          (('visually_similar_subject_ids' in sub.data &&
+            sub.data.visually_similar_subject_ids.includes(subject.id)) ||
+            ((subject.data as WKKanji).component_subject_ids.length ===
+              sub.data.component_subject_ids.length &&
+              sub.data.component_subject_ids.every((d) =>
+                (subject.data as WKKanji).component_subject_ids.includes(d),
+              ))),
       )
       return similar.length > 0
-        ? `<b>Similar:</b>\n${(await Promise.all(similar.map(x => generateRelated(x))).then(x => x.join('\n')))}`
+        ? `<b>Similar:</b>\n${await Promise.all(similar.map((x) => generateRelated(x))).then((x) => x.join('\n'))}`
         : ``
     },
     sameMeaning: async (s) => {
       const answers = getSubjectMeanings(s)
       const same = subjects.filter(
-        subject =>
-          subject.id !== s.id
-          && subject.object === s.object
-          && answers.some(a => getSubjectMeanings(subject).includes(a)),
+        (subject) =>
+          subject.id !== s.id &&
+          subject.object === s.object &&
+          answers.some((a) => getSubjectMeanings(subject).includes(a)),
       )
       return same.length > 0
-        ? `<b>Same meaning:</b>\n${(await Promise.all(same.map(x => generateRelated(x))).then(x => x.join('\n')))}`
+        ? `<b>Same meaning:</b>\n${await Promise.all(same.map((x) => generateRelated(x))).then((x) => x.join('\n'))}`
         : ``
     },
     sameReading: async (s) => {
       const answers = getSubjectReadings(s as WKObject<WKKanji>)
       const same = subjects.filter(
-        subject =>
-          subject.id !== s.id
-          && subject.object === s.object
-          && answers.some(a =>
+        (subject) =>
+          subject.id !== s.id &&
+          subject.object === s.object &&
+          answers.some((a) =>
             getSubjectReadings(subject as WKObject<WKKanji>).includes(a),
           ),
       )
       return same.length > 0
-        ? `<b>Same reading:</b>\n${(await Promise.all(same.map(x => generateRelated(x))).then(x => x.join('\n')))}`
+        ? `<b>Same reading:</b>\n${await Promise.all(same.map((x) => generateRelated(x))).then((x) => x.join('\n'))}`
         : ``
     },
-    usedIn: async s =>
+    usedIn: async (s) =>
       (s.data as WKRadical).amalgamation_subject_ids.length > 0
-        ? `<b>Used in:</b>\n${(
-          await Promise.all(
+        ? `<b>Used in:</b>\n${await Promise.all(
             (s.data as WKRadical).amalgamation_subject_ids
-              .map(id => subjectsMap.get(id)!)
-              .map(x => generateRelated(x)),
-          ).then(x => x.join('\n'))
-        )}`
+              .map((id) => subjectsMap.get(id)!)
+              .map((x) => generateRelated(x)),
+          ).then((x) => x.join('\n'))}`
         : '',
     audio: async (s) => {
       const audios = (s.data as WKVocab).pronunciation_audios.filter(
-        x => x.content_type === 'audio/mpeg',
+        (x) => x.content_type === 'audio/mpeg',
       )
       const urls = await Promise.all(
-        audios.map(a => downloadFileAndGetHash(a.url, 'mp3')),
+        audios.map((a) => downloadFileAndGetHash(a.url, 'mp3')),
       )
       return audios
         .map(
@@ -418,7 +415,7 @@ Anime sentences:
         )
         .join('\n')
     },
-    examples: s =>
+    examples: (s) =>
       (s.data as WKVocab).context_sentences
         .map(({ ja, en }) => `<example>${ja}\n${en}</example>`)
         .join('\n'),
@@ -429,36 +426,36 @@ Anime sentences:
         ? `<img class="stroke-order" src="/static/stroke_order/${code}.svg">`
         : ''
     },
-    typeOfWord: s =>
+    typeOfWord: (s) =>
       `Type of word: ${(s.data as WKVocab).parts_of_speech.join(', ')}`,
     pitchAccent: (s) => {
-      const p
-        = s.object === 'kana_vocabulary'
+      const p =
+        s.object === 'kana_vocabulary'
           ? pitchAccents.filter(
-            p => s.data.characters === p[0] || s.data.characters === p[1],
-          )
-          : pitchAccents.filter((p) => {
-            const readings = getSubjectReadings(s as WKObject<WKVocab>)
-            return (
-              (s.data.characters === p[0] || s.data.characters === p[1])
-              && (p[1].length === 0
-                || readings.includes(p[0])
-                || readings.includes(p[1]))
+              (p) => s.data.characters === p[0] || s.data.characters === p[1],
             )
-          })
+          : pitchAccents.filter((p) => {
+              const readings = getSubjectReadings(s as WKObject<WKVocab>)
+              return (
+                (s.data.characters === p[0] || s.data.characters === p[1]) &&
+                (p[1].length === 0 ||
+                  readings.includes(p[0]) ||
+                  readings.includes(p[1]))
+              )
+            })
       return p.length > 0
         ? `Pitch accents: ${p
-          .map(
-            x =>
-              `<jp-pitch-accent h="${x[1]}" p="${x[2]}">${s.data.characters}</jp-pitch-accent>`,
-          )
-          .join(', ')}`
+            .map(
+              (x) =>
+                `<jp-pitch-accent h="${x[1]}" p="${x[2]}">${s.data.characters}</jp-pitch-accent>`,
+            )
+            .join(', ')}`
         : ''
     },
-    conjugation: s =>
+    conjugation: (s) =>
       `<jp-conjugation>${s.data.characters ?? ''}</jp-conjugation>`,
-    title: s => s.data.characters ?? '',
-    level: s => `Level: ` + s.data.level,
+    title: (s) => s.data.characters ?? '',
+    level: (s) => `Level: ` + s.data.level,
   }
   async function parseSchema(
     schemaName: string,
@@ -476,19 +473,22 @@ Anime sentences:
   // });
   // const themeId = lastInsertRowIdQuery.get()!.id;
   const themeId = 4
-  const dbsubjects = database.prepare<TableDefaults, [number]>(
-    `SELECT * FROM ${TABLES.STUDY_SUBJECTS} WHERE theme_id = ?`,
-  )
+  const dbsubjects = database
+    .prepare<TableDefaults, [number]>(
+      `SELECT * FROM ${TABLES.STUDY_SUBJECTS} WHERE theme_id = ?`,
+    )
     .all(themeId)
-    .map(x => x.id)
+    .map((x) => x.id)
   // END OF CHANGE BLOCK
   log('Deleting dependencies')
-  database.prepare(
-    `DELETE FROM ${TABLES.STUDY_SUBJECT_DEPS}
+  database
+    .prepare(
+      `DELETE FROM ${TABLES.STUDY_SUBJECT_DEPS}
     WHERE subject_id IN (
       SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE theme_id = ?
     )`,
-  ).run(themeId)
+    )
+    .run(themeId)
   const databaseMap = new Map<number, number>()
   const idReplaces = new Map<number, number>()
   const subjectIdToCreate = new Set<number>()
@@ -502,53 +502,56 @@ Anime sentences:
     }
     const qs: UpdateTableDTO<StudyQuestionDTO>[] = []
     const sameTitle = subjects.filter(
-      s =>
+      (s) =>
         s.data.characters === subject.data.characters && s.id !== subject.id,
     )
     const meanings = getSubjectMeanings(subject)
     const alternateMeanings = sameTitle
-      .flatMap(x => getSubjectMeanings(x))
-      .map(x => x.toLowerCase())
-      .filter(a => meanings.every(x => x.toLowerCase() !== a))
+      .flatMap((x) => getSubjectMeanings(x))
+      .map((x) => x.toLowerCase())
+      .filter((a) => meanings.every((x) => x.toLowerCase() !== a))
     switch (subject.object) {
       case 'vocabulary': {
         const vocabulary = subject as WKObject<WKVocab>
         s.title = `Vocabulary:\n${vocabulary.data.characters}`
         const readings = getSubjectReadings(vocabulary)
         const alternateReadings = sameTitle
-          .filter(s => s.object === 'vocabulary' || s.object === 'kanji')
-          .flatMap(s => getSubjectReadings(s as WKObject<WKVocab>))
-          .map(x => x.toLowerCase())
-          .filter(a => readings.every(x => x.toLowerCase() !== a))
-        qs.push({
-          answers: meanings,
-          description: await parseSchema('vocabularyMeaning', vocabulary),
-          question: `Vocabulary meaning:\n<accent>${s.title.slice(12)}</accent>`,
-          subjectId: -1,
-          alternateAnswers:
-            alternateMeanings.length === 0
-              ? null
-              : Object.fromEntries(
-                alternateMeanings.map(a => [
-                  a,
-                  `Please type vocabulary meaning`,
-                ]),
-              ),
-        }, {
-          answers: readings,
-          description: await parseSchema('vocabularyReading', vocabulary),
-          question: `Vocabulary reading:\n<accent>${s.title.slice(12)}</accent>`,
-          subjectId: -1,
-          alternateAnswers:
-            alternateReadings.length === 0
-              ? null
-              : Object.fromEntries(
-                alternateReadings.map(a => [
-                  a,
-                  `Please type vocabulary reading`,
-                ]),
-              ),
-        })
+          .filter((s) => s.object === 'vocabulary' || s.object === 'kanji')
+          .flatMap((s) => getSubjectReadings(s as WKObject<WKVocab>))
+          .map((x) => x.toLowerCase())
+          .filter((a) => readings.every((x) => x.toLowerCase() !== a))
+        qs.push(
+          {
+            answers: meanings,
+            description: await parseSchema('vocabularyMeaning', vocabulary),
+            question: `Vocabulary meaning:\n<accent>${s.title.slice(12)}</accent>`,
+            subjectId: -1,
+            alternateAnswers:
+              alternateMeanings.length === 0
+                ? null
+                : Object.fromEntries(
+                    alternateMeanings.map((a) => [
+                      a,
+                      `Please type vocabulary meaning`,
+                    ]),
+                  ),
+          },
+          {
+            answers: readings,
+            description: await parseSchema('vocabularyReading', vocabulary),
+            question: `Vocabulary reading:\n<accent>${s.title.slice(12)}</accent>`,
+            subjectId: -1,
+            alternateAnswers:
+              alternateReadings.length === 0
+                ? null
+                : Object.fromEntries(
+                    alternateReadings.map((a) => [
+                      a,
+                      `Please type vocabulary reading`,
+                    ]),
+                  ),
+          },
+        )
         break
       }
       case 'kana_vocabulary': {
@@ -563,11 +566,11 @@ Anime sentences:
             alternateMeanings.length === 0
               ? null
               : Object.fromEntries(
-                alternateMeanings.map(a => [
-                  a,
-                  `Please type vocabulary meaning`,
-                ]),
-              ),
+                  alternateMeanings.map((a) => [
+                    a,
+                    `Please type vocabulary meaning`,
+                  ]),
+                ),
         })
         break
       }
@@ -576,39 +579,42 @@ Anime sentences:
         s.title = `Kanji:\n${kanji.data.characters}`
         const readings2 = getSubjectReadings(kanji)
         const alternateReadings2 = sameTitle
-          .filter(s => s.object === 'vocabulary' || s.object === 'kanji')
-          .flatMap(s => getSubjectReadings(s as WKObject<WKVocab>))
-          .map(x => x.toLowerCase())
-          .filter(a => readings2.every(x => x.toLowerCase() !== a))
-        qs.push({
-          answers: meanings,
-          description: await parseSchema('kanjiMeaning', kanji),
-          question: `Kanji meaning:\n<accent>${s.title.slice(7)}</accent>`,
-          subjectId: -1,
-          alternateAnswers:
-            alternateMeanings.length === 0
-              ? null
-              : Object.fromEntries(
-                alternateMeanings.map(a => [
-                  a,
-                  `Please type kanji meaning`,
-                ]),
-              ),
-        }, {
-          answers: readings2,
-          description: await parseSchema('kanjiReading', kanji),
-          question: `Kanji reading:\n<accent>${s.title.slice(7)}</accent>`,
-          subjectId: -1,
-          alternateAnswers:
-            alternateReadings2.length === 0
-              ? null
-              : Object.fromEntries(
-                alternateReadings2.map(a => [
-                  a,
-                  `Please type kanji reading`,
-                ]),
-              ),
-        })
+          .filter((s) => s.object === 'vocabulary' || s.object === 'kanji')
+          .flatMap((s) => getSubjectReadings(s as WKObject<WKVocab>))
+          .map((x) => x.toLowerCase())
+          .filter((a) => readings2.every((x) => x.toLowerCase() !== a))
+        qs.push(
+          {
+            answers: meanings,
+            description: await parseSchema('kanjiMeaning', kanji),
+            question: `Kanji meaning:\n<accent>${s.title.slice(7)}</accent>`,
+            subjectId: -1,
+            alternateAnswers:
+              alternateMeanings.length === 0
+                ? null
+                : Object.fromEntries(
+                    alternateMeanings.map((a) => [
+                      a,
+                      `Please type kanji meaning`,
+                    ]),
+                  ),
+          },
+          {
+            answers: readings2,
+            description: await parseSchema('kanjiReading', kanji),
+            question: `Kanji reading:\n<accent>${s.title.slice(7)}</accent>`,
+            subjectId: -1,
+            alternateAnswers:
+              alternateReadings2.length === 0
+                ? null
+                : Object.fromEntries(
+                    alternateReadings2.map((a) => [
+                      a,
+                      `Please type kanji reading`,
+                    ]),
+                  ),
+          },
+        )
         break
       }
       case 'radical': {
@@ -616,11 +622,11 @@ Anime sentences:
         s.title = radical.data.characters
           ? `Radical:\n${radical.data.characters}`
           : `Radical:\n<img class="em" src="/static/${await downloadFileAndGetHash(
-            radical.data.character_images.find(
-              x => x.content_type === 'image/svg+xml',
-            )!.url,
-            'svg',
-          )}">`
+              radical.data.character_images.find(
+                (x) => x.content_type === 'image/svg+xml',
+              )!.url,
+              'svg',
+            )}">`
         qs.push({
           answers: meanings,
           description: await parseSchema('radical', radical),
@@ -630,38 +636,50 @@ Anime sentences:
             alternateMeanings.length === 0
               ? null
               : Object.fromEntries(
-                alternateMeanings.map(a => [
-                  a,
-                  `Please type radical meaning`,
-                ]),
-              ),
+                  alternateMeanings.map((a) => [
+                    a,
+                    `Please type radical meaning`,
+                  ]),
+                ),
         })
         break
       }
     }
 
     // === DB ===
-    let id
-      = idReplaces.get(subject.id)
-      ?? database.prepare<{ id: number }, [string]>(
-        `SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`,
-      ).get(s.title)?.id
-      ?? database.prepare<{ id: number }, [string]>(
-        `SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`,
-      ).get(s.title.replace('\n', '\n〜'))?.id
+    let id =
+      idReplaces.get(subject.id) ??
+      database
+        .prepare<
+          { id: number },
+          [string]
+        >(`SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`)
+        .get(s.title)?.id ??
+      database
+        .prepare<
+          { id: number },
+          [string]
+        >(`SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`)
+        .get(s.title.replace('\n', '\n〜'))?.id
     if (!id && s.title.includes(' お'))
-      id = database.prepare<{ id: number }, [string]>(
-        `SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`,
-      ).get(s.title.replace(' お', ' '))?.id
+      id = database
+        .prepare<
+          { id: number },
+          [string]
+        >(`SELECT id FROM ${TABLES.STUDY_SUBJECTS} WHERE title = ?`)
+        .get(s.title.replace(' お', ' '))?.id
     // === find subject by answers ===
     if (!id) {
       const q = questionsTable.convertFrom(
-        database.prepare<DBRow, [string, string]>(
-          `SELECT * FROM study_questions WHERE answers = ? AND question LIKE ?`,
-        ).get(
-          getSubjectMeanings(subject).join('|'),
-          `${qs[0]!.question!.slice(0, 4)}%`,
-        ),
+        database
+          .prepare<
+            DBRow,
+            [string, string]
+          >(`SELECT * FROM study_questions WHERE answers = ? AND question LIKE ?`)
+          .get(
+            getSubjectMeanings(subject).join('|'),
+            `${qs[0]!.question!.slice(0, 4)}%`,
+          ),
       )
       if (q) {
         console.log('FOUND HARD WAY')
@@ -672,16 +690,15 @@ Anime sentences:
       // log(`[UPDATING SUBJECT] ${subject.id} ${s.title}`);
       subjectsTable.update(id, s)
       dbsubjects.splice(dbsubjects.indexOf(id), 1)
-    }
-    else {
-      if (!subjectIdToCreate.has(subject.id))
-        throw new Error('It must exist')
+    } else {
+      if (!subjectIdToCreate.has(subject.id)) throw new Error('It must exist')
       log(`[CREATING SUBJECT] ${subject.id} ${s.title}`)
       id = subjectsTable.create(s).lastInsertRowid as number
     }
     databaseMap.set(subject.id, id)
     const dbqs = subjectsTable.getById(id)?.questionIds ?? []
-    if (dbqs.length !== qs.length && !subjectIdToCreate.has(subject.id)) throw new Error('DBQS is not equal')
+    if (dbqs.length !== qs.length && !subjectIdToCreate.has(subject.id))
+      throw new Error('DBQS is not equal')
     for (let index = 0; index < qs.length; index++) {
       const q = qs[index]!
       const dbq = dbqs[index]
@@ -689,10 +706,8 @@ Anime sentences:
       if (dbq) {
         // log(`[UPDATING QUESTION] ${i ? 'Meaning' : 'Reading'}`);
         questionsTable.update(dbq, q)
-      }
-      else {
-        if (!subjectIdToCreate.has(subject.id))
-          throw new Error('It must exist')
+      } else {
+        if (!subjectIdToCreate.has(subject.id)) throw new Error('It must exist')
         log(`[CREATING QUESTION] ${index ? 'Meaning' : 'Reading'}`)
         questionsTable.create(q as StudyQuestionDTO)
       }
@@ -720,7 +735,8 @@ Anime sentences:
           // Subject ids only known after all updates so we fix them now
           .replaceAll(
             /<subject uid="(\d+?)"/g,
-            (_, id) => `<subject uid="${databaseMap.get(Number.parseInt(id as string))}"`,
+            (_, id) =>
+              `<subject uid="${databaseMap.get(Number.parseInt(id as string))}"`,
           ),
       ),
     })

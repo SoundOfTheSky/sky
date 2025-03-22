@@ -1,6 +1,6 @@
 import { log } from '@softsky/utils'
 
-import { visitEmitter, visitsStats } from '@/services/session'
+import { visitEmitter, visitsStats } from '@/services/session/session'
 import { subscribeWSEvent } from '@/services/ws'
 
 let online = 0

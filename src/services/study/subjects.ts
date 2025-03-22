@@ -61,10 +61,12 @@ export class SubjectsTable extends Table<StudySubject, StudySubjectDTO> {
   }
 
   public convertFrom(data?: DBRow | null): StudySubject | undefined {
-    if (!data) return;
-    (data as unknown as StudySubject).questionIds = (data.questionIds as string)
+    if (!data) return
+    ;(data as unknown as StudySubject).questionIds = (
+      data.questionIds as string
+    )
       .split(',')
-      .map(x => Number.parseInt(x))
+      .map((x) => Number.parseInt(x))
     return super.convertFrom(data)
   }
 }

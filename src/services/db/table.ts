@@ -79,17 +79,21 @@ export class Table<
 
   public create(data: INPUT): Changes {
     const cols = this.convertTo(data)
-    return database.query(
-      `INSERT INTO ${this.name} (${cols.map(x => x[0]).join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
-    ).run(...cols.map(x => x[1]))
+    return database
+      .query(
+        `INSERT INTO ${this.name} (${cols.map((x) => x[0]).join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
+      )
+      .run(...cols.map((x) => x[1]))
   }
 
   public update(id: number | string, data: UpdateTableDTO<INPUT>): Changes {
     const cols = this.convertTo(data)
     if (cols.length === 0) throw new Error('No fields to update')
-    return database.query(
-      `UPDATE ${this.name} SET ${cols.map(x => x[0] + ' = ?').join(', ')} WHERE id = ?`,
-    ).run(...cols.map(x => x[1]), id)
+    return database
+      .query(
+        `UPDATE ${this.name} SET ${cols.map((x) => x[0] + ' = ?').join(', ')} WHERE id = ?`,
+      )
+      .run(...cols.map((x) => x[1]), id)
   }
 
   public convertTo(data: UpdateTableDTO<INPUT>) {
@@ -122,7 +126,13 @@ export class Table<
   }
 
   public convertFromMany(data: DBRow[]) {
-    return data.map(x => this.convertFrom(x)!)
+    return data.map((x) => this.convertFrom(x)!)
+  }
+
+  public createIndex(fields: string[]) {
+    database.exec(
+      `CREATE INDEX IF NOT EXISTS idx_${this.name}_${fields.join('_')} ON ${this.name} (${fields.join(',')})`,
+    )
   }
 
   protected initializeTable() {
@@ -135,8 +145,8 @@ export class Table<
             if (options.required) q += ' NOT NULL'
             else if (options.default)
               q += ` DEFAULT ${
-                typeof options.default === 'string'
-                && options.default !== 'current_timestamp'
+                typeof options.default === 'string' &&
+                options.default !== 'current_timestamp'
                   ? `"${options.default}"`
                   : options.default
               }`
@@ -156,27 +166,17 @@ export class Table<
           ...append,
         ].join(',')})`,
     )
-    this.registerUpdateTrigger()
-    this.registerUpdateIndex()
-  }
-
-  protected registerUpdateTrigger() {
-    if (this.schema.get('updated')?.type !== 'TEXT') return
-    database.exec(
-      `CREATE TRIGGER IF NOT EXISTS tg_${this.name}_update
-      AFTER UPDATE ON ${this.name} FOR EACH ROW
-      BEGIN
-        UPDATE ${this.name} SET updated = current_timestamp
-        WHERE id = old.id;
-      END`,
-    )
-  }
-
-  protected registerUpdateIndex() {
-    if (this.schema.get('updated')?.type !== 'TEXT') return
-    database.exec(
-      `CREATE INDEX IF NOT EXISTS idx_${this.name}_updated ON ${this.name} (updated)`,
-    )
+    if (this.schema.get('updated')?.type === 'TEXT') {
+      database.exec(
+        `CREATE TRIGGER IF NOT EXISTS tg_${this.name}_update
+        AFTER UPDATE ON ${this.name} FOR EACH ROW
+        BEGIN
+          UPDATE ${this.name} SET updated = current_timestamp
+          WHERE id = old.id;
+        END`,
+      )
+      this.createIndex(['updated'])
+    }
   }
 }
 export class TableWithUser<
@@ -191,14 +191,14 @@ export class TableWithUser<
   protected $getByIdUser = this.query
     .clone()
     .where<{
-    id: string | number
-    userId: number
-  }>(`${this.name}.id = $id AND ${this.name}.user_id = $userId`)
+      id: string | number
+      userId: number
+    }>(`${this.name}.id = $id AND ${this.name}.user_id = $userId`)
     .toDBQuery()
 
   protected $deleteByIdUser = database.prepare<
     undefined,
-    { id: number | string, userId: number }
+    { id: number | string; userId: number }
   >(`DELETE FROM ${this.name} WHERE id = $id AND user_id = $userId`)
 
   public updateByUser(
@@ -209,9 +209,11 @@ export class TableWithUser<
     const userId = (data as unknown as { user_id: number }).user_id
     delete (data as { user_id?: number }).user_id
     if (cols.length === 0) throw new Error('No fields to update')
-    return database.query(
-      `UPDATE ${this.name} SET ${cols.map(x => x[0] + ' = ?').join(', ')} WHERE id = ? AND user_id = ?`,
-    ).run(...cols.map(x => x[1]), id, userId)
+    return database
+      .query(
+        `UPDATE ${this.name} SET ${cols.map((x) => x[0] + ' = ?').join(', ')} WHERE id = ? AND user_id = ?`,
+      )
+      .run(...cols.map((x) => x[1]), id, userId)
   }
 
   public getByIdUser(id: string | number, userId: number): OUTPUT | undefined {

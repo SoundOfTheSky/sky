@@ -26,7 +26,9 @@ export function sendJSON(response: HTTPResponse, data: unknown) {
 }
 
 export function sendCompressedJSON(response: HTTPResponse, data: unknown) {
-  response.body = zlib.deflateSync(JSON.stringify(data)) as unknown as Uint8Array
+  response.body = zlib.deflateSync(
+    JSON.stringify(data),
+  ) as unknown as Uint8Array
   response.headers.set('Content-Type', 'application/json')
   response.headers.set('Content-Encoding', 'deflate')
 }
@@ -52,7 +54,7 @@ export function getCookies(request: Request) {
   const cookie = request.headers.get('cookie')
   if (!cookie) return {}
   return Object.fromEntries(
-    cookie.split('; ').map(cookie => cookie.split('=')),
+    cookie.split('; ').map((cookie) => cookie.split('=')),
   ) as Record<string, string>
 }
 

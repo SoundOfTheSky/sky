@@ -57,8 +57,7 @@ export class StoreTable extends Table<TableDefaults & StoreData> {
     if (typeof value === 'number') {
       if (value % 1 === 0) newValue.n = value
       else newValue.f = value
-    }
-    else if (typeof value === 'string') newValue.s = value
+    } else if (typeof value === 'string') newValue.s = value
     else if (Buffer.isBuffer(value)) newValue.b = value
     if (exists) return this.update(exists.id, newValue)
     return this.create(newValue as StoreData)

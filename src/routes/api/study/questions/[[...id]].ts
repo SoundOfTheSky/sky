@@ -7,7 +7,7 @@ import { StudyQuestion, StudyQuestionT } from '@/sky-shared/study'
 export default createRestEndpointHandler(
   new RESTApi<StudyQuestion>(questionsTable, {
     updated: {
-      convertTo: data =>
+      convertTo: (data) =>
         convertToDate(new Date(Number.parseInt(data) * 1000))!,
       sql: (m, p) =>
         m === '<'

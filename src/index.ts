@@ -21,7 +21,7 @@ const httpServer = serve({
   },
   port: process.env.HTTP_PORT ?? 80,
 })
-globalThis.server = serve<WS['data']>({
+globalThis.server = serve<WS['data'], object>({
   port: process.env.PORT ?? 443,
   key: process.env.KEY ? file(process.env.KEY) : undefined,
   cert: process.env.CERT ? file(process.env.CERT) : undefined,
@@ -37,7 +37,7 @@ globalThis.server = serve<WS['data']>({
     close: wsCloseHandler,
     open: wsOpenHandler,
   },
-  maxRequestBodySize: 1024 * 1024 * 10, // 10mb
+  maxRequestBodySize: Infinity,
   idleTimeout: 30,
   development: false,
 })

@@ -1,11 +1,11 @@
 import Path from 'node:path'
 
-import { ValidationError, formatTime, log } from '@softsky/utils'
+import { ValidationError, formatNumber, log } from '@softsky/utils'
 import { FileSystemRouter, Server } from 'bun'
 
 import { HTTPHandler, HTTPResponse } from '@/services/http/types'
 import { HTTPError } from '@/services/http/utils'
-import { sessionGuard } from '@/services/session'
+import { sessionGuard } from '@/services/session/session'
 
 const router = new FileSystemRouter({
   style: 'nextjs',
@@ -59,19 +59,20 @@ export default async function handleHTTP(
   const handler = handlers.get(routerResult.name)!
   try {
     await handler(request, response, routerResult)
-  }
-  catch (error) {
-    console.error(error)
+  } catch (error) {
     if (error instanceof HTTPError) {
       response.status = error.code
       response.body = error.body
-    }
-    else if (error instanceof ValidationError) {
+    } else if (error instanceof ValidationError) {
       response.status = 400
       response.body = error.message
+    } else {
+      response.status = 500
+      console.error(error)
     }
-    else throw error
   }
-  log(`[HTTP END] ${request.method}: ${request.url} ${formatTime(Date.now() - time)}`)
+  log(
+    `[HTTP END] ${request.method}: ${request.url} ${formatNumber(Date.now() - time)}`,
+  )
   return new Response(response.body as globalThis.BodyInit, response)
 }

@@ -36,7 +36,7 @@ const disposedTokens = new Map<string, number>() // Token/time of disposal
 
 export async function signJWT(
   body: object,
-  options: { expiresIn?: number, subject?: string } = {},
+  options: { expiresIn?: number; subject?: string } = {},
 ): Promise<SignedToken> {
   const now = Math.floor(Date.now() / 1000)
   return {
@@ -57,8 +57,7 @@ export async function verifyJWT<T = JWTPayload>(token: string) {
     })
     if (payload.version !== JWT_VERSION) return
     return payload as T
-  }
-  catch {
+  } catch {
     return
   }
 }
@@ -100,8 +99,9 @@ export async function sessionGuard(options: {
   permissions?: string[]
   throw401?: boolean
 }): Promise<JWTPayload | undefined> {
-  const token
-    = getCookies(options.request).session ?? options.request.headers.get('authorization')
+  const token =
+    getCookies(options.request).session ??
+    options.request.headers.get('authorization')
   const payload = token ? await verifyJWT(token.slice(7)) : undefined
   // If no token
   if (!payload) {
@@ -119,22 +119,21 @@ export async function sessionGuard(options: {
   // Refresh token
   const alreadyDisposed = disposedTokens.has(payload.sub)
   if (
-    options.response
-    && !options.request.headers.has('authorization')
-    && (payload.exp - JWT_REFRESH) * 1000 < Date.now()
-    && !alreadyDisposed
+    options.response &&
+    (payload.iat + JWT_REFRESH) * 1000 < Date.now() &&
+    !alreadyDisposed
   ) {
     registerVisit(false)
     disposedTokens.set(payload.sub, Date.now())
     setAuth(options.response, await signJWT(payload))
   }
   if (
-    alreadyDisposed
-    || (options.permissions
-      && (!payload.user
-        || (!payload.user.permissions.includes('ADMIN')
-          && options.permissions.some(
-            perm => !payload.user!.permissions.includes(perm),
+    alreadyDisposed ||
+    (options.permissions &&
+      (!payload.user ||
+        (!payload.user.permissions.includes('ADMIN') &&
+          options.permissions.some(
+            (perm) => !payload.user!.permissions.includes(perm),
           ))))
   ) {
     if (options.throw401) throw new HTTPError('Not allowed', 401)
@@ -149,8 +148,8 @@ export async function sessionGuard(options: {
 setInterval(() => {
   const now = Date.now()
   for (const [sub, time] of disposedTokens.entries())
-    if (now - time > JWT_EXPIRES) disposedTokens.delete(sub)
-}, JWT_EXPIRES * 1000)
+    if (now - time > JWT_EXPIRES * 1000) disposedTokens.delete(sub)
+}, JWT_REFRESH * 1000)
 
 // === Visits ===
 export const visitsStats = {

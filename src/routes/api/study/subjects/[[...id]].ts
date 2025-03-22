@@ -9,7 +9,7 @@ export default createRestEndpointHandler(
     subjectsTable,
     {
       updated: {
-        convertTo: data =>
+        convertTo: (data) =>
           convertToDate(new Date(Number.parseInt(data) * 1000))!,
         sql: (m, p) =>
           m === '<'

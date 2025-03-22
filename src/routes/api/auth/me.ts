@@ -2,7 +2,7 @@ import { Optional, ValidationError } from '@softsky/utils'
 
 import { HTTPHandler } from '@/services/http/types'
 import { HTTPError, sendCompressedJSON } from '@/services/http/utils'
-import { sessionGuard } from '@/services/session'
+import { sessionGuard } from '@/services/session/session'
 import { User, usersTable } from '@/services/session/users'
 
 export default (async function (request, response) {

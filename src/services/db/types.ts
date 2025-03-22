@@ -1,17 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-import { Optional } from '@softsky/utils'
-
 import { TableDefaults } from '@/sky-shared/database'
 
 export type DBDataType = string | number | Uint8Array | null
 
 export type DBRow = Record<string, DBDataType>
 
-export type TableDTO<T extends TableDefaults> = Optional<
-  T,
-  keyof TableDefaults
->
+export type TableDTO<T extends TableDefaults> = Omit<T, keyof TableDefaults>
 
 export type TableColumn = {
   type: keyof ColumnTypeMap
@@ -40,7 +33,7 @@ export type ColumnTypeMap = {
 }
 
 export type UpdateTableDTO<T> = {
-  [P in keyof T]?: T[P] | null | undefined;
+  [P in keyof T]?: T[P] | null | undefined
 }
 
 export type ColumnToType<C extends TableColumn> = C['required'] extends true
@@ -48,5 +41,5 @@ export type ColumnToType<C extends TableColumn> = C['required'] extends true
   : ColumnTypeMap[C['type']] | undefined
 
 export type GenerateRowType<T extends Record<string, TableColumn>> = {
-  [K in keyof T]: ColumnToType<T[K]>;
+  [K in keyof T]: ColumnToType<T[K]>
 }

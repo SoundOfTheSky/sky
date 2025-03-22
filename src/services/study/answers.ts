@@ -95,7 +95,7 @@ export class AnswersTable extends TableWithUser<StudyAnswer, StudyAnswerDTO> {
 
   public create(data: StudyAnswerDTO): Changes {
     data.answers = data.answers?.filter(
-      x => !['wrong', 'correct'].includes(x.toLowerCase()),
+      (x) => !['wrong', 'correct'].includes(x.toLowerCase()),
     )
     let changes: Changes
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call

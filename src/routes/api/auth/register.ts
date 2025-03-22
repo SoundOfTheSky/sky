@@ -3,7 +3,7 @@ import { ValidationError } from '@softsky/utils'
 import { LoginT } from '@/routes/api/auth/login'
 import { HTTPHandler } from '@/services/http/types'
 import { getRequestBodyT } from '@/services/http/utils'
-import { sessionGuard, setAuth, signJWT } from '@/services/session'
+import { sessionGuard, setAuth, signJWT } from '@/services/session/session'
 import { usersTable } from '@/services/session/users'
 
 export default (async function (request, response) {
@@ -18,7 +18,7 @@ export default (async function (request, response) {
     username: body.username,
     password: await Bun.password.hash(body.password),
     status: 0,
-    permissions: ['STUDY'],
+    permissions: ['STORAGE'],
   }).lastInsertRowid as number
   setAuth(
     response,
@@ -27,7 +27,7 @@ export default (async function (request, response) {
         ...payload,
         user: {
           id: userId,
-          permissions: ['STUDY'],
+          permissions: ['STORAGE'],
           status: 0,
         },
       },

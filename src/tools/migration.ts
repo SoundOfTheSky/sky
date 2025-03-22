@@ -18,31 +18,37 @@ function exec(cmd: string) {
   try {
     log(cmd)
     database.exec(cmd)
-  }
-  catch (error) {
+  } catch (error) {
     console.error('Error while executing query:', cmd)
     throw error
   }
 }
 
 function getTableSchema(name: string) {
-  return database.query<{ sql: string }, [string]>(
-    `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`,
-  ).get(name)?.sql
+  return database
+    .query<
+      { sql: string },
+      [string]
+    >(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`)
+    .get(name)?.sql
 }
 
 function getTableTriggers(name: string) {
-  return database.query<{ sql: string }, [string]>(
-    `SELECT sql FROM sqlite_master WHERE type = 'trigger' AND tbl_name = ?`,
-  )
+  return database
+    .query<{ sql: string }, [string]>(
+      `SELECT sql FROM sqlite_master WHERE type = 'trigger' AND tbl_name = ?`,
+    )
     .all(name)
-    .map(trigger => trigger.sql)
+    .map((trigger) => trigger.sql)
 }
 
 function dropAllTriggers() {
-  for (const { name } of database.query<{ name: string }, []>(
-    `SELECT name FROM sqlite_master WHERE type = 'trigger'`,
-  ).all())
+  for (const { name } of database
+    .query<
+      { name: string },
+      []
+    >(`SELECT name FROM sqlite_master WHERE type = 'trigger'`)
+    .all())
     exec(`DROP TRIGGER ${name}`)
 }
 
@@ -90,12 +96,14 @@ function editTableSchema(
   if (!schema) throw new Error('No such table')
   const triggers = getTableTriggers(table)
   exec(edit(schema.replace(table, temporary)))
-  for (const col of database.query<
-    {
-      name: string
-    },
-    []
-  >(`PRAGMA table_info(${temporary})`).all())
+  for (const col of database
+    .query<
+      {
+        name: string
+      },
+      []
+    >(`PRAGMA table_info(${temporary})`)
+    .all())
     if (!insertCols[col.name]) insertCols[col.name] = col.name
   exec(
     `INSERT INTO "${temporary}"(${Object.keys(insertCols).join(', ')}) SELECT ${Object.values(insertCols).join(', ')} FROM "${table}"`,
@@ -112,18 +120,18 @@ function migration1() {
   exec(`UPDATE users SET permissions = 'ADMIN'`)
   editTableSchema(
     `users`,
-    schema =>
+    (schema) =>
       schema.replace(
         `permissions TEXT NOT NULL,`,
         'permissions TEXT NOT NULL, password TEXT NOT NULL,',
       ),
     {
-      password: '\'BRUH\'',
+      password: "'BRUH'",
     },
   )
   editTableSchema(
     'users_answers',
-    schema =>
+    (schema) =>
       schema.replace(
         'created TEXT DEFAULT current_timestamp,',
         'created TEXT DEFAULT current_timestamp, updated TEXT DEFAULT current_timestamp,',
@@ -132,7 +140,7 @@ function migration1() {
       updated: 'created',
     },
   )
-  editTableSchema('subjects', schema =>
+  editTableSchema('subjects', (schema) =>
     schema
       .replace(
         'FOREIGN KEY(srs_id) REFERENCES srs(id) ON DELETE CASCADE ON UPDATE CASCADE,',
@@ -140,7 +148,7 @@ function migration1() {
       )
       .replace('srs_id INTEGER NOT NULL,', ''),
   )
-  editTableSchema('users_themes', schema =>
+  editTableSchema('users_themes', (schema) =>
     schema.replace(
       'need_unlock INTEGER NOT NULL,',
       'need_unlock INTEGER DEFAULT 1,',

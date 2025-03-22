@@ -3,7 +3,7 @@ import { TypeCompiler } from '@sinclair/typebox/compiler'
 
 import { HTTPHandler } from '@/services/http/types'
 import { getRequestBodyT, HTTPError } from '@/services/http/utils'
-import { sessionGuard, setAuth, signJWT } from '@/services/session'
+import { sessionGuard, setAuth, signJWT } from '@/services/session/session'
 import { usersTable } from '@/services/session/users'
 
 export const LoginT = TypeCompiler.Compile(
@@ -41,4 +41,5 @@ export default (async function (request, response) {
       },
     ),
   )
+  response.body = ''
 } satisfies HTTPHandler)

@@ -1,7 +1,7 @@
 import { parseInt } from '@softsky/utils'
 
 import { HTTPHandler } from '@/services/http/types'
-import { sessionGuard } from '@/services/session'
+import { sessionGuard } from '@/services/session/session'
 import { usersThemesTable } from '@/services/study/users-themes'
 
 export default (async function (request, response, route) {

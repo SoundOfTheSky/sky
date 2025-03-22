@@ -1,10 +1,16 @@
 import { rm } from 'node:fs/promises'
 
-import { ProgressLoggerTransform, log } from '@softsky/utils'
+import {
+  FORMAT_NUMBER_RANGES_READABLE,
+  SpeedCalculator,
+  formatBytes,
+  formatNumber,
+  log,
+} from '@softsky/utils'
 import { file } from 'bun'
 import { Database, constants } from 'bun:sqlite'
 
-import yandexDisk from '@/services/yandex-disk'
+import { yandexDisk } from '@/services/fs'
 
 // === DB initialization ===
 log('[Loading] DB...')
@@ -19,8 +25,7 @@ export const database = await (async () => {
       safeIntegers: false,
       strict: true,
     })
-  }
-  catch {
+  } catch {
     await rm(DBFileName, {
       force: true,
     })
@@ -32,7 +37,7 @@ export const database = await (async () => {
     })
     await loadBackupDB()
     database = new Database(DBFileName, {
-      create: true,
+      create: false,
       readwrite: true,
       safeIntegers: false,
       strict: true,
@@ -62,8 +67,7 @@ export async function backupDB() {
       file(DBBackupName).stream(),
     )
     log('Backup done!')
-  }
-  catch {
+  } catch {
     console.error('Error while backing up db')
   }
 }
@@ -74,21 +78,28 @@ export async function loadBackupDB(name?: string, restart?: boolean) {
     const index = info.content
       ?.map((c, index_) => [Number.parseInt(c.name.slice(0, -3)), index_])
       .sort((a, b) => b[0]! - a[0]!)[0]?.[1]
-    if (index === undefined) throw new Error('Can\'t find backup')
+    if (index === undefined) throw new Error("Can't find backup")
     name = info.content![index]!.name.slice(0, -3)
   }
   log('Downloading backup', name)
+  const info = await yandexDisk.getInfo(`backups/${name}.db`)
   const response = await yandexDisk.read(`backups/${name}.db`)
   const dbfile = file(DBFileName).writer()
-  for await (const chunk of response.body!.pipeThrough<Uint8Array>(
-    new ProgressLoggerTransform(
-      'Downloading backup %p% %s/S %b/%s %lt %t',
-      5,
-      +response.headers.get('content-length')!,
-    ),
-  ) as unknown as AsyncIterable<Uint8Array>)
-    dbfile.write(chunk)
-  await dbfile.end()
+  const speedCalculator = new SpeedCalculator(info.size)
+  const logInterval = setInterval(() => {
+    console.log(
+      `Downloading backup ${(speedCalculator.stats.percent * 100) | 0}% ${formatBytes(speedCalculator.sum)}/${formatBytes(info.size!)} ${formatBytes(speedCalculator.stats.speed)}/s ETA: ${formatNumber(speedCalculator.stats.eta, 1000, FORMAT_NUMBER_RANGES_READABLE)}`,
+    )
+  }, 5000)
+  try {
+    for await (const chunk of response as unknown as AsyncIterable<Uint8Array>) {
+      speedCalculator.push(chunk.length)
+      dbfile.write(chunk)
+    }
+    await dbfile.end()
+  } finally {
+    clearInterval(logInterval)
+  }
   if (restart) {
     log('Restarting...')
     // eslint-disable-next-line unicorn/no-process-exit

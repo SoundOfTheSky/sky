@@ -9,7 +9,9 @@ export const convertToArray = (data: number[] | string[] | undefined | null) =>
 export const convertFromArray = (data: DBDataType) =>
   typeof data === 'string' ? data.split('|') : undefined
 export const convertFromNumberArray = (data: DBDataType) =>
-  typeof data === 'string' ? data.split('|').map(element => +element) : undefined
+  typeof data === 'string'
+    ? data.split('|').map((element) => +element)
+    : undefined
 export function convertToDate(
   d: Date | string | undefined | null,
 ): string | null | undefined {

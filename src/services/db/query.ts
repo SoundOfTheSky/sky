@@ -11,7 +11,7 @@ type Join = {
 }
 
 type Updates<FIELDS extends DBRow> = {
-  [P in keyof FIELDS]?: string;
+  [P in keyof FIELDS]?: string
 }
 
 export enum QUERY_MODE {
@@ -103,6 +103,7 @@ export class Query<
     return this
   }
 
+  /** Multiple calls don't override each other */
   public sort(field: string, desc?: boolean) {
     if (!this._sort) this._sort = []
     this._sort.push({
@@ -176,8 +177,7 @@ export class Query<
     try {
       this._query = database.prepare(this.toString())
       return this._query
-    }
-    catch (error) {
+    } catch (error) {
       if (error instanceof Error) error.message += '\nQuery:' + this.toString()
       throw error
     }
@@ -219,10 +219,10 @@ export class Query<
   protected joinToString() {
     if (!this._joins || this._joins.length === 0) return ''
     return (
-      ' '
-      + this._joins
+      ' ' +
+      this._joins
         .map(
-          join =>
+          (join) =>
             `${join.left ? 'LEFT JOIN' : 'JOIN'} ${join.tableName} ON ${join.condition}`,
         )
         .join(' ')
@@ -241,8 +241,8 @@ export class Query<
   protected sortByToString() {
     if (!this._sort) return ''
     return (
-      ' SORT BY '
-      + this._sort
+      ' ORDER BY ' +
+      this._sort
         .map(({ field, desc }) => field + (desc ? ' DESC' : ''))
         .join(',')
     )

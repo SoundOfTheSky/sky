@@ -3,8 +3,7 @@ import { HTTPError } from '@/services/http/utils'
 import { getStaticFileWithIndexFallback } from '@/services/static'
 
 export default (async function (request, response, router) {
-  if (router.pathname.startsWith('/api/'))
-    throw new HTTPError('Not found', 404)
+  if (router.pathname.startsWith('/api/')) throw new HTTPError('Not found', 404)
   const file = await getStaticFileWithIndexFallback(
     router.pathname,
     request.headers.get('accept-encoding')?.includes('br'),

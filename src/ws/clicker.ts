@@ -11,5 +11,5 @@ subscribeWSEvent('unsubscribeClicker', (ws) => {
 subscribeWSEvent('clickerClick', () => clicks++)
 setInterval(() => {
   clicks = Math.floor(clicks * 0.9)
-  server?.publish('clicker', `clicker ${clicks}`)
+  globalThis.server?.publish('clicker', `clicker ${clicks}`)
 }, 10_000)

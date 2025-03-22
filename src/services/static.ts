@@ -1,10 +1,16 @@
 import { mkdir, rm } from 'node:fs/promises'
 import Path from 'node:path'
 
-import { ProgressLoggerTransform, log } from '@softsky/utils'
+import {
+  FORMAT_NUMBER_RANGES_READABLE,
+  SpeedCalculator,
+  formatBytes,
+  formatNumber,
+  log,
+} from '@softsky/utils'
 import { file, spawnSync } from 'bun'
 
-import yandexDisk from '@/services/yandex-disk'
+import { yandexDisk } from '@/services/fs'
 
 const STATIC_PATH = 'static'
 const INDEX = 'index.html'
@@ -25,9 +31,9 @@ export async function getStaticFileWithIndexFallback(
   const p = Path.join(STATIC_PATH, ...path.split(Path.sep))
 
   return (
-    (await getStaticFile(p, brotli))
-    ?? (await getStaticFile(Path.join(p, INDEX), brotli))
-    ?? (await getStaticFile(Path.join(STATIC_PATH, INDEX), brotli))
+    (await getStaticFile(p, brotli)) ??
+    (await getStaticFile(Path.join(p, INDEX), brotli)) ??
+    (await getStaticFile(Path.join(STATIC_PATH, INDEX), brotli))
   )
 }
 
@@ -35,17 +41,24 @@ export async function reloadStatic() {
   log('Downloading static files...')
   const staticFileName = 'static.zip'
   await rm(staticFileName, { force: true })
+  const info = await yandexDisk.getInfo(staticFileName)
   const response = await yandexDisk.read(staticFileName)
   const zipFile = file(staticFileName).writer()
-  for await (const chunk of response.body!.pipeThrough<Uint8Array>(
-    new ProgressLoggerTransform(
-      'Downloading static %p% %s/S %b/%s %lt %t',
-      5,
-      +response.headers.get('content-length')!,
-    ),
-  ) as unknown as AsyncIterable<Uint8Array>)
-    zipFile.write(chunk)
-  await zipFile.end()
+  const speedCalculator = new SpeedCalculator(info.size)
+  const logInterval = setInterval(() => {
+    console.log(
+      `Downloading static ${(speedCalculator.stats.percent * 100) | 0}% ${formatBytes(speedCalculator.sum)}/${formatBytes(info.size!)} ${formatBytes(speedCalculator.stats.speed)}/s ETA: ${formatNumber(speedCalculator.stats.eta, 1000, FORMAT_NUMBER_RANGES_READABLE)}`,
+    )
+  }, 5000)
+  try {
+    for await (const chunk of response as unknown as AsyncIterable<Uint8Array>) {
+      speedCalculator.push(chunk.length)
+      zipFile.write(chunk)
+    }
+    await zipFile.end()
+  } finally {
+    clearInterval(logInterval)
+  }
   await rm(STATIC_PATH, { force: true })
   await mkdir(STATIC_PATH)
   log('Extracting static files...')

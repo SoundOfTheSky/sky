@@ -7,7 +7,7 @@ import { StudyUserQuestion } from '@/sky-shared/study'
 export class UsersQuestionsTable extends TableWithUser<StudyUserQuestion> {
   public $deleteByUserTheme = database.prepare<
     unknown,
-    { themeId: number, userId: number }
+    { themeId: number; userId: number }
   >(
     `DELETE FROM ${this.name} WHERE id IN (
       SELECT a.id FROM ${this.name} a
