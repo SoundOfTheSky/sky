@@ -2,7 +2,7 @@ import { ValidationError } from '@softsky/utils'
 
 import { LoginT } from '@/routes/api/auth/login'
 import { HTTPHandler } from '@/services/http/types'
-import { getRequestBodyT } from '@/services/http/utils'
+import { getRequestBodyT } from '@/services/http/utilities'
 import { sessionGuard, setAuth, signJWT } from '@/services/session/session'
 import { usersTable } from '@/services/session/users'
 

@@ -1,7 +1,12 @@
 // @ts-check
-import skyEslintConfig from '@softsky/configs/eslint.config.mjs';
+import skyEslintConfig from '@softsky/configs/eslint.config.mjs'
 
 /** @type {import("typescript-eslint").Config} */
 export default [
-  ...skyEslintConfig
-];
+  ...skyEslintConfig,
+  {
+    rules: {
+      'import-x/no-unresolved': 0,
+    },
+  },
+]

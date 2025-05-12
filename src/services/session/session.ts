@@ -4,7 +4,7 @@ import { EventEmitter } from 'node:events'
 import { SignJWT, jwtVerify } from 'jose'
 
 import { HTTPResponse } from '@/services/http/types'
-import { HTTPError, getCookies, setCookie } from '@/services/http/utils'
+import { HTTPError, getCookies, setCookie } from '@/services/http/utilities'
 import { storeTable } from '@/services/store'
 
 // === TOKENS ===

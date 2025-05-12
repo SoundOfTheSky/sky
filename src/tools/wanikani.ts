@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable unicorn/consistent-function-scoping */
+
 /* eslint-disable unused-imports/no-unused-vars */
 
 import { cpSync, readdirSync, readFileSync } from 'node:fs'

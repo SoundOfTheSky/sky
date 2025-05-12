@@ -2,7 +2,7 @@ import { parseInt, ValidationError } from '@softsky/utils'
 
 import { fileSystem } from '@/services/fs'
 import { HTTPHandler } from '@/services/http/types'
-import { HTTPError } from '@/services/http/utils'
+import { HTTPError } from '@/services/http/utilities'
 import { sessionGuard } from '@/services/session/session'
 import { sha256, storageFileTable } from '@/services/storage/storage-file'
 import { StorageFileStatus } from '@/sky-shared/storage'
@@ -15,19 +15,22 @@ export default (async (request, response, route) => {
     throw401: true,
   })
   const userId =
-    (session.user.permissions.includes('ADMIN') &&
+    (route.query.user_id &&
+      session.user.permissions.includes('ADMIN') &&
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       parseInt(route.query.user_id)) ||
     session.user.id
   const fileStorageRow = storageFileTable.getByIdUser(
     parseInt(route.query.id),
     userId,
   )
-  if (!fileStorageRow) throw new HTTPError('Not found', 404)
+  if (!fileStorageRow || fileStorageRow.status === StorageFileStatus.FOLDER)
+    throw new HTTPError('Not found', 404)
   if (request.method === 'GET') {
     try {
-      const fileInfo = await fileSystem.getInfo(fileStorageRow.hash)
+      const fileInfo = await fileSystem.getInfo(fileStorageRow.hash!)
       response.body = (await fileSystem.read(
-        fileStorageRow.hash,
+        fileStorageRow.hash!,
       )) as unknown as AsyncIterable<Uint8Array>
       response.headers.set('content-type', fileInfo.mime ?? 'text')
       response.headers.set('content-length', fileInfo.size?.toString() ?? '0')
@@ -43,22 +46,23 @@ export default (async (request, response, route) => {
   } else if (request.method === 'POST') {
     if (fileStorageRow.status !== StorageFileStatus.NOT_UPLOADED) return
     try {
-      await fileSystem.getInfo(fileStorageRow.hash)
+      await fileSystem.getInfo(fileStorageRow.hash!)
     } catch (error) {
       if (error instanceof Error && error.message === 'NO_FILE') {
         const data = await request.arrayBuffer()
         const hash = sha256(data)
-        if (fileStorageRow.hash !== hash) {
-          console.log(`WRONG_FILE_HASH ${fileStorageRow.hash}!==${hash}`)
+        if (fileStorageRow.hash !== hash)
           throw new ValidationError('WRONG_FILE_HASH')
-        }
         if (fileStorageRow.size !== data.byteLength)
           throw new ValidationError('WRONG_SIZE')
         await fileSystem.write(hash, new Response(data).body!)
         storageFileTable.update(fileStorageRow.id, {
           status: StorageFileStatus.DEFAULT,
         })
-      } else throw error
+      } else {
+        console.error(error)
+        throw error
+      }
     }
   }
 }) satisfies HTTPHandler

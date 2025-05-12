@@ -3,7 +3,7 @@ import { noop, ValidationError } from '@softsky/utils'
 import { convertToDate } from '@/services/db/convetrations'
 import { fileSystem } from '@/services/fs'
 import { createRestEndpointHandler, RESTApiUser } from '@/services/http/rest'
-import { HTTPError } from '@/services/http/utils'
+import { HTTPError } from '@/services/http/utilities'
 import { storageFileTable } from '@/services/storage/storage-file'
 import {
   StorageFile,
@@ -21,9 +21,8 @@ export default createRestEndpointHandler(
           updated: {
             convertTo: (data) =>
               convertToDate(new Date(Number.parseInt(data) * 1000))!,
-            sql: (m, p) =>
-              m === '<' ? `updated ${m} $${p}` : `updated ${m} $${p}`,
           },
+          path: {},
         },
         {
           updated: ['updated'],
@@ -33,14 +32,23 @@ export default createRestEndpointHandler(
     }
 
     public create(data: StorageFileDTO): Promise<StorageFile> {
-      if (data.status !== StorageFileStatus.FOLDER)
+      if (data.status !== StorageFileStatus.FOLDER) {
+        if (!data.hash) throw new ValidationError('WRONG_HASH')
+        console.log(data)
+        if (
+          !storageFileTable.checkPathFoldersExist(
+            data.userId!,
+            data.path ? data.path.split('/') : [],
+          )
+        )
+          throw new ValidationError('NO_PATH')
         data.status = storageFileTable.$getByHashAndStatus.get({
           hash: data.hash,
           status: StorageFileStatus.DEFAULT,
         })
           ? StorageFileStatus.DEFAULT
           : StorageFileStatus.NOT_UPLOADED
-
+      }
       return super.create(data)
     }
 
@@ -51,7 +59,14 @@ export default createRestEndpointHandler(
       const existing = storageFileTable.getById(id)
       if (!existing) throw new ValidationError('NOT_FOUND')
       data.status = existing.status
-      if (data.hash !== existing.hash) {
+      if (
+        !storageFileTable.checkPathFoldersExist(
+          data.userId!,
+          data.path ? data.path.split('/') : [],
+        )
+      )
+        throw new ValidationError('NO_PATH')
+      if (data.hash && data.hash !== existing.hash) {
         ;(data as StorageFile).status = StorageFileStatus.NOT_UPLOADED
         const existing = storageFileTable.$getByHashAndStatus.all({
           hash: data.hash,
@@ -65,18 +80,29 @@ export default createRestEndpointHandler(
 
     public async delete(parameters: {
       id: number
-      user_id: number
+      userId: number
     }): Promise<void> {
       const item = storageFileTable.getByIdUser(
         parameters.id,
-        parameters.user_id,
+        parameters.userId,
       )
       if (!item) throw new HTTPError('NOT FOUND', 404)
-      const existing = storageFileTable.$getByHashAndStatus.all({
-        hash: item.hash,
-        status: StorageFileStatus.DEFAULT,
-      })
-      if (existing.length === 1) await fileSystem.delete(item.hash).catch(noop)
+      if (
+        item.status === StorageFileStatus.FOLDER &&
+        storageFileTable.$getPathLike.get({
+          path: `${item.path}/${item.name}%`,
+          userId: parameters.userId,
+        })
+      )
+        throw new ValidationError('FOLDER_NOT_EMPTY')
+      if (item.hash) {
+        const existing = storageFileTable.$getByHashAndStatus.all({
+          hash: item.hash,
+          status: StorageFileStatus.DEFAULT,
+        })
+        if (existing.length === 1)
+          await fileSystem.delete(item.hash).catch(noop)
+      }
       return super.delete(parameters)
     }
   })(),

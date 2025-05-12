@@ -75,7 +75,7 @@ export class Query<
           ? PARAMS
           : PARAMS & PARAMETERS
     >
-    if (!self._conditions) self._conditions = []
+    self._conditions ??= []
     self._conditions.push(condition)
     delete self._query
     return self
@@ -87,7 +87,7 @@ export class Query<
     condition: string,
     left?: boolean,
   ) {
-    if (!this._joins) this._joins = []
+    this._joins ??= []
     this._joins.push({
       tableName,
       condition,
@@ -105,7 +105,7 @@ export class Query<
 
   /** Multiple calls don't override each other */
   public sort(field: string, desc?: boolean) {
-    if (!this._sort) this._sort = []
+    this._sort ??= []
     this._sort.push({
       field,
       desc: desc ?? false,

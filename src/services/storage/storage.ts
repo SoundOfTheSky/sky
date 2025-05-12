@@ -5,6 +5,7 @@ import { DEFAULT_COLUMNS, TableWithUser } from '@/services/db/table'
 import TABLES from '@/services/tables'
 import { UserStorage, UserStorageDTO } from '@/sky-shared/storage'
 
+
 export class UserStorageTable extends TableWithUser<
   UserStorage,
   UserStorageDTO,

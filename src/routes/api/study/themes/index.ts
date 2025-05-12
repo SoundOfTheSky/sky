@@ -1,5 +1,5 @@
 import { HTTPHandler } from '@/services/http/types'
-import { sendCompressedJSON } from '@/services/http/utils'
+import { sendCompressedJSON } from '@/services/http/utilities'
 import { sessionGuard } from '@/services/session/session'
 import { usersThemesTable } from '@/services/study/users-themes'
 

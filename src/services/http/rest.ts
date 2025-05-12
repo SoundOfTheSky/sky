@@ -8,7 +8,7 @@ import { Query } from '@/services/db/query'
 import { Table, TableWithUser } from '@/services/db/table'
 import { DBDataType, DBRow, TableDTO } from '@/services/db/types'
 import { HTTPHandler } from '@/services/http/types'
-import { HTTPError, sendCompressedJSON } from '@/services/http/utils'
+import { HTTPError, sendCompressedJSON } from '@/services/http/utilities'
 import { sessionGuard } from '@/services/session/session'
 import { TableDefaults } from '@/sky-shared/database'
 
@@ -32,8 +32,8 @@ export class RESTApi<
     public queryFields: Record<
       string,
       {
-        sql: (modifier: string, parameter: string) => string
-        convertTo: (data: string) => DBDataType
+        sql?: (modifier: string, parameter: string) => string
+        convertTo?: (data: string) => DBDataType
       }
     > = {},
     public sortableFields: Record<string, string[]> = {},
@@ -86,10 +86,8 @@ export class RESTApi<
         if (key === 'sort+' || isDescSort) {
           const fieldsString = query[key]!
           const toPush = key + '=' + fieldsString
-          pushToSorted(
-            cachedKey,
-            toPush,
-            (element) => toPush.localeCompare(element) < 0,
+          pushToSorted(cachedKey, toPush, (element) =>
+            toPush.localeCompare(element),
           )
           const split = fieldsString.split(',')
           for (let index = 0; index < split.length; index++) {
@@ -115,20 +113,18 @@ export class RESTApi<
         const field = this.queryFields[name]
         if (!field) continue
         const parameter = name + modifier[1]
-        const sql = field.sql(modifier[0], parameter)
+        const sql =
+          field.sql?.(modifier[0], parameter) ??
+          `${name} ${modifier[0]} $${parameter}`
         where += ' AND ' + sql
-        parameters[parameter] = field.convertTo(query[key]!)
-        pushToSorted(
-          cachedKey,
-          sql,
-          (element) => sql.localeCompare(element) < 0,
-        )
+        parameters[parameter] = field.convertTo?.(query[key]!) ?? query[key]!
+        pushToSorted(cachedKey, sql, (element) => sql.localeCompare(element))
       }
-    where = where.slice(5)
     const cachedKeyString = cachedKey.join(' ')
     let cachedQuery = this.queryCache.get(cachedKeyString)
     if (!cachedQuery) {
       const tableQuery = this.table.query.clone()
+      where = where.slice(5)
       if (where) tableQuery.where(where)
       for (let index = 0; index < sort.length; index++) {
         const { field, desc } = sort[index]!
@@ -155,23 +151,23 @@ export class RESTApiUser<
 
   public async get(parameters: {
     id: number
-    user_id: number
+    userId: number
   }): Promise<OUTPUT | undefined> {
-    return this.table.getByIdUser(parameters.id, parameters.user_id)
+    return this.table.getByIdUser(parameters.id, parameters.userId)
   }
 
   public async delete(parameters: {
     id: number
-    user_id: number
+    userId: number
   }): Promise<void> {
-    this.table.deleteByIdUser(parameters.id, parameters.user_id)
+    this.table.deleteByIdUser(parameters.id, parameters.userId)
   }
 
   public async create(data: INPUT): Promise<OUTPUT> {
     const changes = this.table.create(data)
     return this.get({
       id: changes.lastInsertRowid as number,
-      user_id: (data as { user_id: number }).user_id,
+      userId: (data as { userId: number }).userId,
     }) as Promise<OUTPUT>
   }
 
@@ -179,26 +175,24 @@ export class RESTApiUser<
     const changes = this.table.update(id, data)
     return this.get({
       id: changes.lastInsertRowid as number,
-      user_id: (data as { user_id: number }).user_id,
+      userId: (data as { userId: number }).userId,
     }) as Promise<OUTPUT>
   }
 }
-async function getRestBody(
-  request: Request,
-  T: TypeCheck<TSchema>,
-): Promise<{ user_id: number }> {
-  const body = (await request.json()) as { user_id: number }
+
+async function getRestBody(request: Request, T: TypeCheck<TSchema>) {
+  const body = (await request.json()) as { userId?: number }
   if (!T.Check(body))
     throw new HTTPError(
       'Validation error',
       400,
       JSON.stringify([...T.Errors(body)]),
     )
-  return objectMap(body, (key, value) => [
-    key,
-    value === undefined ? null : value,
-  ]) as { user_id: number }
+  return objectMap(body, (key, value) => [key, value ?? null]) as {
+    userId: number
+  }
 }
+
 export function createRestEndpointHandler(
   api: RESTApi,
   T: TypeCheck<TSchema>,
@@ -212,13 +206,13 @@ export function createRestEndpointHandler(
       permissions: [request.method === 'GET' ? viewPermission : editPermission],
       throw401: true,
     })
-    const parameter = route.params.id
+    const id = route.params.id
     switch (request.method) {
       case 'GET': {
-        if (parameter) {
+        if (id) {
           const item = await api.get({
-            id: parseInt(parameter),
-            user_id: session.user.id,
+            id: parseInt(id),
+            userId: session.user.id,
           } as never)
           if (!item) throw new HTTPError('Not found', 404)
           sendCompressedJSON(response, item)
@@ -230,25 +224,22 @@ export function createRestEndpointHandler(
       }
       case 'DELETE': {
         await api.delete({
-          id: parseInt(parameter),
-          user_id: session.user.id,
+          id: parseInt(id),
+          userId: session.user.id,
         } as never)
         break
       }
       case 'POST': {
         const body = await getRestBody(request, T)
-        body.user_id = session.user.id
+        body.userId = session.user.id
         const a = await api.create(body)
         sendCompressedJSON(response, a)
         break
       }
       case 'PUT': {
         const body = await getRestBody(request, T)
-        body.user_id = session.user.id
-        sendCompressedJSON(
-          response,
-          await api.update(parseInt(parameter), body),
-        )
+        body.userId = session.user.id
+        sendCompressedJSON(response, await api.update(parseInt(id), body))
         break
       }
     }

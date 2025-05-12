@@ -22,6 +22,23 @@ export class StorageFileTable extends TableWithUser<
     }>('hash = $hash AND status = $status')
     .toDBQuery()
 
+  public $getByPathNameUserId = this.query
+    .clone()
+    .where<{
+      path: string
+      name: string
+      userId: number
+    }>('path = $path AND name = $name AND user_id = $userId')
+    .toDBQuery()
+
+  public $getPathLike = this.query
+    .clone()
+    .where<{
+      path: string
+      userId: number
+    }>('path LIKE $path AND user_id = $userId')
+    .toDBQuery()
+
   public constructor() {
     super(TABLES.STORAGE_FILE, {
       ...DEFAULT_COLUMNS,
@@ -49,15 +66,32 @@ export class StorageFileTable extends TableWithUser<
       },
       hash: {
         type: 'TEXT',
-        required: true,
       },
       status: {
         type: 'INTEGER',
-        default: 0,
+        default: StorageFileStatus.NOT_UPLOADED,
       },
     })
-    this.createIndex(['path', 'user_id'])
-    this.createIndex(['hash'])
+    this.createIndex(['path', 'name', 'user_id'])
+    this.createIndex(['hash', 'status'])
+  }
+
+  public checkPathFoldersExist(userId: number, path: string[]) {
+    console.log(userId, path)
+    let p = ''
+    for (let index = 0; index < path.length; index++) {
+      const folder = path[index]!
+      if (
+        !this.$getByPathNameUserId.get({
+          userId,
+          path: p,
+          name: folder,
+        })
+      )
+        return false
+      p += '/' + folder
+    }
+    return true
   }
 }
 export const storageFileTable = new StorageFileTable()

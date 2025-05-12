@@ -4,7 +4,7 @@ import { ValidationError, formatNumber, log } from '@softsky/utils'
 import { FileSystemRouter, Server } from 'bun'
 
 import { HTTPHandler, HTTPResponse } from '@/services/http/types'
-import { HTTPError } from '@/services/http/utils'
+import { HTTPError } from '@/services/http/utilities'
 import { sessionGuard } from '@/services/session/session'
 
 const router = new FileSystemRouter({

@@ -2,7 +2,7 @@ import { Type } from '@sinclair/typebox'
 import { TypeCompiler } from '@sinclair/typebox/compiler'
 
 import { HTTPHandler } from '@/services/http/types'
-import { getRequestBodyT, HTTPError } from '@/services/http/utils'
+import { getRequestBodyT, HTTPError } from '@/services/http/utilities'
 import { sessionGuard, setAuth, signJWT } from '@/services/session/session'
 import { usersTable } from '@/services/session/users'
 
