@@ -1,4 +1,4 @@
-import { subscribeWSEvent } from '@/services/ws'
+import { subscribeWSEvent } from '@/services/routing/web-socket'
 
 let clicks = 0
 subscribeWSEvent('subscribeClicker', (ws) => {

@@ -1,11 +1,11 @@
-import { HTTPHandler } from '@/services/http/types'
-import { sendCompressedJSON } from '@/services/http/utilities'
-import { sessionGuard } from '@/services/session/session'
+import { HTTPHandler } from '@/services/routing/types'
+import { sendCompressedJSON } from '@/services/routing/utilities'
+import { getSession } from '@/services/session/session'
 import { storageTable } from '@/services/storage/storage'
 
 export default (async (request, response) => {
   if (request.method === 'GET') {
-    const session = await sessionGuard({
+    const session = await getSession({
       request,
       response,
       permissions: ['STORAGE'],

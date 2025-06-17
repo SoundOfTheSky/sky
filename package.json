@@ -6,23 +6,22 @@
   "scripts": {
     "start": "bun src/index.ts",
     "lint": "eslint \"src/**/*{.js,.ts}\" --fix && tsc",
-    "proxy": "bun x reverse-proxy-node --key privkey.pem --ca chain.pem --cert cert.pem '/^/(api|static|ws)/=:64000' '/^//=:64002'",
+    "proxy": "bun x reverse-proxy-node --key privkey.pem --ca chain.pem --cert cert.pem '/^/(api|static|graphql|ws)/=:64000' '/^//=:64002'",
     "deploy": "bun src/tools/deploy.ts",
     "migrate": "bun src/tools/migration.ts"
   },
   "dependencies": {
-    "@sinclair/typebox": "^0.34.33",
-    "@softsky/utils": "^2.4.0",
-    "@typegoose/typegoose": "^12.15.1",
-    "eslint-plugin-unused-imports": "^4.1.4",
-    "file-type": "^20.5.0",
+    "@sinclair/typebox": "^0.34.35",
+    "@softsky/utils": "^2.5.3",
+    "cbor-x": "^1.6.0",
+    "file-type": "^21.0.0",
     "jose": "^6.0.11",
     "mime-types": "^3.0.1",
-    "mongoose": "^8.14.2"
+    "mongodb": "^6.17.0"
   },
   "devDependencies": {
     "@softsky/configs": "^1.3.3",
-    "@types/bun": "^1.2.13",
-    "@types/mime-types": "^2.1.4"
+    "@types/bun": "^1.2.16",
+    "@types/mime-types": "^3.0.1"
   }
 }

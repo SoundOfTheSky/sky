@@ -1,27 +1,14 @@
 import { randomUUID } from 'node:crypto'
-import { EventEmitter } from 'node:events'
 
 import { SignJWT, jwtVerify } from 'jose'
 
-import { HTTPResponse } from '@/services/http/types'
-import { HTTPError, getCookies, setCookie } from '@/services/http/utilities'
-import { storeTable } from '@/services/store'
+import { HTTPResponse } from '@/services/routing/types'
+import { getCookies, setCookie } from '@/services/routing/utilities'
+import { SessionPayload } from '@/sky-shared/session'
 
 // === TOKENS ===
-type JWTBody = {
-  user?: {
-    id: number
-    status: number
-    permissions: string[]
-  }
-  version: number
-}
-export type JWTPayload = JWTBody & {
-  sub: string // JWT ID
-  iat: number // Issued at
-  exp: number // Exprires at
-}
-type SignedToken = {
+
+export type SignedToken = {
   access_token: string
   token_type: string
   expires_in: number
@@ -50,7 +37,7 @@ export async function signJWT(
     expires_in: options.expiresIn ?? JWT_EXPIRES,
   }
 }
-export async function verifyJWT<T = JWTPayload>(token: string) {
+export async function verifyJWT<T = SessionPayload>(token: string) {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET, {
       algorithms: [JWT_ALG],
@@ -69,75 +56,26 @@ export function setAuth(response: HTTPResponse, token: SignedToken) {
   )
 }
 
-export async function sessionGuard(options: {
-  request: Request
-}): Promise<JWTPayload | undefined>
-export async function sessionGuard(options: {
-  request: Request
-  response: HTTPResponse
-}): Promise<JWTPayload>
-export async function sessionGuard(options: {
-  request: Request
-  response?: HTTPResponse
-  permissions: string[]
-  throw401?: false
-}): Promise<
-  | (Omit<JWTPayload, 'user'> & { user: NonNullable<JWTPayload['user']> })
-  | undefined
->
-export async function sessionGuard(options: {
-  request: Request
-  response?: HTTPResponse
-  permissions: string[]
-  throw401: true
-}): Promise<
-  Omit<JWTPayload, 'user'> & { user: NonNullable<JWTPayload['user']> }
->
-export async function sessionGuard(options: {
-  request: Request
-  response?: HTTPResponse
-  permissions?: string[]
-  throw401?: boolean
-}): Promise<JWTPayload | undefined> {
+export async function getSession(
+  request: Request,
+  response: HTTPResponse,
+): Promise<SessionPayload> {
   const token =
-    getCookies(options.request).session ??
-    options.request.headers.get('authorization')
+    getCookies(request).session ?? request.headers.get('authorization')
   const payload = token ? await verifyJWT(token.slice(7)) : undefined
   // If no token
-  if (!payload) {
-    if (options.response) {
-      registerVisit(true)
-      const newSession = await signJWT({})
-      setAuth(options.response, newSession)
-      if (options.permissions && options.throw401)
-        throw new HTTPError('Not allowed', 401)
-      return verifyJWT(newSession.access_token)
-    }
-    return
+  if (!payload || disposedTokens.has(payload.sub)) {
+    // registerVisit(true)
+    const newSession = await signJWT({})
+    setAuth(response, newSession)
+    return verifyJWT(newSession.access_token) as Promise<SessionPayload>
   }
 
   // Refresh token
-  const alreadyDisposed = disposedTokens.has(payload.sub)
-  if (
-    options.response &&
-    (payload.iat + JWT_REFRESH) * 1000 < Date.now() &&
-    !alreadyDisposed
-  ) {
-    registerVisit(false)
+  if ((payload.iat + JWT_REFRESH) * 1000 < Date.now()) {
+    // registerVisit(false)
     disposedTokens.set(payload.sub, Date.now())
-    setAuth(options.response, await signJWT(payload))
-  }
-  if (
-    alreadyDisposed ||
-    (options.permissions &&
-      (!payload.user ||
-        (!payload.user.permissions.includes('ADMIN') &&
-          options.permissions.some(
-            (perm) => !payload.user!.permissions.includes(perm),
-          ))))
-  ) {
-    if (options.throw401) throw new HTTPError('Not allowed', 401)
-    return
+    setAuth(response, await signJWT(payload))
   }
   return payload
 }
@@ -152,16 +90,16 @@ setInterval(() => {
 }, JWT_REFRESH * 1000)
 
 // === Visits ===
-export const visitsStats = {
-  visits: (storeTable.getValue('visits') ?? 0) as number,
-  uniqueVisits: (storeTable.getValue('uniqueVisits') ?? 0) as number,
-}
-function registerVisit(unique: boolean) {
-  const key = unique ? 'uniqueVisits' : 'visits'
-  visitsStats[key]++
-  storeTable.setValue(key, visitsStats[key])
-  if (unique) registerVisit(false)
-  else visitEmitter.emit('update')
-}
-// eslint-disable-next-line unicorn/prefer-event-target
-export const visitEmitter = new EventEmitter()
+// export const visitsStats = {
+//   visits: (storeTable.getValue('visits') ?? 0) as number,
+//   uniqueVisits: (storeTable.getValue('uniqueVisits') ?? 0) as number,
+// }
+// function registerVisit(unique: boolean) {
+//   const key = unique ? 'uniqueVisits' : 'visits'
+//   visitsStats[key]++
+//   storeTable.setValue(key, visitsStats[key])
+//   if (unique) registerVisit(false)
+//   else visitEmitter.emit('update')
+// }
+// // eslint-disable-next-line unicorn/prefer-event-target
+// export const visitEmitter = new EventEmitter()

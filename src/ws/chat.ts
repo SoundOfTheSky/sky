@@ -1,5 +1,5 @@
 import { usersTable } from '@/services/session/users'
-import { WS, subscribeWSEvent } from '@/services/ws'
+import { WS, subscribeWSEvent } from '@/services/routing/web-socket'
 
 type ChatMessage = {
   username: string

@@ -3,14 +3,13 @@ import { file, serve } from 'bun'
 
 import '@/preload.ts'
 
-import { database } from '@/services/db/database'
-import handleHTTP from '@/services/http'
+import handleHTTP from '@/services/routing/http'
+import { WS } from '@/services/routing/types'
 import {
-  WS,
   wsCloseHandler,
   wsMessageHandler,
   wsOpenHandler,
-} from '@/services/ws'
+} from '@/services/routing/web-socket'
 
 const httpServer = serve({
   fetch: (request) => {
@@ -51,7 +50,6 @@ process.on('uncaughtException', (error) => {
 })
 function onExit() {
   log('Closing')
-  database.close()
   // eslint-disable-next-line unicorn/no-process-exit
   process.exit()
 }

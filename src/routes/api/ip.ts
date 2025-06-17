@@ -1,6 +1,6 @@
 import { ValidationError } from '@softsky/utils'
 
-import { HTTPHandler } from '@/services/http/types'
+import { HTTPHandler } from '@/services/routing/types'
 
 export default (function (request, response) {
   const data = server!.requestIP(request)

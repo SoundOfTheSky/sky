@@ -1,7 +1,7 @@
 import { log } from '@softsky/utils'
 
 import { visitEmitter, visitsStats } from '@/services/session/session'
-import { subscribeWSEvent } from '@/services/ws'
+import { subscribeWSEvent } from '@/services/routing/web-socket'
 
 let online = 0
 subscribeWSEvent('subscribeServerStats', (ws) => {

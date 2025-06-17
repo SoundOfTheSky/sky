@@ -18,7 +18,9 @@
     "rootDir": "${configDir}/src",
     "skipLibCheck": true,
     "strict": true,
-    "target": "esnext"
+    "target": "esnext",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "include": ["${configDir}/src"]
 }

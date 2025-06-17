@@ -1,14 +1,14 @@
 import { parseInt, ValidationError } from '@softsky/utils'
 
 import { fileSystem } from '@/services/fs'
-import { HTTPHandler } from '@/services/http/types'
-import { HTTPError } from '@/services/http/utilities'
-import { sessionGuard } from '@/services/session/session'
+import { HTTPHandler } from '@/services/routing/types'
+import { HTTPError } from '@/services/routing/utilities'
+import { getSession } from '@/services/session/session'
 import { sha256, storageFileTable } from '@/services/storage/storage-file'
 import { StorageFileStatus } from '@/sky-shared/storage'
 
 export default (async (request, response, route) => {
-  const session = await sessionGuard({
+  const session = await getSession({
     request,
     response,
     permissions: ['STORAGE'],

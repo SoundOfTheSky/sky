@@ -1,9 +1,10 @@
-import { IncomingMessage } from 'node:http'
+import { IncomingMessage, OutgoingHttpHeaders } from 'node:http'
 import { RequestOptions, request as httpsRequest } from 'node:https'
 import { URL } from 'node:url'
 // import { BrotliDecompress, Deflate, Gunzip, createGunzip, createBrotliDecompress, createDeflate } from 'node:zlib';
 
-export type HTTPSRequestOptions = RequestOptions & {
+export type HTTPSRequestOptions = Omit<RequestOptions, 'headers'> & {
+  headers?: OutgoingHttpHeaders
   followRedirects?: boolean
   body?: unknown
   raw?: boolean
