@@ -3,6 +3,8 @@ import { fileSystem, FS } from '@/services/fs'
 import { File, FileController } from '@/sky-shared/controllers/file.controller'
 import { DatabaseConnector } from '@/sky-shared/database'
 
+export const FileDatabase = new MongoDatabaseConnector<File>('files')
+
 class BEFileController extends FileController {
   public constructor(
     database: DatabaseConnector<File>,
@@ -37,7 +39,7 @@ class BEFileController extends FileController {
   }
 }
 
-export default new BEFileController(
+export const fileController = new BEFileController(
   new MongoDatabaseConnector('files'),
   fileSystem,
 )

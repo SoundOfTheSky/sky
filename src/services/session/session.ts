@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { SignJWT, jwtVerify } from 'jose'
 
 import { HTTPResponse } from '@/services/routing/types'
-import { getCookies, setCookie } from '@/services/routing/utilities'
+import { setCookie } from '@/services/routing/utilities'
 import { SessionPayload } from '@/sky-shared/session'
 
 // === TOKENS ===
@@ -22,12 +22,12 @@ const JWT_ALG = 'HS256'
 const disposedTokens = new Map<string, number>() // Token/time of disposal
 
 export async function signJWT(
-  body: object,
+  body: SessionPayload,
   options: { expiresIn?: number; subject?: string } = {},
 ): Promise<SignedToken> {
   const now = Math.floor(Date.now() / 1000)
   return {
-    access_token: await new SignJWT({ version: JWT_VERSION, ...body })
+    access_token: await new SignJWT({ ...body, version: JWT_VERSION })
       .setProtectedHeader({ alg: JWT_ALG })
       .setIssuedAt(now)
       .setExpirationTime(now + (options.expiresIn ?? JWT_EXPIRES))
@@ -37,7 +37,8 @@ export async function signJWT(
     expires_in: options.expiresIn ?? JWT_EXPIRES,
   }
 }
-export async function verifyJWT<T = SessionPayload>(token: string) {
+export async function verifyJWT<T = SessionPayload>(token?: string | null) {
+  if (!token) return
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET, {
       algorithms: [JWT_ALG],
@@ -54,30 +55,6 @@ export function setAuth(response: HTTPResponse, token: SignedToken) {
     'session',
     `${token.token_type} ${token.access_token}; Max-Age=${token.expires_in}`,
   )
-}
-
-export async function getSession(
-  request: Request,
-  response: HTTPResponse,
-): Promise<SessionPayload> {
-  const token =
-    getCookies(request).session ?? request.headers.get('authorization')
-  const payload = token ? await verifyJWT(token.slice(7)) : undefined
-  // If no token
-  if (!payload || disposedTokens.has(payload.sub)) {
-    // registerVisit(true)
-    const newSession = await signJWT({})
-    setAuth(response, newSession)
-    return verifyJWT(newSession.access_token) as Promise<SessionPayload>
-  }
-
-  // Refresh token
-  if ((payload.iat + JWT_REFRESH) * 1000 < Date.now()) {
-    // registerVisit(false)
-    disposedTokens.set(payload.sub, Date.now())
-    setAuth(response, await signJWT(payload))
-  }
-  return payload
 }
 
 /**

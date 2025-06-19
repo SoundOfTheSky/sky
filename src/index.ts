@@ -3,7 +3,7 @@ import { file, serve } from 'bun'
 
 import '@/preload.ts'
 
-import handleHTTP from '@/services/routing/http'
+import { handleHTTP } from '@/services/routing/http'
 import { WS } from '@/services/routing/types'
 import {
   wsCloseHandler,

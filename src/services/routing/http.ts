@@ -5,7 +5,7 @@ import { getRoute } from '@/services/routing/router'
 import { HTTPResponse } from '@/services/routing/types'
 import { HTTPError } from '@/services/routing/utilities'
 
-export default async function handleHTTP(
+export async function handleHTTP(
   request: Request,
 ): Promise<Response | undefined> {
   const url = request.url.slice(request.url.indexOf('/', 8))

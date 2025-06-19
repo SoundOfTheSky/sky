@@ -1,25 +1,25 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { decode, encode } from 'cbor-x'
 
 import { HTTPHandler } from '@/services/routing/types'
-import { getSession } from '@/services/session/session'
+import { verifyJWT } from '@/services/session/session'
 import {
-  APIMappableHandler,
   APIMappableHandlerMethods,
   APIMappableHandlerOptions,
+  NotAllowedError,
+  APIMappableHandler,
 } from '@/sky-shared/api-mappable'
 
-export function mapApi<T = undefined>(
-  handler: APIMappableHandler<T>,
-  body: (request: Request) => Promise<T> = async (request) =>
-    decode(await request.bytes()),
-) {
+const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH'])
+
+export function mapApi<T = undefined>(handler: APIMappableHandler<T>) {
   return (async (request, response, query, parameters) => {
+    const session = await verifyJWT(request.headers.get('session'))
+    if (!session) throw new NotAllowedError()
     const data = {
-      session: await getSession(request, response),
+      session,
     } as APIMappableHandlerOptions<T>
-    if (request.method !== 'GET' && request.method !== 'DELETE')
-      data.body = body(request)
+    if (BODY_METHODS.has(request.method))
+      data.body = decode(await request.bytes())
     data.method = request.method as APIMappableHandlerMethods
     data.query = query
     data.parameters = parameters
@@ -27,17 +27,20 @@ export function mapApi<T = undefined>(
   }) satisfies HTTPHandler
 }
 
-export function defaultMapApi(controller: {
-  create?: APIMappableHandler
-  update?: APIMappableHandler
-  get?: APIMappableHandler
-  delete?: APIMappableHandler
-  getAll?: APIMappableHandler
-}) {
+export function defaultMapApi(
+  idFieldName: string,
+  controller: {
+    create?: APIMappableHandler
+    update?: APIMappableHandler
+    get?: APIMappableHandler
+    delete?: APIMappableHandler
+    getAll?: APIMappableHandler
+  },
+) {
   return mapApi((data) => {
     switch (data.method) {
       case 'GET': {
-        return data.parameters?.id
+        return data.parameters?.[idFieldName]
           ? controller.get?.(data)
           : controller.getAll?.(data)
       }
