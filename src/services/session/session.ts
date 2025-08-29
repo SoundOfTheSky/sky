@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
+import { Optional } from '@softsky/utils'
 import { SignJWT, jwtVerify } from 'jose'
 
 import { HTTPResponse } from '@/services/routing/types'
@@ -16,13 +17,11 @@ export type SignedToken = {
 
 const JWT_VERSION = 1
 const JWT_EXPIRES = 60 * 60 * 24 * 30
-const JWT_REFRESH = 60 * 60 * 4
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET)
 const JWT_ALG = 'HS256'
-const disposedTokens = new Map<string, number>() // Token/time of disposal
 
 export async function signJWT(
-  body: SessionPayload,
+  body: Optional<SessionPayload, 'sub' | 'iat' | 'exp' | 'version'>,
   options: { expiresIn?: number; subject?: string } = {},
 ): Promise<SignedToken> {
   const now = Math.floor(Date.now() / 1000)
@@ -56,27 +55,3 @@ export function setAuth(response: HTTPResponse, token: SignedToken) {
     `${token.token_type} ${token.access_token}; Max-Age=${token.expires_in}`,
   )
 }
-
-/**
- * Clear disposed tokens, challenges
- */
-setInterval(() => {
-  const now = Date.now()
-  for (const [sub, time] of disposedTokens.entries())
-    if (now - time > JWT_EXPIRES * 1000) disposedTokens.delete(sub)
-}, JWT_REFRESH * 1000)
-
-// === Visits ===
-// export const visitsStats = {
-//   visits: (storeTable.getValue('visits') ?? 0) as number,
-//   uniqueVisits: (storeTable.getValue('uniqueVisits') ?? 0) as number,
-// }
-// function registerVisit(unique: boolean) {
-//   const key = unique ? 'uniqueVisits' : 'visits'
-//   visitsStats[key]++
-//   storeTable.setValue(key, visitsStats[key])
-//   if (unique) registerVisit(false)
-//   else visitEmitter.emit('update')
-// }
-// // eslint-disable-next-line unicorn/prefer-event-target
-// export const visitEmitter = new EventEmitter()

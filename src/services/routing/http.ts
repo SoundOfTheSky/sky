@@ -4,6 +4,7 @@ import { http as defaultHandler } from '@/routes'
 import { getRoute } from '@/services/routing/router'
 import { HTTPResponse } from '@/services/routing/types'
 import { HTTPError } from '@/services/routing/utilities'
+import { NotAllowedError, NotFoundError } from '@/sky-shared/api-mappable'
 
 export async function handleHTTP(
   request: Request,
@@ -20,12 +21,19 @@ export async function handleHTTP(
   )
   const { handler, query, parameters } = getRoute(url)
   try {
-    await (handler.http?.(request, response, query, parameters) ??
-      defaultHandler(request, response, query, parameters))
+    await (handler.http
+      ? handler.http(request, response, query, parameters)
+      : defaultHandler(request, response, query, parameters))
   } catch (error) {
     if (error instanceof HTTPError) {
       response.status = error.code
       response.body = error.body
+    } else if (error instanceof NotFoundError) {
+      response.status = 404
+      response.body = error.message
+    } else if (error instanceof NotAllowedError) {
+      response.status = 401
+      response.body = error.message
     } else if (error instanceof ValidationError) {
       response.status = 400
       response.body = error.message

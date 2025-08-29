@@ -77,7 +77,6 @@ export class StorageFileTable extends TableWithUser<
   }
 
   public checkPathFoldersExist(userId: number, path: string[]) {
-    console.log(userId, path)
     let p = ''
     for (let index = 0; index < path.length; index++) {
       const folder = path[index]!

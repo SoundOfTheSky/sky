@@ -51,23 +51,21 @@ export class MongoDatabaseConnector<T extends DefaultSchema>
     })
   }
 
-  public async deleteMany(query: QueryKeys<T>, index?: string): Promise<void> {
+  public async deleteMany(query: QueryKeys<T>): Promise<void> {
     await (this.collection as unknown as Collection<DefaultSchema>).deleteMany(
-      this.buildFilter(query, index),
+      this.buildFilter(query),
     )
   }
 
-  public async *cursor(query: QueryKeys<T>, index?: string): AsyncGenerator<T> {
-    for await (const element of this.collection.find(
-      this.buildFilter(query, index),
-    ))
+  public async *cursor(query: QueryKeys<T>): AsyncGenerator<T> {
+    for await (const element of this.collection.find(this.buildFilter(query)))
       yield element as T
   }
 
-  public getAll(query: QueryKeys<T>, index?: string): Promise<T[]> {
-    return this.collection
-      .find(this.buildFilter(query, index))
-      .toArray() as Promise<T[]>
+  public getAll(query: QueryKeys<T>): Promise<T[]> {
+    return this.collection.find(this.buildFilter(query)).toArray() as Promise<
+      T[]
+    >
   }
 
   public async update(_id: string, fields: Partial<T>): Promise<void> {
@@ -80,15 +78,14 @@ export class MongoDatabaseConnector<T extends DefaultSchema>
   public async updateMany(
     query: QueryKeys<T>,
     fields: Partial<T>,
-    index = '_id',
   ): Promise<void> {
     await (this.collection as unknown as Collection<DefaultSchema>).updateMany(
-      this.buildFilter(query, index),
+      this.buildFilter(query),
       fields,
     )
   }
 
-  private buildFilter(query: QueryKeys<T>, _index?: string) {
+  private buildFilter(query: QueryKeys<T>) {
     const filter: Record<string, any> = {}
     for (const key in query) {
       const field = key.slice(0, -1)

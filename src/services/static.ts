@@ -46,7 +46,7 @@ export async function reloadStatic() {
   const zipFile = file(staticFileName).writer()
   const speedCalculator = new SpeedCalculator(info.size)
   const logInterval = setInterval(() => {
-    console.log(
+    log(
       `Downloading static ${(speedCalculator.stats.percent * 100) | 0}% ${formatBytes(speedCalculator.sum)}/${formatBytes(info.size!)} ${formatBytes(speedCalculator.stats.speed)}/s ETA: ${formatNumber(speedCalculator.stats.eta, 1000, FORMAT_NUMBER_RANGES_READABLE)}`,
     )
   }, 5000)
